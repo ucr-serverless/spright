@@ -29,6 +29,10 @@ static int autoscale_memory(uint8_t mb)
 {
 	char *buffer = NULL;
 
+	if (unlikely(mb == 0)) {
+		return 0;
+	}
+
 	buffer = malloc(1000000 * mb * sizeof(char));
 	if (unlikely(buffer == NULL)) {
 		fprintf(stderr, "malloc() error: %s\n", rte_strerror(errno));
