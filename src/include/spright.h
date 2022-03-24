@@ -30,15 +30,15 @@ struct {
 			uint32_t sleep_ns;
 			uint32_t compute;
 		} param;
-	} nf[UINT8_MAX];
+	} nf[UINT8_MAX + 1];
 
 	uint8_t n_routes;
 	struct {
 		char name[64];
 
 		uint8_t length;
-		uint8_t node[UINT8_MAX];
-	} route[UINT8_MAX];
+		uint8_t node[UINT8_MAX + 1];
+	} route[UINT8_MAX + 1];
 } *cfg;
 
 #endif /* SPRIGHT_H */
