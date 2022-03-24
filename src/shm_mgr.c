@@ -30,6 +30,8 @@ static void cfg_print(void)
 	uint8_t i;
 	uint8_t j;
 
+	printf("Name: %s\n", cfg->name);
+
 	printf("Number of NFs: %hhu\n", cfg->n_nfs);
 	printf("NFs:\n");
 	for (i = 0; i < cfg->n_nfs; i++) {
@@ -92,6 +94,14 @@ static int cfg_init(char *cfg_file)
 		        config_error_line(&config), config_error_text(&config));
 		goto error_1;
 	}
+
+	ret = config_lookup_string(&config, "name", &name);
+	if (unlikely(ret == CONFIG_FALSE)) {
+		/* TODO: Error message */
+		goto error_1;
+	}
+
+	strcpy(cfg->name, name);
 
 	setting = config_lookup(&config, "nfs");
 	if (unlikely(setting == NULL)) {

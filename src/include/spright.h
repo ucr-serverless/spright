@@ -17,6 +17,8 @@ int node_id;
 struct {
 	struct rte_mempool *mempool;
 
+	char name[64];
+
 	uint8_t n_nfs;
 	struct {
 		char name[64];
