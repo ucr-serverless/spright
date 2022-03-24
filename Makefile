@@ -14,7 +14,7 @@ LDFLAGS = $(shell pkg-config --libs-only-L libconfig libdpdk)
 LDLIBS = $(shell pkg-config --libs-only-l libconfig libdpdk)
 
 CFLAGS += -Isrc/include -MMD -MP -O3 -Wall -Werror
-LDFLAGS += -lbpf -lm -pthread
+LDLIBS += -lbpf -lm -pthread
 
 .PHONY: all shm_mgr gateway nf clean
 
