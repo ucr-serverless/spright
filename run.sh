@@ -30,7 +30,7 @@ shm_mgr()
 		exit 1
 	fi
 
-	bin/shm_mgr_${io} \
+	exec bin/shm_mgr_${io} \
 		-l ${CPU_SHM_MGR[0]} \
 		--file-prefix=spright \
 		--proc-type=primary \
@@ -42,7 +42,7 @@ shm_mgr()
 
 gateway()
 {
-	bin/gateway_${io} \
+	exec bin/gateway_${io} \
 		-l ${CPU_GATEWAY[0]},${CPU_GATEWAY[1]},${CPU_GATEWAY[2]} \
 		--main-lcore=${CPU_GATEWAY[0]} \
 		--file-prefix=spright \
@@ -59,7 +59,7 @@ nf()
 		exit 1
 	fi
 
-	bin/nf_${io} \
+	exec bin/nf_${io} \
 		-l ${CPU_NF[$((${1} - 1))]} \
 		--file-prefix=spright \
 		--proc-type=secondary \
