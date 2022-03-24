@@ -155,9 +155,9 @@ static int conn_write(int *sockfd)
 		goto error_0;
 	}
 
-	if (txn->hop_count < cfg->route[txn->route_id].length) {
-		txn->hop_count++;
+	txn->hop_count++;
 
+	if (txn->hop_count < cfg->route[txn->route_id].length) {
 		ret = io_tx(txn,
 		            cfg->route[txn->route_id].node[txn->hop_count]);
 		if (unlikely(ret == -1)) {

@@ -202,6 +202,8 @@ static void *nf_tx(void *arg)
 				return NULL;
 			}
 
+			txn->hop_count++;
+
 			if (likely(txn->hop_count <
 			           cfg->route[txn->route_id].length)) {
 				next_node =
@@ -209,8 +211,6 @@ static void *nf_tx(void *arg)
 			} else {
 				next_node = 0;
 			}
-
-			txn->hop_count++;
 
 			ret = io_tx(txn, next_node);
 			if (unlikely(ret == -1)) {
