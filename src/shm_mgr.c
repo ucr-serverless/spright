@@ -207,7 +207,10 @@ static int cfg_init(char *cfg_file)
 	}
 
 	n = config_setting_length(setting);
-	cfg->n_routes = n;
+	cfg->n_routes = n + 1;
+
+	strcpy(cfg->route[0].name, "Default");
+	cfg->route[0].length = 0;
 
 	for (i = 0; i < n; i++) {
 		subsetting = config_setting_get_elem(setting, i);
@@ -226,6 +229,9 @@ static int cfg_init(char *cfg_file)
 		if (unlikely(ret == CONFIG_FALSE)) {
 			/* TODO: Error message */
 			goto error_1;
+		} else if (unlikely(id == 0)) {
+			/* TODO: Error message */
+			goto error_1;
 		}
 
 		ret = config_setting_lookup_string(subsetting, "name", &name);
@@ -234,7 +240,7 @@ static int cfg_init(char *cfg_file)
 			goto error_1;
 		}
 
-		strcpy(cfg->route[id - 1].name, name);
+		strcpy(cfg->route[id].name, name);
 
 		subsubsetting = config_setting_lookup(subsetting, "nodes");
 		if (unlikely(subsubsetting == NULL)) {
@@ -249,11 +255,11 @@ static int cfg_init(char *cfg_file)
 		}
 
 		m = config_setting_length(subsubsetting);
-		cfg->route[id - 1].length = m;
+		cfg->route[id].length = m;
 
 		for (j = 0; j < m; j++) {
 			value = config_setting_get_int_elem(subsubsetting, j);
-			cfg->route[id - 1].node[j] = value;
+			cfg->route[id].node[j] = value;
 		}
 	}
 
