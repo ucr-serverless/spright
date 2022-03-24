@@ -121,7 +121,7 @@ static int conn_read(int sockfd)
 		txn->route_id = 0;
 	} else {
 		errno = 0;
-		txn->route_id = strtol(string, NULL, 10);
+		txn->route_id = strtol(string + 1, NULL, 10);
 		if (unlikely(errno != 0 || txn->route_id < 0)) {
 			txn->route_id = 0;
 		}
