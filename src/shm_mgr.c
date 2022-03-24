@@ -48,14 +48,16 @@ static void cfg_print(void)
 	printf("Number of Routes: %hhu\n", cfg->n_routes);
 	printf("Routes:\n");
 	for (i = 0; i < cfg->n_routes; i++) {
-		printf("\tID: %hhu\n", i + 1);
+		printf("\tID: %hhu\n", i);
 		printf("\tName: %s\n", cfg->route[i].name);
 		printf("\tLength = %hhu\n", cfg->route[i].length);
-		printf("\tNodes = [");
-		for (j = 0; j < cfg->route[i].length; j++) {
-			printf("%hhu ", cfg->route[i].node[j]);
+		if (cfg->route[i].length > 0) {
+			printf("\tNodes = [");
+			for (j = 0; j < cfg->route[i].length; j++) {
+				printf("%hhu ", cfg->route[i].node[j]);
+			}
+			printf("\b]\n");
 		}
-		printf("\b]\n");
 		printf("\n");
 	}
 }
