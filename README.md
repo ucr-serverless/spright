@@ -1,4 +1,4 @@
-# Shared Memory for Microservices
+# SPRIGHT
 
 ## Install dependencies (apt)
 ```bash
@@ -58,7 +58,12 @@ sudo ldconfig
 cd ../..
 ```
 
-# Set up hugepages
+## Set up hugepages
 ```bash
 sudo sysctl -w vm.nr_hugpages=4096
+```
+
+## Build SPRIGHT
+```bash
+make
 ```
