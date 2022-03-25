@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <unistd.h>
 #include <sys/epoll.h>
@@ -35,7 +36,7 @@ static int autoscale_memory(uint8_t mb)
 
 	buffer = malloc(1000000 * mb * sizeof(char));
 	if (unlikely(buffer == NULL)) {
-		fprintf(stderr, "malloc() error: %s\n", rte_strerror(errno));
+		fprintf(stderr, "malloc() error: %s\n", strerror(errno));
 		return -1;
 	}
 
