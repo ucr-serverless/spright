@@ -27,6 +27,11 @@ sudo make install
 cd ..
 ```
 
+## Reboot system
+```bash
+sudo reboot
+```
+
 ## Install libbpf
 ```bash
 git clone --single-branch https://github.com/libbpf/libbpf.git
@@ -51,4 +56,9 @@ ninja
 sudo ninja install
 sudo ldconfig
 cd ../..
+```
+
+# Set up hugepages
+```bash
+sudo sysctl -w vm.nr_hugpages=4096
 ```
