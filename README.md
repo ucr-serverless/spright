@@ -1,24 +1,14 @@
 # Shared Memory for Microservices
 
-## Install Linux dependencies
+## Install dependencies (apt)
 ```bash
-sudo apt install -y flex bison build-essential dwarves libssl-dev libelf-dev
+sudo apt install -y flex bison build-essential dwarves libssl-dev libelf-dev \
+                    libnuma-dev pkg-config python3-pip python3-pyelftools
 ```
 
-## Install DPDK dependencies
+## Install dependencies (pip)
 ```bash
-sudo apt install -y libnuma-dev pkg-config python3-pip python3-pyelftools
 sudo pip3 install meson ninja
-```
-
-## Install libbpf dependencies
-```bash
-sudo apt install -y libelf-dev
-```
-
-## Install Docker
-```bash
-sudo apt install -y docker.io
 ```
 
 ## Install Linux
@@ -36,19 +26,6 @@ sudo make install
 cd ..
 ```
 
-## Install DPDK
-```bash
-git clone --single-branch git://dpdk.org/dpdk
-cd dpdk
-git switch --detach v21.11
-meson build
-cd build
-ninja
-sudo ninja install
-sudo ldconfig
-cd ../..
-```
-
 ## Install libbpf
 ```bash
 git clone --single-branch https://github.com/libbpf/libbpf.git
@@ -62,7 +39,15 @@ sudo ldconfig
 cd ../..
 ```
 
-## Reserve Hugepages
+## Install DPDK
 ```bash
-sudo sysctl -w vm.nr_hugepages=1024
+git clone --single-branch git://dpdk.org/dpdk
+cd dpdk
+git switch --detach v21.11
+meson build
+cd build
+ninja
+sudo ninja install
+sudo ldconfig
+cd ../..
 ```
