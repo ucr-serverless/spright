@@ -25,9 +25,9 @@
 
 #define PORT 8080
 
-#define BACKLOG 1024
+#define BACKLOG (1U << 16)
 
-#define N_EVENTS_MAX 2048
+#define N_EVENTS_MAX (1U << 17)
 
 #define HTTP_RESPONSE "HTTP/1.1 200 OK\r\n" \
                       "Connection: close\r\n" \

@@ -23,7 +23,7 @@
 
 #define RING_NAME_LENGTH_MAX 16
 
-#define RING_LENGTH_MAX 1024
+#define RING_LENGTH_MAX (1U << 16)
 
 static struct rte_ring **ring = NULL;
 
