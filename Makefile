@@ -18,7 +18,7 @@ LDLIBS += -lbpf -lm -pthread
 
 .PHONY: all shm_mgr gateway nf go_nf clean
 
-all: bin shm_mgr gateway nf
+all: bin shm_mgr gateway nf go_nf
 
 shm_mgr: bin/shm_mgr_rte_ring bin/shm_mgr_sk_msg
 
@@ -50,9 +50,7 @@ bin/nf_sk_msg: src/io_sk_msg.o src/nf.o
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
--include $(patsubst %.o, %.d, $(wildcard src/*.o))
-
-nf: bin/go_nf_rte_ring bin/go_nf_sk_msg
+go_nf: bin/go_nf_rte_ring bin/go_nf_sk_msg
 
 bin/go_nf_rte_ring: src/io_rte_ring.o
 	@ echo "GO BUILD $@"
@@ -61,6 +59,8 @@ bin/go_nf_rte_ring: src/io_rte_ring.o
 bin/go_nf_sk_msg: src/io_sk_msg.o
 	@ echo "GO BUILD $@"
 	@ CGO_CFLAGS_ALLOW=".*" go build -o $@ -tags="sk_msg" go/nf.go
+
+-include $(patsubst %.o, %.d, $(wildcard src/*.o))
 
 %.o: %.c
 	@ echo "CC $@"
