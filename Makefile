@@ -52,13 +52,13 @@ bin/nf_sk_msg: src/io_sk_msg.o src/nf.o
 
 go_nf: bin/go_nf_rte_ring bin/go_nf_sk_msg
 
-bin/go_nf_rte_ring: src/io_rte_ring.o
+bin/go_nf_rte_ring: go/nf.go src/io_rte_ring.o
 	@ echo "GO BUILD $@"
-	@ CGO_CFLAGS_ALLOW=".*" go build -o $@ -tags="rte_ring" go/nf.go
+	@ CGO_CFLAGS_ALLOW=".*" go build -o $@ -tags="rte_ring" $<
 
-bin/go_nf_sk_msg: src/io_sk_msg.o
+bin/go_nf_sk_msg: go/nf.go src/io_sk_msg.o
 	@ echo "GO BUILD $@"
-	@ CGO_CFLAGS_ALLOW=".*" go build -o $@ -tags="sk_msg" go/nf.go
+	@ CGO_CFLAGS_ALLOW=".*" go build -o $@ -tags="sk_msg" $<
 
 -include $(patsubst %.o, %.d, $(wildcard src/*.o))
 
