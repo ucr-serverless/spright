@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2022 University of California, Riverside
 
-package spright
+package main
 
 // #cgo pkg-config: libdpdk
-// #cgo CFLAGS: -I${SRCDIR}/../../../src/include
-// #cgo LDFLAGS: -L${SRCDIR}/../../../src
+// #cgo CFLAGS: -I${SRCDIR}/../src/include
+// #cgo LDFLAGS: -L${SRCDIR}/../src
 // #cgo rte_ring LDFLAGS: -l:io_rte_ring.o
 // #cgo sk_msg LDFLAGS: -l:io_sk_msg.o -lbpf
 //
@@ -118,7 +118,7 @@ import (
 	"unsafe"
 )
 
-func NfInit() error {
+func nfInit() error {
 	argc := C.int(len(os.Args))
 	argv := (*[0xff]*C.char)(C.argv_create(argc))
 	defer C.argv_destroy(unsafe.Pointer(argv))
@@ -136,7 +136,7 @@ func NfInit() error {
 	return nil
 }
 
-func NfExit() error {
+func nfExit() error {
 	ret := C.nf_exit()
 	if (ret < 0) {
 		return errors.New("nf_exit() error")
@@ -145,10 +145,24 @@ func NfExit() error {
 	return nil
 }
 
-func IoRx() error {
+func ioRx() error {
 	return nil
 }
 
-func IoTx() error {
+func ioTx() error {
 	return nil
+}
+
+func main() {
+	var err error
+
+	err = nfInit()
+	if err != nil {
+		panic(err)
+	}
+
+	err = nfExit()
+	if err != nil {
+		panic(err)
+	}
 }
