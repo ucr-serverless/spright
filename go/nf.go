@@ -29,7 +29,7 @@ package main
 // 	char *argv = NULL;
 //
 // 	argv = malloc(argc * sizeof(char *));
-// 	if (argv == NULL) {
+// 	if (unlikely(argv == NULL)) {
 // 		fprintf(stderr, "malloc() error: %s\n", strerror(errno));
 // 		return NULL;
 // 	}
@@ -110,6 +110,26 @@ package main
 //
 // 	return 0;
 // }
+//
+// static int nf_io_rx(struct http_transaction **txn)
+// {
+// 	return io_rx((void **)txn);
+// }
+//
+// static int nf_io_tx(struct http_transaction *txn)
+// {
+// 	uint8_t next_node;
+//
+// 	txn->hop_count++;
+//
+// 	if (likely(txn->hop_count < cfg->route[txn->route_id].length)) {
+// 		next_node = cfg->route[txn->route_id].node[txn->hop_count];
+// 	} else {
+// 		next_node = 0;
+// 	}
+//
+// 	return io_tx(txn, next_node);
+// }
 import "C"
 
 import (
@@ -138,18 +158,49 @@ func nfInit() error {
 
 func nfExit() error {
 	ret := C.nf_exit()
-	if (ret < 0) {
+	if (ret == -1) {
 		return errors.New("nf_exit() error")
 	}
 
 	return nil
 }
 
-func ioRx() error {
+func ioRx() (*C.struct_http_transaction, error) {
+	var txn = (*C.struct_http_transaction)(C.NULL)
+
+	ret := C.nf_io_rx(&txn)
+	if (ret == -1) {
+		return txn, errors.New("nf_io_rx() error")
+	}
+
+	return txn, nil
+}
+
+func ioTx(txn *C.struct_http_transaction) error {
+	ret := C.nf_io_tx(txn)
+	if (ret == -1) {
+		return errors.New("nf_io_tx() error")
+	}
+
 	return nil
 }
 
-func ioTx() error {
+func nf() error {
+	var txn = (*C.struct_http_transaction)(C.NULL)
+	var err error
+
+	for {
+		txn, err = ioRx()
+		if err != nil {
+			return err
+		}
+
+		err = ioTx(txn)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
