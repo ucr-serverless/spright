@@ -212,6 +212,11 @@ func main() {
 		panic(err)
 	}
 
+	err = nf()
+	if err != nil {
+		panic(err)
+	}
+
 	err = nfExit()
 	if err != nil {
 		panic(err)
