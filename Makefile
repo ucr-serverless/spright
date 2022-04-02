@@ -16,7 +16,7 @@ LDLIBS = $(shell pkg-config --libs-only-l libconfig libdpdk)
 CFLAGS += -Isrc/include -MMD -MP -O3 -Wall -Werror
 LDLIBS += -lbpf -lm -pthread
 
-.PHONY: all shm_mgr gateway nf clean
+.PHONY: all shm_mgr gateway nf go_nf clean
 
 all: bin shm_mgr gateway nf
 
@@ -51,6 +51,16 @@ bin/nf_sk_msg: src/io_sk_msg.o src/nf.o
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
 -include $(patsubst %.o, %.d, $(wildcard src/*.o))
+
+nf: bin/go_nf_rte_ring bin/go_nf_sk_msg
+
+bin/go_nf_rte_ring: src/io_rte_ring.o
+	@ echo "GO BUILD $@"
+	@ CGO_CFLAGS_ALLOW=".*" go build -o $@ -tags="rte_ring" go/nf.go
+
+bin/go_nf_sk_msg: src/io_sk_msg.o
+	@ echo "GO BUILD $@"
+	@ CGO_CFLAGS_ALLOW=".*" go build -o $@ -tags="sk_msg" go/nf.go
 
 %.o: %.c
 	@ echo "CC $@"
