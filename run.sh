@@ -59,7 +59,14 @@ nf()
 		exit 1
 	fi
 
-	exec bin/nf_${io} \
+	if [ ${GO_NF} ] && [ ${GO_NF} -eq 1 ]
+	then
+		go="go_"
+	else
+		go=""
+	fi
+
+	exec bin/${go}nf_${io} \
 		-l ${CPU_NF[$((${1} - 1))]} \
 		--file-prefix=spright \
 		--proc-type=secondary \
