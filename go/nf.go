@@ -130,6 +130,26 @@ package main
 //
 // 	return io_tx(txn, next_node);
 // }
+//
+// static struct http_transaction *txn_create(void)
+// {
+// 	struct http_transaction *txn;
+// 	int ret;
+//
+// 	ret = rte_mempool_get(cfg->mempool, (void **)&txn);
+// 	if (unlikely(ret < 0)) {
+// 		fprintf(stderr, "rte_mempool_get() error: %s\n",
+// 		        rte_strerror(-ret));
+// 		return NULL;
+// 	}
+//
+// 	return txn;
+// }
+//
+// static void txn_delete(struct http_transaction *txn)
+// {
+// 	rte_mempool_put(cfg->mempool, txn);
+// }
 import "C"
 
 import (
@@ -183,6 +203,14 @@ func ioTx(txn *C.struct_http_transaction) error {
 	}
 
 	return nil
+}
+
+func txnCreate() *C.struct_http_transaction {
+	return C.txn_create()
+}
+
+func txnDelete(txn *C.struct_http_transaction) {
+	C.txn_delete(txn)
 }
 
 func nf() error {
