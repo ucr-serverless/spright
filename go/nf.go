@@ -116,19 +116,9 @@ package main
 // 	return io_rx((void **)txn);
 // }
 //
-// static int nf_io_tx(struct http_transaction *txn)
+// static int nf_io_tx(struct http_transaction *txn, uint8_t next_nf)
 // {
-// 	uint8_t next_node;
-//
-// 	txn->hop_count++;
-//
-// 	if (likely(txn->hop_count < cfg->route[txn->route_id].length)) {
-// 		next_node = cfg->route[txn->route_id].node[txn->hop_count];
-// 	} else {
-// 		next_node = 0;
-// 	}
-//
-// 	return io_tx(txn, next_node);
+// 	return io_tx(txn, next_nf);
 // }
 //
 // static struct http_transaction *txn_create(void)
@@ -150,13 +140,60 @@ package main
 // {
 // 	rte_mempool_put(cfg->mempool, txn);
 // }
+//
+// static uint8_t route(struct http_transaction *txn)
+// {
+// 	uint8_t next_nf;
+//
+// 	txn->hop_count++;
+//
+// 	if (likely(txn->hop_count < cfg->route[txn->route_id].length)) {
+// 		next_nf = cfg->route[txn->route_id].node[txn->hop_count];
+// 	} else {
+// 		next_nf = 0;
+// 	}
+// 	return next_nf;
+// }
+//
+// static int get_num_workers(uint8_t nf_id)
+// {
+// 	uint8_t num_workers = cfg->nf[nf_id - 1].n_threads;
+// 	return (int) num_workers;
+// }
+// static uint8_t get_route_len(uint8_t route_id)
+// {
+// 	return cfg->route[route_id].length;
+// }
+// static uint8_t get_route_hop(uint8_t route_id, uint8_t hop_idx)
+// {
+// 	return cfg->route[route_id].node[hop_idx];
+// }
 import "C"
 
 import (
 	"errors"
 	"os"
 	"unsafe"
+	"fmt"
+	"strconv"
 )
+
+var (
+	// Route = []uint8{1, 2, 3, 4}
+	Route []uint8
+	RouteID uint8 = 1
+	nfID uint8
+	numWorkers int
+)
+
+type ReceiveChannel struct {
+    Transaction *C.struct_http_transaction
+}
+
+type TransmitChannel struct {
+    Transaction *C.struct_http_transaction
+	NextNF C.uint8_t
+}
 
 func nfInit() error {
 	argc := C.int(len(os.Args))
@@ -173,6 +210,19 @@ func nfInit() error {
 		return errors.New("nf_init() error")
 	}
 
+	nfID_int, _ := strconv.Atoi(os.Args[8])
+	nfID = uint8(nfID_int)
+	
+	numWorkers = int(C.get_num_workers(C.uchar(nfID)))
+	
+	RouteLen := C.get_route_len(C.uchar(RouteID))
+	
+	for idx := 0; idx < int(RouteLen); idx++ {
+		r := C.get_route_hop(C.uchar(RouteID), C.uchar(idx))
+		Route = append(Route, uint8(r))
+	}
+	fmt.Printf("[NF %v] Route %v has %v Hops: %v\n", nfID, RouteID, RouteLen, Route)
+	fmt.Printf("Use http://<IP_Address>:<Port>/%v/ for testing\n", RouteID)
 	return nil
 }
 
@@ -185,24 +235,48 @@ func nfExit() error {
 	return nil
 }
 
-func ioRx() (*C.struct_http_transaction, error) {
-	var txn = (*C.struct_http_transaction)(C.NULL)
+// func ioRx() (*C.struct_http_transaction, error) {
+// 	var txn = (*C.struct_http_transaction)(C.NULL)
 
-	ret := C.nf_io_rx(&txn)
-	if (ret == -1) {
-		return txn, errors.New("nf_io_rx() error")
+// 	ret := C.nf_io_rx(&txn)
+// 	if (ret == -1) {
+// 		return txn, errors.New("nf_io_rx() error")
+// 	}
+
+// 	return txn, nil
+// }
+
+// func ioTx(txn *C.struct_http_transaction, next_nf C.uint8_t) error {
+// 	ret := C.nf_io_tx(txn, next_nf)
+// 	if (ret == -1) {
+// 		return errors.New("nf_io_tx() error")
+// 	}
+
+// 	return nil
+// }
+
+func ioRx(rxChan chan<- ReceiveChannel) {
+	fmt.Println("Receiver Thread started")
+	for {
+		var txn = (*C.struct_http_transaction)(C.NULL)
+
+		ret := C.nf_io_rx(&txn)
+		if (ret == -1) {
+			panic(errors.New("nf_io_rx() error"))
+		}
+	
+		rxChan <- ReceiveChannel{Transaction: txn}
 	}
-
-	return txn, nil
 }
 
-func ioTx(txn *C.struct_http_transaction) error {
-	ret := C.nf_io_tx(txn)
-	if (ret == -1) {
-		return errors.New("nf_io_tx() error")
+func ioTx(txChan <-chan TransmitChannel) {
+	fmt.Println("Transmiter Thread started")
+	for t := range txChan {
+		ret := C.nf_io_tx(t.Transaction, t.NextNF)
+		if (ret == -1) {
+			panic(errors.New("nf_io_tx() error"))
+		}
 	}
-
-	return nil
 }
 
 func txnCreate() *C.struct_http_transaction {
@@ -213,21 +287,77 @@ func txnDelete(txn *C.struct_http_transaction) {
 	C.txn_delete(txn)
 }
 
-func nf() error {
-	var txn = (*C.struct_http_transaction)(C.NULL)
-	var err error
+// func nfWorker(threadID int, txn *C.struct_http_transaction) C.uint8_t {
+// 	// fmt.Printf("Worker Thread %v started\n", threadID)
+// 	// fmt.Printf("Thread %v: Received msg\n", threadID)
+// 	// next_nf := C.route(txn)
+// 	var next_nf C.uint8_t
+// 	txn.hop_count = txn.hop_count + C.uchar(1) 
+// 	if txn.hop_count < C.uchar(len(Route)) {
+// 		next_nf = C.uchar(Route[txn.hop_count])
+// 	} else {
+// 		next_nf = 0
+// 	}
+// 	// fmt.Printf("HopCount %v, route len: %v\n", txn.hop_count, uint8(len(Route)))
+// 	// fmt.Printf("Next NF is %v\n", next_nf)
+// 	// time.Sleep(1 * time.Second)
+// 	return next_nf
+// }
 
-	for {
-		txn, err = ioRx()
-		if err != nil {
-			return err
-		}
+func nfWorker(threadID int, rxChan <-chan ReceiveChannel, txChan chan<- TransmitChannel) {
+	fmt.Printf("Worker Thread %v started\n", threadID)
 
-		err = ioTx(txn)
-		if err != nil {
-			return err
+	for rx := range rxChan {
+		// fmt.Printf("Thread %v: Received msg\n", threadID)
+		// time.Sleep(1 * time.Second)
+
+		txn := rx.Transaction
+		// next_nf := C.route(txn)
+		var next_nf C.uint8_t
+		txn.hop_count = txn.hop_count + C.uchar(1) 
+		if txn.hop_count < C.uchar(len(Route)) {
+			next_nf = C.uchar(Route[txn.hop_count])
+		} else {
+			next_nf = 0
 		}
+		// fmt.Printf("HopCount %v, route len: %v\n", txn.hop_count, uint8(len(Route)))
+		// fmt.Printf("Next NF is %v\n", next_nf)
+		txChan <- TransmitChannel{Transaction: txn, NextNF: next_nf}
 	}
+}
+
+func nf() error {
+	// var txn = (*C.struct_http_transaction)(C.NULL)
+	// var err error
+
+	RxChan := make(chan ReceiveChannel)
+	TxChan := make(chan TransmitChannel)
+
+	// numWorkers := 2
+	fmt.Printf("NF %v is creating %v worker threads...\n", nfID, numWorkers)
+	for idx := 1; idx <= numWorkers; idx++ {
+		go nfWorker(idx, RxChan, TxChan)
+	}
+	
+	go ioRx(RxChan)
+	
+	ioTx(TxChan)
+
+	close(RxChan)
+	close(TxChan)
+	// for {
+	// 	txn, err = ioRx()
+	// 	if err != nil {
+	// 		return err
+	// 	}
+		
+	// 	next_nf := nfWorker(numWorkers, txn)
+
+	// 	err = ioTx(txn, next_nf)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
 
 	return nil
 }
