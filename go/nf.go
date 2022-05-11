@@ -179,7 +179,6 @@ import (
 )
 
 var (
-	// Route = []uint8{1, 2, 3, 4}
 	Route []uint8
 	RouteID uint8 = 1
 	nfID uint8
@@ -235,26 +234,6 @@ func nfExit() error {
 	return nil
 }
 
-// func ioRx() (*C.struct_http_transaction, error) {
-// 	var txn = (*C.struct_http_transaction)(C.NULL)
-
-// 	ret := C.nf_io_rx(&txn)
-// 	if (ret == -1) {
-// 		return txn, errors.New("nf_io_rx() error")
-// 	}
-
-// 	return txn, nil
-// }
-
-// func ioTx(txn *C.struct_http_transaction, next_nf C.uint8_t) error {
-// 	ret := C.nf_io_tx(txn, next_nf)
-// 	if (ret == -1) {
-// 		return errors.New("nf_io_tx() error")
-// 	}
-
-// 	return nil
-// }
-
 func ioRx(rxChan chan<- ReceiveChannel) {
 	fmt.Println("Receiver Thread started")
 	for {
@@ -287,23 +266,6 @@ func txnDelete(txn *C.struct_http_transaction) {
 	C.txn_delete(txn)
 }
 
-// func nfWorker(threadID int, txn *C.struct_http_transaction) C.uint8_t {
-// 	// fmt.Printf("Worker Thread %v started\n", threadID)
-// 	// fmt.Printf("Thread %v: Received msg\n", threadID)
-// 	// next_nf := C.route(txn)
-// 	var next_nf C.uint8_t
-// 	txn.hop_count = txn.hop_count + C.uchar(1) 
-// 	if txn.hop_count < C.uchar(len(Route)) {
-// 		next_nf = C.uchar(Route[txn.hop_count])
-// 	} else {
-// 		next_nf = 0
-// 	}
-// 	// fmt.Printf("HopCount %v, route len: %v\n", txn.hop_count, uint8(len(Route)))
-// 	// fmt.Printf("Next NF is %v\n", next_nf)
-// 	// time.Sleep(1 * time.Second)
-// 	return next_nf
-// }
-
 func nfWorker(threadID int, rxChan <-chan ReceiveChannel, txChan chan<- TransmitChannel) {
 	fmt.Printf("Worker Thread %v started\n", threadID)
 
@@ -312,7 +274,6 @@ func nfWorker(threadID int, rxChan <-chan ReceiveChannel, txChan chan<- Transmit
 		// time.Sleep(1 * time.Second)
 
 		txn := rx.Transaction
-		// next_nf := C.route(txn)
 		var next_nf C.uint8_t
 		txn.hop_count = txn.hop_count + C.uchar(1) 
 		if txn.hop_count < C.uchar(len(Route)) {
@@ -320,20 +281,15 @@ func nfWorker(threadID int, rxChan <-chan ReceiveChannel, txChan chan<- Transmit
 		} else {
 			next_nf = 0
 		}
-		// fmt.Printf("HopCount %v, route len: %v\n", txn.hop_count, uint8(len(Route)))
-		// fmt.Printf("Next NF is %v\n", next_nf)
+		// fmt.Printf("Next NF: %v, Current Hop: %v\n", txn.hop_count, next_nf)
 		txChan <- TransmitChannel{Transaction: txn, NextNF: next_nf}
 	}
 }
 
 func nf() error {
-	// var txn = (*C.struct_http_transaction)(C.NULL)
-	// var err error
-
 	RxChan := make(chan ReceiveChannel)
 	TxChan := make(chan TransmitChannel)
 
-	// numWorkers := 2
 	fmt.Printf("NF %v is creating %v worker threads...\n", nfID, numWorkers)
 	for idx := 1; idx <= numWorkers; idx++ {
 		go nfWorker(idx, RxChan, TxChan)
@@ -345,19 +301,6 @@ func nf() error {
 
 	close(RxChan)
 	close(TxChan)
-	// for {
-	// 	txn, err = ioRx()
-	// 	if err != nil {
-	// 		return err
-	// 	}
-		
-	// 	next_nf := nfWorker(numWorkers, txn)
-
-	// 	err = ioTx(txn, next_nf)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
 
 	return nil
 }
