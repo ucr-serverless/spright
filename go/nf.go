@@ -172,6 +172,10 @@ package main
 // {
 // 	return cfg->nf[nf_id - 1].name;;
 // }
+// static uint8_t get_n_nfs()
+// {
+// 	return cfg->n_nfs;
+// }
 import "C"
 
 import (
@@ -191,6 +195,7 @@ var (
 	nfID uint8
 	numWorkers int
 	nfName string
+	nfNameToIdMap map[string]uint8
 )
 
 var log *logrus.Logger
@@ -244,8 +249,16 @@ func nfInit() error {
 		r := C.get_route_hop(C.uchar(RouteID), C.uchar(idx))
 		Route = append(Route, uint8(r))
 	}
+	
+	// Initialize the NF Name to NF ID map
+	numNF := C.get_n_nfs()
+	nfNameToIdMap = make(map[string]uint8)
+	for idx := 1; idx <= int(numNF); idx++ {
+		// C.Gostring() seems to copy the entire length of the buffer
+		nfNameToIdMap[C.GoString(C.get_nf_name(C.uchar(uint8(idx))))] = uint8(idx)
+	}
+	fmt.Printf("nfNameToIdMap: %v\n", nfNameToIdMap)
 
-	// C.Gostring() seems to copy the entire length of the buffer
 	nfName = C.GoString(C.get_nf_name(C.uchar(nfID)))
 	log.Infof("[%v (ID: %v)] Route %v has %v Hops: %v", nfName, nfID, RouteID, RouteLen, Route)
 	log.Infof("Use http://<IP_Address>:<Port>/%v/ for testing", RouteID)
@@ -338,11 +351,28 @@ func nfDispatcher(txn *C.struct_http_transaction) C.uint8_t {
 
 func dummyHandler(txn *C.struct_http_transaction) C.uint8_t {
 	var next_nf C.uint8_t
+	// STATIC ROUTING EXAMPLE: The next NF is pre-defined in the config file
 	if txn.hop_count < C.uchar(len(Route)) {
 		next_nf = C.uchar(Route[txn.hop_count])
 	} else {
 		next_nf = 0
 	}
+
+	/* DYNAMIC ROUTING EXAMPLE: The next NF to be called is decided by the current handler
+	if nfName == "ProductCatalogService" {
+		next_nf_name := "RecommendationService"
+		next_nf = C.uchar(nfNameToIdMap[next_nf_name])
+	} else if nfName == "RecommendationService" {
+		next_nf_name := "CheckoutService"
+		next_nf = C.uchar(nfNameToIdMap[next_nf_name])
+	} else if nfName == "CheckoutService" {
+		next_nf_name := "CurrencyService"
+		next_nf = C.uchar(nfNameToIdMap[next_nf_name])
+	} else if nfName == "CurrencyService" {
+		next_nf = 0;
+	} else {
+		log.Error("Unknown NF!")
+	} */
 
 	// Write the name of remote handler to called in the next function
 	// !! The two copies below leads to a 1K reduction in RPS (39600 to 38700, 2.5% loss) !!
