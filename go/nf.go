@@ -168,6 +168,10 @@ package main
 // {
 // 	return cfg->route[route_id].node[hop_idx];
 // }
+// static char* get_nf_name(uint8_t nf_id)
+// {
+// 	return cfg->nf[nf_id - 1].name;;
+// }
 import "C"
 
 import (
@@ -176,6 +180,9 @@ import (
 	"unsafe"
 	"fmt"
 	"strconv"
+	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -183,7 +190,10 @@ var (
 	RouteID uint8 = 1
 	nfID uint8
 	numWorkers int
+	nfName string
 )
+
+var log *logrus.Logger
 
 type ReceiveChannel struct {
     Transaction *C.struct_http_transaction
@@ -192,6 +202,20 @@ type ReceiveChannel struct {
 type TransmitChannel struct {
     Transaction *C.struct_http_transaction
 	NextNF C.uint8_t
+}
+
+func init() {
+	log = logrus.New()
+	log.Level = logrus.DebugLevel
+	log.Formatter = &logrus.JSONFormatter{
+		FieldMap: logrus.FieldMap{
+			logrus.FieldKeyTime:  "timestamp",
+			logrus.FieldKeyLevel: "severity",
+			logrus.FieldKeyMsg:   "message",
+		},
+		TimestampFormat: time.RFC3339Nano,
+	}
+	log.Out = os.Stdout
 }
 
 func nfInit() error {
@@ -220,8 +244,11 @@ func nfInit() error {
 		r := C.get_route_hop(C.uchar(RouteID), C.uchar(idx))
 		Route = append(Route, uint8(r))
 	}
-	fmt.Printf("[NF %v] Route %v has %v Hops: %v\n", nfID, RouteID, RouteLen, Route)
-	fmt.Printf("Use http://<IP_Address>:<Port>/%v/ for testing\n", RouteID)
+
+	// C.Gostring() seems to copy the entire length of the buffer
+	nfName = C.GoString(C.get_nf_name(C.uchar(nfID)))
+	log.Infof("[%v (ID: %v)] Route %v has %v Hops: %v", nfName, nfID, RouteID, RouteLen, Route)
+	log.Infof("Use http://<IP_Address>:<Port>/%v/ for testing", RouteID)
 	return nil
 }
 
@@ -235,7 +262,7 @@ func nfExit() error {
 }
 
 func ioRx(rxChan chan<- ReceiveChannel) {
-	fmt.Println("Receiver Thread started")
+	log.Infof("Receiver Thread started")
 	for {
 		var txn = (*C.struct_http_transaction)(C.NULL)
 
@@ -249,7 +276,7 @@ func ioRx(rxChan chan<- ReceiveChannel) {
 }
 
 func ioTx(txChan <-chan TransmitChannel) {
-	fmt.Println("Transmiter Thread started")
+	log.Infof("Transmiter Thread started")
 	for t := range txChan {
 		ret := C.nf_io_tx(t.Transaction, t.NextNF)
 		if (ret == -1) {
@@ -275,22 +302,64 @@ func nfWorker(threadID int, rxChan <-chan ReceiveChannel, txChan chan<- Transmit
 
 		txn := rx.Transaction
 		var next_nf C.uint8_t
-		txn.hop_count = txn.hop_count + C.uchar(1) 
-		if txn.hop_count < C.uchar(len(Route)) {
-			next_nf = C.uchar(Route[txn.hop_count])
-		} else {
-			next_nf = 0
-		}
-		// fmt.Printf("Next NF: %v, Current Hop: %v\n", txn.hop_count, next_nf)
+		txn.hop_count = txn.hop_count + C.uchar(1)
+
+		// TODO: run dispatcher to select the handler
+		next_nf = nfDispatcher(txn)
+
+		// fmt.Printf("Next NF: %v, Current Hop: %v\n", next_nf, txn.hop_count)
 		txChan <- TransmitChannel{Transaction: txn, NextNF: next_nf}
 	}
+}
+
+func nfDispatcher(txn *C.struct_http_transaction) C.uint8_t {
+	var next_nf C.uint8_t
+
+	var rpcHandler string
+	if nfID != uint8(1) { // NF 1 is used as frontend
+		rpcHandler = C.GoString(&txn.rpc_handler[0])
+	} else if nfID == uint8(1) {
+		rpcHandler = "frontend"
+	} else {
+		log.Error("Unknown NF!")
+	}
+	// fmt.Printf("Handler %v() in %v gets called\n", rpcHandler, nfName)
+	
+	// TODO: Ad service only calls GetAds() handler
+	if rpcHandler == "frontend" {
+		next_nf = dummyHandler(txn)
+	} else {
+		next_nf = dummyHandler(txn)
+	}
+
+	// Ad service returns a response to the frontend service	
+	return next_nf
+}
+
+func dummyHandler(txn *C.struct_http_transaction) C.uint8_t {
+	var next_nf C.uint8_t
+	if txn.hop_count < C.uchar(len(Route)) {
+		next_nf = C.uchar(Route[txn.hop_count])
+	} else {
+		next_nf = 0
+	}
+
+	// Write the name of remote handler to called in the next function
+	// !! The two copies below leads to a 1K reduction in RPS (39600 to 38700, 2.5% loss) !!
+	next_rpcHandler := "dummyHandler-" + nfName
+	cs := C.CString(next_rpcHandler) // There is one copy
+	defer C.free(unsafe.Pointer(cs))
+	C.strcpy(&txn.rpc_handler[0], cs) // There is another one copy
+	// fmt.Printf("%v will call %v() in %v\n", nfName, next_rpcHandler, next_nf)
+
+	return next_nf
 }
 
 func nf() error {
 	RxChan := make(chan ReceiveChannel)
 	TxChan := make(chan TransmitChannel)
 
-	fmt.Printf("NF %v is creating %v worker threads...\n", nfID, numWorkers)
+	log.Infof("%v (ID: %v) is creating %v worker threads...", nfName, nfID, numWorkers)
 	for idx := 1; idx <= numWorkers; idx++ {
 		go nfWorker(idx, RxChan, TxChan)
 	}
