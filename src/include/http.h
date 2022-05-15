@@ -22,6 +22,7 @@ struct http_transaction {
 	uint32_t length_response;
 
 	char rpc_handler[64];
+	char caller_nf[64];
 	char request[HTTP_MSG_LENGTH_MAX];
 	char response[HTTP_MSG_LENGTH_MAX];
 };
