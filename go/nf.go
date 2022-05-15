@@ -317,7 +317,7 @@ func nfWorker(threadID int, rxChan <-chan ReceiveChannel, txChan chan<- Transmit
 		var next_nf C.uint8_t
 		txn.hop_count = txn.hop_count + C.uchar(1)
 
-		// TODO: run dispatcher to select the handler
+		// run dispatcher to select the handler
 		next_nf = nfDispatcher(txn)
 
 		// fmt.Printf("Next NF: %v, Current Hop: %v\n", next_nf, txn.hop_count)
@@ -329,23 +329,26 @@ func nfDispatcher(txn *C.struct_http_transaction) C.uint8_t {
 	var next_nf C.uint8_t
 
 	var rpcHandler string
-	if nfID != uint8(1) { // NF 1 is used as frontend
+	if nfID != uint8(1) {
 		rpcHandler = C.GoString(&txn.rpc_handler[0])
-	} else if nfID == uint8(1) {
+		// fmt.Printf("Handler %v() in %v gets called by %v\n", rpcHandler, nfName, C.GoString(&txn.caller_nf[0]))
+	} else if nfID == uint8(1) {  // NF 1 is used as frontend
 		rpcHandler = "frontend"
+		// fmt.Printf("Handler %v() in %v gets called by SPRIGHT GW\n", rpcHandler, nfName)
 	} else {
 		log.Error("Unknown NF!")
 	}
-	// fmt.Printf("Handler %v() in %v gets called\n", rpcHandler, nfName)
-	
-	// TODO: Ad service only calls GetAds() handler
+
 	if rpcHandler == "frontend" {
 		next_nf = dummyHandler(txn)
 	} else {
 		next_nf = dummyHandler(txn)
 	}
 
-	// Ad service returns a response to the frontend service	
+	callerNF := C.CString(nfName) // There is one copy
+	defer C.free(unsafe.Pointer(callerNF))
+	C.strcpy(&txn.caller_nf[0], callerNF) // There is another one copy
+
 	return next_nf
 }
 
