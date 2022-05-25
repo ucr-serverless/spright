@@ -4,7 +4,7 @@
 ```bash
 sudo apt install -y flex bison build-essential dwarves libssl-dev libelf-dev \
                     libnuma-dev pkg-config python3-pip python3-pyelftools \
-                    libconfig-dev golang
+                    libconfig-dev golang clang gcc-multilib
 ```
 
 ## Install dependencies (pip)
@@ -66,4 +66,16 @@ sudo sysctl -w vm.nr_hugpages=16384
 ## Build SPRIGHT
 ```bash
 make
+```
+
+## Compile the eBPF code into an object file
+```bash
+cd ebpf/
+clang -g -O2 -c -target bpf -o sk_msg_kern.o sk_msg_kern.c
+
+# Copy sk_msg_kern.o to obj/
+cp sk_msg_kern.o ../obj/
+
+# Debugging purpose: output bpf_printk()
+sudo cat  /sys/kernel/debug/tracing/trace_pipe
 ```
