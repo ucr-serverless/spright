@@ -4,7 +4,7 @@
 package main
 
 import (
-	"github.com/ShixiongQi/SPRIGHT/pkg/gateway"
+	"github.com/ShixiongQi/spright/pkg/gateway"
 
 	"onlineboutique/internal/common"
 )

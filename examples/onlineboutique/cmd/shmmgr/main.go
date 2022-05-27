@@ -4,7 +4,7 @@
 package main
 
 import (
-	"github.com/ShixiongQi/SPRIGHT/pkg/shmmgr"
+	"github.com/ShixiongQi/spright/pkg/shmmgr"
 
 	"onlineboutique/internal/common"
 )

@@ -4,7 +4,7 @@
 package main
 
 import (
-	"github.com/ShixiongQi/SPRIGHT/pkg/node"
+	"github.com/ShixiongQi/spright/pkg/node"
 
 	"onlineboutique/internal/common"
 )
