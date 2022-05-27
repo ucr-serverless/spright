@@ -12,33 +12,13 @@
 
 #define MEMZONE_NAME "SPRIGHT_MEMZONE"
 
-int node_id;
+uint8_t node_id = UINT8_MAX;
 
 struct {
-	struct rte_mempool *mempool;
+	struct rte_mempool *mempool_http;
+	struct rte_mempool *mempool_app;
 
-	char name[64];
-
-	uint8_t n_nfs;
-	struct {
-		char name[64];
-
-		uint8_t n_threads;
-
-		struct {
-			uint8_t memory_mb;
-			uint32_t sleep_ns;
-			uint32_t compute;
-		} param;
-	} nf[UINT8_MAX + 1];
-
-	uint8_t n_routes;
-	struct {
-		char name[64];
-
-		uint8_t length;
-		uint8_t node[UINT8_MAX + 1];
-	} route[UINT8_MAX + 1];
+	uint8_t n_nodes;
 } *cfg;
 
 #endif /* SPRIGHT_H */
