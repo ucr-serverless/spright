@@ -60,7 +60,7 @@ cd ../..
 
 ## Set up hugepages
 ```bash
-sudo sysctl -w vm.nr_hugpages=16384
+sudo sysctl -w vm.nr_hugepages=16384
 ```
 
 ## Build SPRIGHT
