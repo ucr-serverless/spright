@@ -9,7 +9,7 @@
 #include <stdint.h>
 
 int shmmgr_init(int argc, char **argv, uint8_t n_nodes,
-                unsigned size_app_transaction);
+                unsigned app_transaction_size);
 
 int shmmgr_exit(void);
 
