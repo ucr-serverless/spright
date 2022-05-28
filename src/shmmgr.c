@@ -27,7 +27,7 @@
 static const struct rte_memzone *memzone = NULL;
 
 int shmmgr_init(int argc, char **argv, uint8_t n_nodes,
-                unsigned size_app_transaction)
+                unsigned app_transaction_size)
 {
 	int ret;
 
@@ -56,7 +56,7 @@ int shmmgr_init(int argc, char **argv, uint8_t n_nodes,
 	cfg->mempool = rte_mempool_create(MEMPOOL_NAME_HTTP, N_MEMPOOL_ELEMENTS,
 	                                  sizeof(uint8_t) +
 	                                  sizeof(struct http_transaction) +
-	                                  size_app_transaction, 0, 0, NULL,
+	                                  app_transaction_size, 0, 0, NULL,
 	                                  NULL, NULL, NULL, rte_socket_id(), 0);
 	if (unlikely(cfg->mempool == NULL)) {
 		fprintf(stderr, "rte_mempool_create() error: %s\n",
