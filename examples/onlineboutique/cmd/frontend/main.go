@@ -10,4 +10,17 @@ import (
 )
 
 func main() {
+	var err error
+
+	err = node.Init(common.NodeIDFrontend)
+	if err != nil {
+		panic(err)
+	}
+
+	select{}
+
+	err = node.Exit()
+	if err != nil {
+		panic(err)
+	}
 }
