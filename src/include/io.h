@@ -14,6 +14,6 @@ int io_exit(void);
 
 int io_rx(void **obj);
 
-int io_tx(void *obj, uint8_t dst_node_id);
+int io_tx(void *obj, uint8_t node_id_dst);
 
 #endif /* IO_H */

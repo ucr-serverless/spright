@@ -14,8 +14,6 @@
 #include <unistd.h>
 
 #include <rte_branch_prediction.h>
-#include <rte_errno.h>
-#include <rte_mempool.h>
 
 #include <bpf/bpf.h>
 #include <bpf/libbpf.h>
@@ -136,14 +134,13 @@ static int rpc_server(int fd_sk_msg_map)
 		return -1;
 	}
 
-	/* TODO: Correct backlog? */
-	ret = listen(sockfd_l, 10);
+	ret = listen(sockfd_l, cfg->n_nodes - 1);
 	if (unlikely(ret == -1)) {
 		fprintf(stderr, "listen() error: %s\n", strerror(errno));
 		return -1;
 	}
 
-	for (i = 0; i < cfg->n_nfs; i++) {
+	for (i = 0; i < cfg->n_nodes - 1; i++) {
 		sockfd_c = accept(sockfd_l, NULL, NULL);
 		if (unlikely(sockfd_c == -1)) {
 			fprintf(stderr, "accept() error: %s\n",
@@ -410,6 +407,7 @@ int io_exit(void)
 int io_rx(void **obj)
 {
 	ssize_t bytes_received;
+	uint8_t node_id_src;
 	struct metadata m;
 
 	bytes_received = recv(sockfd_sk_msg, &m, sizeof(struct metadata), 0);
@@ -420,15 +418,23 @@ int io_rx(void **obj)
 
 	*obj = m.obj;
 
-	return 0;
+	node_id_src = *(uint8_t *)*obj;
+
+	*obj += sizeof(uint8_t);
+
+	return node_id_src;
 }
 
-int io_tx(void *obj, uint8_t next_node)
+int io_tx(void *obj, uint8_t node_id_dst)
 {
 	ssize_t bytes_sent;
 	struct metadata m;
 
-	m.node_id = next_node;
+	obj -= sizeof(uint8_t);
+
+	*(uint8_t *)obj = node_id;
+
+	m.node_id = node_id_dst;
 	m.obj = obj;
 
 	bytes_sent = send(sockfd_sk_msg, &m, sizeof(struct metadata), 0);

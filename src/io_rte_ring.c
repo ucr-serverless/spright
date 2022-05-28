@@ -33,7 +33,7 @@ static int init_primary(void)
 	uint8_t i;
 	uint8_t j;
 
-	for (i = 0; i < cfg->n_nfs + 1; i++) {
+	for (i = 0; i < cfg->n_nodes; i++) {
 		snprintf(ring_name, RING_NAME_LENGTH_MAX, RING_NAME_FORMAT, i);
 
 		/* TODO: Change "flags" argument */
@@ -60,7 +60,7 @@ static int init_secondary(void)
 	char ring_name[RING_NAME_LENGTH_MAX];
 	uint8_t i;
 
-	for (i = 0; i < cfg->n_nfs + 1; i++) {
+	for (i = 0; i < cfg->n_nodes; i++) {
 		snprintf(ring_name, RING_NAME_LENGTH_MAX, RING_NAME_FORMAT, i);
 
 		ring[i] = rte_ring_lookup(ring_name);
@@ -78,7 +78,7 @@ static int exit_primary(void)
 {
 	uint8_t i;
 
-	for (i = 0; i < cfg->n_nfs + 1; i++) {
+	for (i = 0; i < cfg->n_nodes; i++) {
 		rte_ring_free(ring[i]);
 	}
 
@@ -94,7 +94,7 @@ int io_init(void)
 {
 	int ret;
 
-	ring = malloc((cfg->n_nfs + 1) * sizeof(struct rte_ring *));
+	ring = malloc((cfg->n_nodes) * sizeof(struct rte_ring *));
 	if (unlikely(ring == NULL)) {
 		fprintf(stderr, "malloc() error: %s\n", strerror(errno));
 		goto error_0;
@@ -155,14 +155,24 @@ error_0:
 
 int io_rx(void **obj)
 {
+	uint8_t node_id_src;
+
 	while (rte_ring_dequeue(ring[node_id], obj) != 0);
 
-	return 0;
+	node_id_src = *(uint8_t *)*obj;
+
+	*obj += sizeof(uint8_t);
+
+	return node_id_src;
 }
 
-int io_tx(void *obj, uint8_t next_node)
+int io_tx(void *obj, uint8_t node_id_dst)
 {
-	while (rte_ring_enqueue(ring[next_node], obj) != 0);
+	obj -= sizeof(uint8_t);
+
+	*(uint8_t *)obj = node_id;
+
+	while (rte_ring_enqueue(ring[node_id_dst], obj) != 0);
 
 	return 0;
 }

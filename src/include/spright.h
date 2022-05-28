@@ -12,12 +12,10 @@
 
 #define MEMZONE_NAME "SPRIGHT_MEMZONE"
 
-uint8_t node_id = UINT8_MAX;
+uint8_t node_id;
 
 struct {
-	struct rte_mempool *mempool_http;
-	struct rte_mempool *mempool_app;
-
+	struct rte_mempool *mempool;
 	uint8_t n_nodes;
 } *cfg;
 
