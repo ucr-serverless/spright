@@ -55,7 +55,7 @@ func Rx() (uint8, *byte, error) {
 		return 255, nil, errors.New("io_rx() error")
 	}
 
-	txn = (*byte)(txn)
+	txn = (*byte)(_txn)
 
 	return uint8(ret), txn, nil
 }
