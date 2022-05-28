@@ -26,6 +26,11 @@ package io
 // {
 //	return txn + 1;
 // }
+//
+// void *set_app_transaction(struct http_transaction *txn)
+// {
+//	return (struct http_transaction *)txn - 1;
+// }
 import "C"
 
 import (
@@ -33,9 +38,9 @@ import (
 	"unsafe"
 )
 
-type httpTransaction struct {
-	lengthRequest uint32
-	lengthResponse uint32
+type HttpTransaction struct {
+	LengthRequest uint32
+	LengthResponse uint32
 
 	Request *string
 	Response *string
@@ -68,15 +73,15 @@ func Tx(txn *byte, nodeIDDst uint8) error {
 	return nil
 }
 
-func GetHttpTransaction(txn *byte, txnHTTP *httpTransaction) {
+func GetHttpTransaction(txn *byte, txnHttp *HttpTransaction) {
 	var _txn *C.struct_http_transaction
 
 	_txn = (*C.struct_http_transaction)(unsafe.Pointer(txn))
 
-	txnHTTP.lengthRequest = uint32(_txn.length_request)
-	txnHTTP.lengthResponse = uint32(_txn.length_response)
-	txnHTTP.Request = (*string)(unsafe.Pointer(&_txn.request))
-	txnHTTP.Response = (*string)(unsafe.Pointer(&_txn.response))
+	txnHttp.LengthRequest = uint32(_txn.length_request)
+	txnHttp.LengthResponse = uint32(_txn.length_response)
+	txnHttp.Request = (*string)(unsafe.Pointer(&_txn.request))
+	txnHttp.Response = (*string)(unsafe.Pointer(&_txn.response))
 }
 
 func GetAppTransaction(txn *byte) *byte {
@@ -85,4 +90,12 @@ func GetAppTransaction(txn *byte) *byte {
 	_txn = (*C.struct_http_transaction)(unsafe.Pointer(txn));
 
 	return (*byte)(C.get_app_transaction(_txn))
+}
+
+func SetAppTransaction(txn *byte) *byte {
+	var _txn *C.struct_http_transaction
+
+	_txn = (*C.struct_http_transaction)(unsafe.Pointer(txn));
+
+	return (*byte)(C.set_app_transaction(_txn))
 }
