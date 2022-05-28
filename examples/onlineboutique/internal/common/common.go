@@ -4,6 +4,7 @@
 package common
 
 type Transaction struct {
+	ID uint32
 }
 
 const (
