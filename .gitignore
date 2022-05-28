@@ -1,0 +1,3 @@
+lib
+src/*.o
+src/*.d
