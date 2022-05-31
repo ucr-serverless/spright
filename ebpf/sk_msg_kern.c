@@ -57,7 +57,7 @@ int bpf_skmsg_tx(struct sk_msg_md *msg)
         return SK_DROP;
     }
     int next_fn_id = *((int*)data);
-    // bpf_printk("[sk_msg] redirect to socket at array position %d", key);
+    // bpf_printk("[sk_msg] redirect to socket at array position %d", next_fn_id);
 
 	struct datarec *rec = bpf_map_lookup_elem(&skmsg_stats_map, &next_fn_id);
 	if (!rec)
@@ -65,15 +65,17 @@ int bpf_skmsg_tx(struct sk_msg_md *msg)
 
     rec->rx_packets++;
 
-    return bpf_msg_redirect_map(msg, &sock_map, next_fn_id, BPF_F_INGRESS);
-    // if(ret == SK_PASS) {
-    //     bpf_printk("[sk_msg] redirect success");
-    // }else if(ret == SK_DROP) {
-    //     bpf_printk("[sk_msg] redirect error");
-    // }else{
-    //     bpf_printk("[sk_msg] unknown redirect result");
-    // }
-    // return ret;
+    long ret = bpf_msg_redirect_map(msg, &sock_map, next_fn_id, BPF_F_INGRESS);
+
+    if (ret == SK_PASS) {
+        // bpf_printk("[sk_msg] redirect success");
+        bpf_printk("[sk_msg] redirect to socket at array position %d", next_fn_id);
+    } else if (ret == SK_DROP) {
+        bpf_printk("[sk_msg] redirect error");
+    } else {
+        bpf_printk("[sk_msg] unknown redirect result");
+    }
+    return ret;
 }
 
 char _license[] SEC("license") = "GPL";

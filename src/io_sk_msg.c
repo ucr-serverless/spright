@@ -327,6 +327,11 @@ static int init_nf(void)
 		return -1;
 	}
 
+struct timeval tv;
+tv.tv_sec = 0;
+tv.tv_usec = 0;
+setsockopt(sockfd_sk_msg, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(PORT_SK_MSG);
 	addr.sin_addr.s_addr = inet_addr("127.0.0.1");
@@ -412,11 +417,18 @@ int io_rx(void **obj)
 	ssize_t bytes_received;
 	struct metadata m;
 
+while(1){
 	bytes_received = recv(sockfd_sk_msg, &m, sizeof(struct metadata), 0);
-	if (unlikely(bytes_received == -1)) {
+	if (unlikely(bytes_received == -1) && errno != EAGAIN) {
 		fprintf(stderr, "recv() error: %s\n", strerror(errno));
 		return -1;
+	} else if (errno == EAGAIN) {
+		fprintf(stderr, "EAGAIN recv() error: %s\n", strerror(errno));
+		continue;
+	} else {
+		break;
 	}
+}
 
 	*obj = m.obj;
 

@@ -4,8 +4,8 @@
 package main
 
 // #cgo pkg-config: libdpdk
-// #cgo CFLAGS: -I${SRCDIR}/../src/include
-// #cgo LDFLAGS: -L${SRCDIR}/../src
+// #cgo CFLAGS: -I${SRCDIR}/../../src/include
+// #cgo LDFLAGS: -L${SRCDIR}/../../src
 // #cgo rte_ring LDFLAGS: -l:io_rte_ring.o
 // #cgo sk_msg LDFLAGS: -l:io_sk_msg.o -lbpf
 //
@@ -336,63 +336,78 @@ func nfWorker(threadID int, rxChan <-chan ReceiveChannel, txChan chan<- Transmit
 	}
 }
 
+// txHandler sets up the current NF as the caller and
+// writes the name of remote handler to called in the next function
+func txHandler(next_rpcHandler string, txn *C.struct_http_transaction) {
+	callerNF := C.CString(nfName) // There is one copy
+	defer C.free(unsafe.Pointer(callerNF))
+	C.strcpy(&txn.caller_nf[0], callerNF) // There is another one copy
+
+	cs := C.CString(next_rpcHandler) // There is one copy
+	defer C.free(unsafe.Pointer(cs))
+	C.strcpy(&txn.rpc_handler[0], cs) // There is another one copy
+}
+
 func nfDispatcher(txn *C.struct_http_transaction) C.uint8_t {
 	var next_nf C.uint8_t
+	var next_rpcHandler string
 
 	rpcHandler := C.GoString(&txn.rpc_handler[0])
 	// fmt.Printf("Handler %v() in %v gets called\n", rpcHandler, nfName)
 
 	if rpcHandler == "GetSupportedCurrenciesHandler" {
-		next_nf = GetSupportedCurrenciesHandler(txn)
+		next_nf, next_rpcHandler = GetSupportedCurrenciesHandler(txn)
 	} else if rpcHandler == "ConvertHandler" {
-		next_nf = ConvertHandler(txn)
+		next_nf, next_rpcHandler = ConvertHandler(txn)
 	} else {
-		log.Error("%v is not supported by %v!", rpcHandler, nfName)
+		log.Errorf("%v is not supported by %v!", rpcHandler, nfName)
 	}
 
-	callerNF := C.CString(nfName) // There is one copy
-	defer C.free(unsafe.Pointer(callerNF))
-	C.strcpy(&txn.caller_nf[0], callerNF) // There is another one copy
+	txHandler(next_rpcHandler, txn)
+	fmt.Printf("%v will call %v() in %v\n", nfName, next_rpcHandler, next_nf)
 
 	return next_nf
 }
 
-func GetSupportedCurrenciesHandler(txn *C.struct_http_transaction) C.uint8_t {
+func GetSupportedCurrenciesHandler(txn *C.struct_http_transaction) (C.uint8_t, string) {
 	var next_nf C.uint8_t
+	var next_rpcHandler string
 
-	next_nf = C.uchar(nfNameToIdMap[C.GoString(&txn.caller_nf[0])]) // AdService returns a response to the frontend
+	if val, ok := nfNameToIdMap[C.GoString(&txn.caller_nf[0])]; ok {
+		next_nf = C.uchar(val)
+		next_rpcHandler = "GetSupportedCurrenciesResponseHandler"
+	} else {
+		// TODO: add error codes support in the txn structure
+		log.Error("Unknown service! Report error to frontend")
+		next_nf = 0
+		next_rpcHandler = "ErrorResponseHandler"
+	}
 
 	/*
 	* Call GetSupportedCurrencies()
 	*/
 
-	// Write the name of remote handler to called in the next function
-	next_rpcHandler := "GetSupportedCurrenciesResponseHandler"
-	cs := C.CString(next_rpcHandler) // There is one copy
-	defer C.free(unsafe.Pointer(cs))
-	C.strcpy(&txn.rpc_handler[0], cs) // There is another one copy
-	// fmt.Printf("%v will call %v() in %v\n", nfName, next_rpcHandler, next_nf)
-
-	return next_nf
+	return next_nf, next_rpcHandler
 }
 
-func ConvertHandler(txn *C.struct_http_transaction) C.uint8_t {
+func ConvertHandler(txn *C.struct_http_transaction) (C.uint8_t, string) {
 	var next_nf C.uint8_t
+	var next_rpcHandler string
 
-	next_nf = C.uchar(nfNameToIdMap[C.GoString(&txn.caller_nf[0])]) // AdService returns a response to the frontend
-
+	if val, ok := nfNameToIdMap[C.GoString(&txn.caller_nf[0])]; ok {
+		next_nf = C.uchar(val)
+		next_rpcHandler = "ConvertResponseHandler"
+	} else {
+		// TODO: add error codes support in the txn structure
+		log.Error("Unknown service! Report error to frontend")
+		next_nf = 0
+		next_rpcHandler = "ErrorResponseHandler"
+	}
 	/*
 	* Call Convert()
 	*/
 
-	// Write the name of remote handler to called in the next function
-	next_rpcHandler := "ConvertResponseHandler"
-	cs := C.CString(next_rpcHandler) // There is one copy
-	defer C.free(unsafe.Pointer(cs))
-	C.strcpy(&txn.rpc_handler[0], cs) // There is another one copy
-	// fmt.Printf("%v will call %v() in %v\n", nfName, next_rpcHandler, next_nf)
-
-	return next_nf
+	return next_nf, next_rpcHandler
 }
 
 func nf() error {

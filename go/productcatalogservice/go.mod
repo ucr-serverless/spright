@@ -5,12 +5,12 @@ go 1.18
 require (
 	cloud.google.com/go/profiler v0.1.1
 	contrib.go.opencensus.io/exporter/jaeger v0.2.1
-	contrib.go.opencensus.io/exporter/stackdriver v0.13.10
+	contrib.go.opencensus.io/exporter/stackdriver v0.13.12
 	github.com/golang/protobuf v1.5.2
 	github.com/google/go-cmp v0.5.7
 	github.com/sirupsen/logrus v1.8.1
 	go.opencensus.io v0.23.0
-	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
+	golang.org/x/net v0.0.0-20220403103023-749bd193bc2b
 	google.golang.org/grpc v1.43.0
 )
 
@@ -18,6 +18,7 @@ require (
 	cloud.google.com/go v0.99.0 // indirect
 	cloud.google.com/go/monitoring v1.1.0 // indirect
 	cloud.google.com/go/trace v1.0.0 // indirect
+	github.com/GoogleCloudPlatform/microservices-demo/src/shippingservice v0.0.0-20220514000650-80ae3f7f014d // indirect
 	github.com/aws/aws-sdk-go v1.37.0 // indirect
 	github.com/census-instrumentation/opencensus-proto v0.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect

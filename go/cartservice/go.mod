@@ -1,4 +1,4 @@
-module github.com/GoogleCloudPlatform/microservices-demo/src/shippingservice
+module cartservice
 
 go 1.18
 

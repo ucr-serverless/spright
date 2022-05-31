@@ -4,8 +4,8 @@
 package main
 
 // #cgo pkg-config: libdpdk
-// #cgo CFLAGS: -I${SRCDIR}/../src/include
-// #cgo LDFLAGS: -L${SRCDIR}/../src
+// #cgo CFLAGS: -I${SRCDIR}/../../src/include
+// #cgo LDFLAGS: -L${SRCDIR}/../../src
 // #cgo rte_ring LDFLAGS: -l:io_rte_ring.o
 // #cgo sk_msg LDFLAGS: -l:io_sk_msg.o -lbpf
 //
@@ -188,7 +188,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 	cmap "github.com/orcaman/concurrent-map"
-	pb "github.com/GoogleCloudPlatform/microservices-demo/src/shippingservice/genproto"
+	pb "cartservice/hipstershop"
+	// pb "github.com/GoogleCloudPlatform/microservices-demo/src/shippingservice/genproto"
 )
 
 var (
@@ -336,80 +337,93 @@ func nfWorker(threadID int, rxChan <-chan ReceiveChannel, txChan chan<- Transmit
 	}
 }
 
+// txHandler sets up the current NF as the caller and
+// writes the name of remote handler to called in the next function
+func txHandler(next_rpcHandler string, txn *C.struct_http_transaction) {
+	callerNF := C.CString(nfName) // There is one copy
+	defer C.free(unsafe.Pointer(callerNF))
+	C.strcpy(&txn.caller_nf[0], callerNF) // There is another one copy
+
+	cs := C.CString(next_rpcHandler) // There is one copy
+	defer C.free(unsafe.Pointer(cs))
+	C.strcpy(&txn.rpc_handler[0], cs) // There is another one copy
+}
+
 func nfDispatcher(txn *C.struct_http_transaction) C.uint8_t {
 	var next_nf C.uint8_t
+	var next_rpcHandler string
 
 	rpcHandler := C.GoString(&txn.rpc_handler[0])
 	// fmt.Printf("Handler %v() in %v gets called\n", rpcHandler, nfName)
 	
 	if rpcHandler == "AddItemHandler" {
-		next_nf = AddItemHandler(txn)
+		next_nf, next_rpcHandler = AddItemHandler(txn)
 	} else if rpcHandler == "GetCartHandler" {
-		next_nf = GetCartHandler(txn)
+		next_nf, next_rpcHandler = GetCartHandler(txn)
 	} else if rpcHandler == "EmptyCartHandler" {
-		next_nf = EmptyCartHandler(txn)
+		next_nf, next_rpcHandler = EmptyCartHandler(txn)
 	} else {
-		log.Error("%v is not supported by %v!", rpcHandler, nfName)
+		log.Errorf("%v is not supported by %v!", rpcHandler, nfName)
 	}
 
-	// Update the current NF as the caller of next NF
-	callerNF := C.CString(nfName)
-	defer C.free(unsafe.Pointer(callerNF))
-	C.strcpy(&txn.caller_nf[0], callerNF)
-
-	// Ad service returns a response to the frontend service	
+	txHandler(next_rpcHandler, txn)
+	fmt.Printf("%v will call %v() in %v\n", nfName, next_rpcHandler, next_nf)
+	
 	return next_nf
 }
 
-func AddItemHandler(txn *C.struct_http_transaction) C.uint8_t {
+func AddItemHandler(txn *C.struct_http_transaction) (C.uint8_t, string) {
 	var next_nf C.uint8_t
+	var next_rpcHandler string
 
 	// AddItemHandler returns a response to the upstream caller
-	next_nf = C.uchar(nfNameToIdMap[C.GoString(&txn.caller_nf[0])])
+	if val, ok := nfNameToIdMap[C.GoString(&txn.caller_nf[0])]; ok {
+		next_nf = C.uchar(val)
+		next_rpcHandler = "AddItemResponseHandler"
+	} else {
+		// TODO: add error codes support in the txn structure
+		log.Error("Unknown service! Report error to frontend")
+		next_nf = 0
+		next_rpcHandler = "ErrorResponseHandler"
+	}
 
-	// Write the name of remote handler to called in the next function
-	// !! The two copies below leads to a 1K reduction in RPS (39600 to 38700, 2.5% loss) !!
-	next_rpcHandler := "AddItemResponseHandler"
-	cs := C.CString(next_rpcHandler) // There is one copy
-	defer C.free(unsafe.Pointer(cs))
-	C.strcpy(&txn.rpc_handler[0], cs) // There is another one copy
-	// fmt.Printf("%v will call %v() in %v\n", nfName, next_rpcHandler, next_nf)
-
-	return next_nf
+	return next_nf, next_rpcHandler
 }
 
-func GetCartHandler(txn *C.struct_http_transaction) C.uint8_t {
+func GetCartHandler(txn *C.struct_http_transaction) (C.uint8_t, string) {
 	var next_nf C.uint8_t
+	var next_rpcHandler string
 
 	// GetCartHandler returns a response to the upstream caller
-	next_nf = C.uchar(nfNameToIdMap[C.GoString(&txn.caller_nf[0])])
+	if val, ok := nfNameToIdMap[C.GoString(&txn.caller_nf[0])]; ok {
+		next_nf = C.uchar(val)
+		next_rpcHandler = "GetCartResponseHandler"
+	} else {
+		// TODO: add error codes support in the txn structure
+		log.Error("Unknown service! Report error to frontend")
+		next_nf = 0
+		next_rpcHandler = "ErrorResponseHandler"
+	}
 
-	// Write the name of remote handler to called in the next function
-	// !! The two copies below leads to a 1K reduction in RPS (39600 to 38700, 2.5% loss) !!
-	next_rpcHandler := "GetCartResponseHandler"
-	cs := C.CString(next_rpcHandler) // There is one copy
-	defer C.free(unsafe.Pointer(cs))
-	C.strcpy(&txn.rpc_handler[0], cs) // There is another one copy
-	// fmt.Printf("%v will call %v() in %v\n", nfName, next_rpcHandler, next_nf)
-
-	return next_nf
+	return next_nf, next_rpcHandler
 }
 
-func EmptyCartHandler(txn *C.struct_http_transaction) C.uint8_t {
+func EmptyCartHandler(txn *C.struct_http_transaction) (C.uint8_t, string) {
 	var next_nf C.uint8_t
+	var next_rpcHandler string
 
 	// EmptyCartHandler returns a response to the upstream caller
-	next_nf = C.uchar(nfNameToIdMap[C.GoString(&txn.caller_nf[0])])
+	if val, ok := nfNameToIdMap[C.GoString(&txn.caller_nf[0])]; ok {
+		next_nf = C.uchar(val)
+		next_rpcHandler = "EmptyCartResponseHandler"
+	} else {
+		// TODO: add error codes support in the txn structure
+		log.Error("Unknown service! Report error to frontend")
+		next_nf = 0
+		next_rpcHandler = "ErrorResponseHandler"
+	}
 
-	// Write the name of remote handler to called in the next function
-	// !! The two copies below leads to a 1K reduction in RPS (39600 to 38700, 2.5% loss) !!
-	next_rpcHandler := "EmptyCartResponseHandler"
-	cs := C.CString(next_rpcHandler) // There is one copy
-	defer C.free(unsafe.Pointer(cs))
-	C.strcpy(&txn.rpc_handler[0], cs) // There is another one copy
-	// fmt.Printf("%v will call %v() in %v\n", nfName, next_rpcHandler, next_nf)
-
-	return next_nf
+	return next_nf, next_rpcHandler
 }
 
 func nf() error {

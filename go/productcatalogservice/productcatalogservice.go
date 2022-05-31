@@ -4,8 +4,8 @@
 package main
 
 // #cgo pkg-config: libdpdk
-// #cgo CFLAGS: -I${SRCDIR}/../src/include
-// #cgo LDFLAGS: -L${SRCDIR}/../src
+// #cgo CFLAGS: -I${SRCDIR}/../../src/include
+// #cgo LDFLAGS: -L${SRCDIR}/../../src
 // #cgo rte_ring LDFLAGS: -l:io_rte_ring.o
 // #cgo sk_msg LDFLAGS: -l:io_sk_msg.o -lbpf
 //
@@ -186,7 +186,7 @@ import (
 	"strconv"
 	"time"
 	"bytes"
-	"flag"
+	// "flag"
 	"io/ioutil"
 	"os/signal"
 	"strings"
@@ -288,7 +288,7 @@ func nfInit() error {
 	// log.Infof("[%v (ID: %v)] Route %v has %v Hops: %v", nfName, nfID, RouteID, RouteLen, Route)
 	// log.Infof("Use http://<IP_Address>:<Port>/%v/ for testing", RouteID)
 
-	flag.Parse()
+	// flag.Parse()
 	// set injected latency
 	if s := os.Getenv("EXTRA_LATENCY"); s != "" {
 		v, err := time.ParseDuration(s)
@@ -369,7 +369,7 @@ func nfWorker(threadID int, rxChan <-chan ReceiveChannel, txChan chan<- Transmit
 
 	for rx := range rxChan {
 		// fmt.Printf("Thread %v: Received msg\n", threadID)
-		// time.Sleep(1 * time.Second)
+		time.Sleep(1 * time.Second)
 
 		txn := rx.Transaction
 		var next_nf C.uint8_t
@@ -382,72 +382,90 @@ func nfWorker(threadID int, rxChan <-chan ReceiveChannel, txChan chan<- Transmit
 	}
 }
 
-func nfDispatcher(txn *C.struct_http_transaction) C.uint8_t {
-	var next_nf C.uint8_t
-
-	rpcHandler := C.GoString(&txn.rpc_handler[0])
-	// fmt.Printf("Handler %v() in %v gets called\n", rpcHandler, nfName)
-
-	if rpcHandler == "ListProductsHandler" {
-		next_nf = ListProductsHandler(txn)
-	} else if rpcHandler == "GetProductHandler" {
-		next_nf = GetProductHandler(txn)
-	} else if rpcHandler == "SearchProductsHandler" {
-		next_nf = SearchProductsHandler(txn)
-	} else {
-		log.Error("%v is not supported by %v!", rpcHandler, nfName)
-	}
-
+// txHandler sets up the current NF as the caller and
+// writes the name of remote handler to called in the next function
+func txHandler(next_rpcHandler string, txn *C.struct_http_transaction) {
 	callerNF := C.CString(nfName) // There is one copy
 	defer C.free(unsafe.Pointer(callerNF))
 	C.strcpy(&txn.caller_nf[0], callerNF) // There is another one copy
 
-	return next_nf
-}
-
-func ListProductsHandler(txn *C.struct_http_transaction) C.uint8_t {
-	var next_nf C.uint8_t
-
-	next_nf = C.uchar(nfNameToIdMap[C.GoString(&txn.caller_nf[0])])
-
-	// Write the name of remote handler to called in the next function
-	next_rpcHandler := "ListProductsResponseHandler"
 	cs := C.CString(next_rpcHandler) // There is one copy
 	defer C.free(unsafe.Pointer(cs))
 	C.strcpy(&txn.rpc_handler[0], cs) // There is another one copy
-	// fmt.Printf("%v will call %v() in %v\n", nfName, next_rpcHandler, next_nf)
-
-	return next_nf
 }
 
-func GetProductHandler(txn *C.struct_http_transaction) C.uint8_t {
+func nfDispatcher(txn *C.struct_http_transaction) C.uint8_t {
 	var next_nf C.uint8_t
+	var next_rpcHandler string
 
-	next_nf = C.uchar(nfNameToIdMap[C.GoString(&txn.caller_nf[0])])
+	rpcHandler := C.GoString(&txn.rpc_handler[0])
+	fmt.Printf("Handler %v() in %v gets called\n", rpcHandler, nfName)
 
-	// Write the name of remote handler to called in the next function
-	next_rpcHandler := "GetProductResponseHandler"
-	cs := C.CString(next_rpcHandler) // There is one copy
-	defer C.free(unsafe.Pointer(cs))
-	C.strcpy(&txn.rpc_handler[0], cs) // There is another one copy
-	// fmt.Printf("%v will call %v() in %v\n", nfName, next_rpcHandler, next_nf)
+	if rpcHandler == "ListProductsHandler" {
+		next_nf, next_rpcHandler = ListProductsHandler(txn)
+	} else if rpcHandler == "GetProductHandler" {
+		next_nf, next_rpcHandler = GetProductHandler(txn)
+	} else if rpcHandler == "SearchProductsHandler" {
+		next_nf, next_rpcHandler = SearchProductsHandler(txn)
+	} else {
+		log.Errorf("%v is not supported by %v!", rpcHandler, nfName)
+	}
+
+	txHandler(next_rpcHandler, txn)
+	fmt.Printf("%v will call %v() in %v\n", nfName, next_rpcHandler, next_nf)
 
 	return next_nf
 }
 
-func SearchProductsHandler(txn *C.struct_http_transaction) C.uint8_t {
+func ListProductsHandler(txn *C.struct_http_transaction) (C.uint8_t, string) {
 	var next_nf C.uint8_t
+	var next_rpcHandler string
 
-	next_nf = C.uchar(nfNameToIdMap[C.GoString(&txn.caller_nf[0])])
+	if val, ok := nfNameToIdMap[C.GoString(&txn.caller_nf[0])]; ok {
+		next_nf = C.uchar(val)
+		next_rpcHandler = "ListProductsResponseHandler"
+	} else {
+		// TODO: add error codes support in the txn structure
+		log.Error("Unknown service! Report error to frontend")
+		next_nf = 0
+		next_rpcHandler = "ErrorResponseHandler"
+	}
 
-	// Write the name of remote handler to called in the next function
-	next_rpcHandler := "SearchProductsResponseHandler"
-	cs := C.CString(next_rpcHandler) // There is one copy
-	defer C.free(unsafe.Pointer(cs))
-	C.strcpy(&txn.rpc_handler[0], cs) // There is another one copy
-	// fmt.Printf("%v will call %v() in %v\n", nfName, next_rpcHandler, next_nf)
+	return next_nf, next_rpcHandler
+}
 
-	return next_nf
+func GetProductHandler(txn *C.struct_http_transaction) (C.uint8_t, string) {
+	var next_nf C.uint8_t
+	var next_rpcHandler string
+
+	if val, ok := nfNameToIdMap[C.GoString(&txn.caller_nf[0])]; ok {
+		next_nf = C.uchar(val)
+		next_rpcHandler = "GetProductResponseHandler"
+	} else {
+		// TODO: add error codes support in the txn structure
+		log.Error("Unknown service! Report error to frontend")
+		next_nf = 0
+		next_rpcHandler = "ErrorResponseHandler"
+	}
+
+	return next_nf, next_rpcHandler
+}
+
+func SearchProductsHandler(txn *C.struct_http_transaction) (C.uint8_t, string) {
+	var next_nf C.uint8_t
+	var next_rpcHandler string
+
+	if val, ok := nfNameToIdMap[C.GoString(&txn.caller_nf[0])]; ok {
+		next_nf = C.uchar(val)
+		next_rpcHandler = "SearchProductsResponseHandler"
+	} else {
+		// TODO: add error codes support in the txn structure
+		log.Error("Unknown service! Report error to frontend")
+		next_nf = 0
+		next_rpcHandler = "ErrorResponseHandler"
+	}
+
+	return next_nf, next_rpcHandler
 }
 
 func nf() error {
@@ -531,7 +549,7 @@ func (p *server) GetProduct(req *pb.GetProductRequest) (*pb.Product, error) {
 		}
 	}
 	if found == nil {
-		return nil, status.Errorf(codes.NotFound, "no product with ID %s", req.Id)
+		return nil, fmt.Errorf("no product with ID %s", req.Id)
 	}
 	return found, nil
 }

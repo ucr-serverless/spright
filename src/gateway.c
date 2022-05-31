@@ -156,7 +156,8 @@ static int conn_write(int *sockfd)
 	}
 
 	txn->hop_count++;
-
+	// printf("hop count: %u\n", txn->hop_count);
+	// printf("route %u's length: %u\n", txn->route_id, cfg->route[txn->route_id].length);
 	if (txn->hop_count < cfg->route[txn->route_id].length) {
 		ret = io_tx(txn,
 		            cfg->route[txn->route_id].node[txn->hop_count]);

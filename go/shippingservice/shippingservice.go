@@ -4,8 +4,8 @@
 package main
 
 // #cgo pkg-config: libdpdk
-// #cgo CFLAGS: -I${SRCDIR}/../src/include
-// #cgo LDFLAGS: -L${SRCDIR}/../src
+// #cgo CFLAGS: -I${SRCDIR}/../../src/include
+// #cgo LDFLAGS: -L${SRCDIR}/../../src
 // #cgo rte_ring LDFLAGS: -l:io_rte_ring.o
 // #cgo sk_msg LDFLAGS: -l:io_sk_msg.o -lbpf
 //
@@ -328,55 +328,71 @@ func nfWorker(threadID int, rxChan <-chan ReceiveChannel, txChan chan<- Transmit
 	}
 }
 
+// txHandler sets up the current NF as the caller and
+// writes the name of remote handler to called in the next function
+func txHandler(next_rpcHandler string, txn *C.struct_http_transaction) {
+	callerNF := C.CString(nfName) // There is one copy
+	defer C.free(unsafe.Pointer(callerNF))
+	C.strcpy(&txn.caller_nf[0], callerNF) // There is another one copy
+
+	cs := C.CString(next_rpcHandler) // There is one copy
+	defer C.free(unsafe.Pointer(cs))
+	C.strcpy(&txn.rpc_handler[0], cs) // There is another one copy
+}
+
 func nfDispatcher(txn *C.struct_http_transaction) C.uint8_t {
 	var next_nf C.uint8_t
+	var next_rpcHandler string
 
 	rpcHandler := C.GoString(&txn.rpc_handler[0])
 	// fmt.Printf("Handler %v() in %v gets called\n", rpcHandler, nfName)
 
 	if rpcHandler == "GetQuoteHandler" {
-		next_nf = GetQuoteHandler(txn)
+		next_nf, next_rpcHandler = GetQuoteHandler(txn)
 	} else if rpcHandler == "ShipOrderHandler" {
-		next_nf = ShipOrderHandler(txn)
+		next_nf, next_rpcHandler = ShipOrderHandler(txn)
 	} else {
-		log.Error("%v is not supported by %v!", rpcHandler, nfName)
+		log.Errorf("%v is not supported by %v!", rpcHandler, nfName)
 	}
 
-	callerNF := C.CString(nfName) // There is one copy
-	defer C.free(unsafe.Pointer(callerNF))
-	C.strcpy(&txn.caller_nf[0], callerNF) // There is another one copy
+	txHandler(next_rpcHandler, txn)
+	fmt.Printf("%v will call %v() in %v\n", nfName, next_rpcHandler, next_nf)
 
 	return next_nf
 }
 
-func GetQuoteHandler(txn *C.struct_http_transaction) C.uint8_t {
+func GetQuoteHandler(txn *C.struct_http_transaction) (C.uint8_t, string) {
 	var next_nf C.uint8_t
+	var next_rpcHandler string
 
-	next_nf = C.uchar(nfNameToIdMap[C.GoString(&txn.caller_nf[0])])
+	if val, ok := nfNameToIdMap[C.GoString(&txn.caller_nf[0])]; ok {
+		next_nf = C.uchar(val)
+		next_rpcHandler = "GetQuoteResponseHandler"
+	} else {
+		// TODO: add error codes support in the txn structure
+		log.Error("Unknown service! Report error to frontend")
+		next_nf = 0
+		next_rpcHandler = "ErrorResponseHandler"
+	}
 
-	// Write the name of remote handler to called in the next function
-	next_rpcHandler := "GetQuoteResponseHandler"
-	cs := C.CString(next_rpcHandler) // There is one copy
-	defer C.free(unsafe.Pointer(cs))
-	C.strcpy(&txn.rpc_handler[0], cs) // There is another one copy
-	// fmt.Printf("%v will call %v() in %v\n", nfName, next_rpcHandler, next_nf)
-
-	return next_nf
+	return next_nf, next_rpcHandler
 }
 
-func ShipOrderHandler(txn *C.struct_http_transaction) C.uint8_t {
+func ShipOrderHandler(txn *C.struct_http_transaction) (C.uint8_t, string) {
 	var next_nf C.uint8_t
+	var next_rpcHandler string
 
-	next_nf = C.uchar(nfNameToIdMap[C.GoString(&txn.caller_nf[0])])
+	if val, ok := nfNameToIdMap[C.GoString(&txn.caller_nf[0])]; ok {
+		next_nf = C.uchar(val)
+		next_rpcHandler = "ShipOrderResponseHandler"
+	} else {
+		// TODO: add error codes support in the txn structure
+		log.Error("Unknown service! Report error to frontend")
+		next_nf = 0
+		next_rpcHandler = "ErrorResponseHandler"
+	}
 
-	// Write the name of remote handler to called in the next function
-	next_rpcHandler := "ShipOrderResponseHandler"
-	cs := C.CString(next_rpcHandler) // There is one copy
-	defer C.free(unsafe.Pointer(cs))
-	C.strcpy(&txn.rpc_handler[0], cs) // There is another one copy
-	// fmt.Printf("%v will call %v() in %v\n", nfName, next_rpcHandler, next_nf)
-
-	return next_nf
+	return next_nf, next_rpcHandler
 }
 
 func nf() error {
