@@ -13,12 +13,12 @@ CFLAGS = $(shell pkg-config --cflags libconfig libdpdk)
 LDFLAGS = $(shell pkg-config --libs-only-L libconfig libdpdk)
 LDLIBS = $(shell pkg-config --libs-only-l libconfig libdpdk)
 
-CFLAGS += -Isrc/include -MMD -MP -O3 -Wall -Werror
-LDLIBS += -lbpf -lm -pthread
+CFLAGS += -Isrc/include -Isrc/cstl/inc -MMD -MP -O3 -Wall -Werror
+LDLIBS += -lbpf -lm -pthread -luuid
 
-.PHONY: all shm_mgr gateway nf go_nf clean
+.PHONY: all shm_mgr gateway nf clean
 
-all: bin shm_mgr gateway nf go_nf
+all: bin shm_mgr gateway nf adservice currencyservice emailservice paymentservice shippingservice productcatalogservice cartservice recommendationservice
 
 shm_mgr: bin/shm_mgr_rte_ring bin/shm_mgr_sk_msg
 
@@ -50,16 +50,87 @@ bin/nf_sk_msg: src/io_sk_msg.o src/nf.o
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
-go_nf: bin/go_nf_rte_ring bin/go_nf_sk_msg
+adservice: bin/adservice_rte_ring bin/adservice_sk_msg
 
-bin/go_nf_rte_ring: go/nf.go src/io_rte_ring.o
-	@ echo "GO BUILD $@"
-	@ CGO_CFLAGS_ALLOW=".*" go build -o $@ -tags="rte_ring" $<
+bin/adservice_rte_ring: src/io_rte_ring.o src/adservice.o
+	@ echo "CC $@"
+	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
-bin/go_nf_sk_msg: go/nf.go src/io_sk_msg.o
-	@ echo "GO BUILD $@"
-	@ CGO_CFLAGS_ALLOW=".*" go build -o $@ -tags="sk_msg" $<
+bin/adservice_sk_msg: src/io_sk_msg.o src/adservice.o
+	@ echo "CC $@"
+	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
+currencyservice: bin/currencyservice_rte_ring bin/currencyservice_sk_msg
+
+bin/currencyservice_rte_ring: src/io_rte_ring.o src/currencyservice.o
+	@ echo "CC $@"
+	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS) ./src/cstl/src/libclib.a
+
+bin/currencyservice_sk_msg: src/io_sk_msg.o src/currencyservice.o
+	@ echo "CC $@"
+	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS) ./src/cstl/src/libclib.a
+
+emailservice: bin/emailservice_rte_ring bin/emailservice_sk_msg
+
+bin/emailservice_rte_ring: src/io_rte_ring.o src/emailservice.o
+	@ echo "CC $@"
+	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
+
+bin/emailservice_sk_msg: src/io_sk_msg.o src/emailservice.o
+	@ echo "CC $@"
+	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
+
+paymentservice: bin/paymentservice_rte_ring bin/paymentservice_sk_msg
+
+bin/paymentservice_rte_ring: src/io_rte_ring.o src/paymentservice.o
+	@ echo "CC $@"
+	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
+
+bin/paymentservice_sk_msg: src/io_sk_msg.o src/paymentservice.o
+	@ echo "CC $@"
+	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
+
+shippingservice: bin/shippingservice_rte_ring bin/shippingservice_sk_msg
+
+bin/shippingservice_rte_ring: src/io_rte_ring.o src/shippingservice.o
+	@ echo "CC $@"
+	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
+
+bin/shippingservice_sk_msg: src/io_sk_msg.o src/shippingservice.o
+	@ echo "CC $@"
+	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
+
+-include $(patsubst %.o, %.d, $(wildcard src/*.o))
+
+productcatalogservice: bin/productcatalogservice_rte_ring bin/productcatalogservice_sk_msg
+
+bin/productcatalogservice_rte_ring: src/io_rte_ring.o src/productcatalogservice.o
+	@ echo "CC $@"
+	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS) ./src/cstl/src/libclib.a
+
+bin/productcatalogservice_sk_msg: src/io_sk_msg.o src/productcatalogservice.o
+	@ echo "CC $@"
+	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS) ./src/cstl/src/libclib.a
+
+cartservice: bin/cartservice_rte_ring bin/cartservice_sk_msg
+
+bin/cartservice_rte_ring: src/io_rte_ring.o src/cartservice.o
+	@ echo "CC $@"
+	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS) ./src/cstl/src/libclib.a
+
+bin/cartservice_sk_msg: src/io_sk_msg.o src/cartservice.o
+	@ echo "CC $@"
+	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS) ./src/cstl/src/libclib.a
+
+recommendationservice: bin/recommendationservice_rte_ring bin/recommendationservice_sk_msg
+
+bin/recommendationservice_rte_ring: src/io_rte_ring.o src/recommendationservice.o
+	@ echo "CC $@"
+	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
+
+bin/recommendationservice_sk_msg: src/io_sk_msg.o src/recommendationservice.o
+	@ echo "CC $@"
+	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 -include $(patsubst %.o, %.d, $(wildcard src/*.o))
 
 %.o: %.c

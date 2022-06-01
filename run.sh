@@ -76,6 +76,206 @@ nf()
 		${1}
 }
 
+adservice()
+{
+	if ! [ ${1} ]
+	then
+		print_usage
+		exit 1
+	fi
+
+	if [ ${GO_NF} ] && [ ${GO_NF} -eq 1 ]
+	then
+		go="go_"
+	else
+		go=""
+	fi
+
+	exec bin/${go}adservice_${io} \
+		-l ${CPU_NF[$((${1} - 1))]} \
+		--file-prefix=spright \
+		--proc-type=secondary \
+		--no-telemetry \
+		--no-pci \
+		-- \
+		${1}
+}
+
+currencyservice()
+{
+	if ! [ ${1} ]
+	then
+		print_usage
+		exit 1
+	fi
+
+	if [ ${GO_NF} ] && [ ${GO_NF} -eq 1 ]
+	then
+		go="go_"
+	else
+		go=""
+	fi
+
+	exec bin/${go}currencyservice_${io} \
+		-l ${CPU_NF[$((${1} - 1))]} \
+		--file-prefix=spright \
+		--proc-type=secondary \
+		--no-telemetry \
+		--no-pci \
+		-- \
+		${1}
+}
+
+emailservice()
+{
+	if ! [ ${1} ]
+	then
+		print_usage
+		exit 1
+	fi
+
+	if [ ${GO_NF} ] && [ ${GO_NF} -eq 1 ]
+	then
+		go="go_"
+	else
+		go=""
+	fi
+
+	exec bin/${go}emailservice_${io} \
+		-l ${CPU_NF[$((${1} - 1))]} \
+		--file-prefix=spright \
+		--proc-type=secondary \
+		--no-telemetry \
+		--no-pci \
+		-- \
+		${1}
+}
+
+paymentservice()
+{
+	if ! [ ${1} ]
+	then
+		print_usage
+		exit 1
+	fi
+
+	if [ ${GO_NF} ] && [ ${GO_NF} -eq 1 ]
+	then
+		go="go_"
+	else
+		go=""
+	fi
+
+	exec bin/${go}paymentservice_${io} \
+		-l ${CPU_NF[$((${1} - 1))]} \
+		--file-prefix=spright \
+		--proc-type=secondary \
+		--no-telemetry \
+		--no-pci \
+		-- \
+		${1}
+}
+
+shippingservice()
+{
+	if ! [ ${1} ]
+	then
+		print_usage
+		exit 1
+	fi
+
+	if [ ${GO_NF} ] && [ ${GO_NF} -eq 1 ]
+	then
+		go="go_"
+	else
+		go=""
+	fi
+
+	exec bin/${go}shippingservice_${io} \
+		-l ${CPU_NF[$((${1} - 1))]} \
+		--file-prefix=spright \
+		--proc-type=secondary \
+		--no-telemetry \
+		--no-pci \
+		-- \
+		${1}
+}
+
+productcatalogservice()
+{
+	if ! [ ${1} ]
+	then
+		print_usage
+		exit 1
+	fi
+
+	if [ ${GO_NF} ] && [ ${GO_NF} -eq 1 ]
+	then
+		go="go_"
+	else
+		go=""
+	fi
+
+	exec bin/${go}productcatalogservice_${io} \
+		-l ${CPU_NF[$((${1} - 1))]} \
+		--file-prefix=spright \
+		--proc-type=secondary \
+		--no-telemetry \
+		--no-pci \
+		-- \
+		${1}
+}
+
+cartservice()
+{
+	if ! [ ${1} ]
+	then
+		print_usage
+		exit 1
+	fi
+
+	if [ ${GO_NF} ] && [ ${GO_NF} -eq 1 ]
+	then
+		go="go_"
+	else
+		go=""
+	fi
+
+	exec bin/${go}cartservice_${io} \
+		-l ${CPU_NF[$((${1} - 1))]} \
+		--file-prefix=spright \
+		--proc-type=secondary \
+		--no-telemetry \
+		--no-pci \
+		-- \
+		${1}
+}
+
+recommendationservice()
+{
+	if ! [ ${1} ]
+	then
+		print_usage
+		exit 1
+	fi
+
+	if [ ${GO_NF} ] && [ ${GO_NF} -eq 1 ]
+	then
+		go="go_"
+	else
+		go=""
+	fi
+
+	exec bin/${go}recommendationservice_${io} \
+		-l ${CPU_NF[$((${1} - 1))]} \
+		--file-prefix=spright \
+		--proc-type=secondary \
+		--no-telemetry \
+		--no-pci \
+		-- \
+		${1}
+}
+
 case ${1} in
 	"shm_mgr" )
 		shm_mgr ${2}
@@ -87,6 +287,38 @@ case ${1} in
 
 	"nf" )
 		nf ${2}
+	;;
+
+	"adservice" )
+		adservice ${2}
+	;;
+
+	"currencyservice" )
+		currencyservice ${2}
+	;;
+
+	"emailservice" )
+		emailservice ${2}
+	;;
+
+	"paymentservice" )
+		paymentservice ${2}
+	;;
+
+	"shippingservice" )
+		shippingservice ${2}
+	;;
+
+	"productcatalogservice" )
+		productcatalogservice ${2}
+	;;
+
+	"cartservice" )
+		cartservice ${2}
+	;;
+
+	"recommendationservice" )
+		recommendationservice ${2}
 	;;
 
 	* )

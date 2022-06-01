@@ -4,7 +4,7 @@
 ```bash
 sudo apt install -y flex bison build-essential dwarves libssl-dev libelf-dev \
                     libnuma-dev pkg-config python3-pip python3-pyelftools \
-                    libconfig-dev golang clang gcc-multilib
+                    libconfig-dev golang clang gcc-multilib uuid-dev
 ```
 
 ## Install dependencies (pip)
