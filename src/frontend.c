@@ -23,94 +23,192 @@
 #include "http.h"
 #include "io.h"
 #include "spright.h"
-#include "c_lib.h"
 #include "utility.h"
+#include "shm_rpc.h"
 
 static int pipefd_rx[UINT8_MAX][2];
 static int pipefd_tx[UINT8_MAX][2];
 
-char *currencies[] = {"EUR", "USD", "JPY", "CAD"};
-double conversion_rate[] = {1.0, 1.1305, 126.40, 1.5128};
+// char defaultCurrency[5] = "CAD";
 
-static int compare_e(void* left, void* right ) {
-    return strcmp((const char *)left, (const char *)right);
+static void setCurrencyHandler(struct http_transaction *txn) {
+	printf("Call setCurrencyHandler\n");
+	char* query = httpQueryParser(txn->request);
+	char _defaultCurrency[5] = "CAD";
+	strcpy(_defaultCurrency, strchr(query, '=') + 1);
+
+	txn->hop_count += 100;
+	txn->next_fn = GATEWAY; // Hack: force gateway to return a response
 }
 
-struct clib_map* currency_data_map;
+static void homeHandler(struct http_transaction *txn) {
+	printf("Call homeHandler ### Hop: %u\n", txn->hop_count);
 
-static void getCurrencyData(struct clib_map* map) {
-    int size = sizeof(currencies)/sizeof(currencies[0]);
-    int i = 0;
-    for (i = 0; i < size; i++ ) {
-        char *key = clib_strdup(currencies[i]);
-        int key_length = (int)strlen(key) + 1;
-        double value = conversion_rate[i];
-		printf("Inserting [%s -> %f]\n", key, value);
-        insert_c_map(map, key, key_length, &value, sizeof(double)); 
-        free(key);
-    }
+	if (txn->hop_count == 0) {
+		getCurrencies(txn);
+
+	} else if (txn->hop_count == 1) {
+		getProducts(txn);
+		txn->productViewCntr = 0;
+
+	} else if (txn->hop_count == 2) {
+		getCart(txn);
+
+	} else if (txn->hop_count == 3) {
+		convertCurrencyOfProducts(txn);
+		homeHandler(txn);
+	} else if (txn->hop_count == 4) {
+		chooseAd(txn);
+
+	} else if (txn->hop_count == 5) {
+		returnResponse(txn);
+
+	} else {
+		printf("homeHandler doesn't know what to do for HOP %u.\n", txn->hop_count);
+		returnResponse(txn);
+
+	}
+	return;
 }
 
-static void GetSupportedCurrencies(struct http_transaction *in){
-	printf("[GetSupportedCurrencies] received request\n");
+static void productHandler(struct http_transaction *txn) {
+	printf("Call productHandler ### Hop: %u\n", txn->hop_count);
 
-	in->get_supported_currencies_response.num_currencies = 0;
-    int size = sizeof(currencies)/sizeof(currencies[0]);
-    int i = 0;
-    for (i = 0; i < size; i++) {
-		in->get_supported_currencies_response.num_currencies++;
-		strcpy(in->get_supported_currencies_response.CurrencyCodes[i], currencies[i]);
+	if (txn->hop_count == 0) {
+		getProduct(txn);
+		txn->productViewCntr = 0;
+	} else if (txn->hop_count == 1) {
+		getCurrencies(txn);
+	} else if (txn->hop_count == 2) {
+		getCart(txn);
+	} else if (txn->hop_count == 3) {
+		convertCurrencyOfProduct(txn);
+
+	} else if (txn->hop_count == 4) {
+		chooseAd(txn);
+	} else if (txn->hop_count == 5) {
+		returnResponse(txn);
+	} else {
+		printf("productHandler doesn't know what to do for HOP %u.\n", txn->hop_count);
+		returnResponse(txn);
+
+	}
+	return;
+}
+
+static void addToCartHandler(struct http_transaction *txn) {
+	printf("Call addToCartHandler ### Hop: %u\n", txn->hop_count);
+	if (txn->hop_count == 0) {
+		getProduct(txn);
+		txn->productViewCntr = 0;
+
+	} else if (txn->hop_count == 1) {
+		insertCart(txn);
+
+	} else if (txn->hop_count == 2) {
+		returnResponse(txn);
+	} else {
+		printf("addToCartHandler doesn't know what to do for HOP %u.\n", txn->hop_count);
+		returnResponse(txn);
+	}
+}
+
+static void viewCartHandler(struct http_transaction *txn) {
+	printf("[%s()] Call viewCartHandler ### Hop: %u\n", __func__, txn->hop_count);
+	if (txn->hop_count == 0) {
+		getCurrencies(txn);
+
+	} else if (txn->hop_count == 1) {
+		getCart(txn);
+		txn->cartItemViewCntr = 0;
+		strcpy(txn->total_price.CurrencyCode, defaultCurrency);
+
+	} else if (txn->hop_count == 2) {
+		getRecommendations(txn);
+
+	} else if (txn->hop_count == 3) {
+		getShippingQuote(txn);
+
+	} else if (txn->hop_count == 4) {
+		convertCurrencyOfShippingQuote(txn);
+		if (txn->get_quote_response.conversion_flag == true) {
+			getCartItemInfo(txn);
+			txn->hop_count++;
+
+		} else {
+			printf("[%s()] Set get_quote_response.conversion_flag as true\n", __func__);
+			txn->get_quote_response.conversion_flag = true;
+		}
+		
+	} else if (txn->hop_count == 5) {
+		getCartItemInfo(txn);
+
+	} else if (txn->hop_count == 6) {
+		convertCurrencyOfCart(txn);
+	} else {
+		printf("[%s()] viewCartHandler doesn't know what to do for HOP %u.\n", __func__, txn->hop_count);
+		returnResponse(txn);
+	}
+}
+
+static void PlaceOrder(struct http_transaction *txn) {
+	parsePlaceOrderRequest(txn);
+	// PrintPlaceOrderRequest(txn);
+
+	strcpy(txn->rpc_handler, "PlaceOrder");
+	txn->caller_fn = FRONTEND;
+	txn->next_fn = CHECKOUT_SVC;
+	txn->hop_count++;
+	txn->checkoutsvc_hop_cnt = 0;
+}
+
+static void placeOrderHandler(struct http_transaction *txn) {
+	printf("[%s()] Call placeOrderHandler ### Hop: %u\n", __func__, txn->hop_count);
+
+	if (txn->hop_count == 0) {
+		PlaceOrder(txn);
+
+	} else if (txn->hop_count == 1) {
+		getRecommendations(txn);
+
+	} else if (txn->hop_count == 2) {
+		getCurrencies(txn);
+
+	} else if (txn->hop_count == 3) {
+		returnResponse(txn);
+
+	} else {
+		printf("[%s()] placeOrderHandler doesn't know what to do for HOP %u.\n", __func__, txn->hop_count);
+		returnResponse(txn);
+	}
+}
+
+static void httpRequestDispatcher(struct http_transaction *txn) {
+
+	char *req = txn->request;
+	// printf("Receive one msg: %s\n", req);
+	if (strstr(req, "/1/cart/checkout") != NULL) {
+		placeOrderHandler(txn);
+	} else if (strstr(req, "/1/cart") != NULL) {
+		if (strstr(req, "GET")) {
+			viewCartHandler(txn);
+		} else if (strstr(req, "POST")) {
+			addToCartHandler(txn);
+		} else {
+			printf("No handler found in frontend\n");
+			printf("%s\n", req);
+		}
+	} else if (strstr(req, "/1/product") != NULL) {
+		productHandler(txn);
+	} else if (strstr(req, "/1/setCurrency") != NULL) {
+		setCurrencyHandler(txn);
+	} else if (strstr(req, "/1") != NULL) {
+		homeHandler(txn);
+	} else {
+		printf("Unknown handler. Check your HTTP Query, human!: %s\n", req);
+		returnResponse(txn);
 	}
 
-	// printf("[GetSupportedCurrencies] completed request\n");
-	return;
-}
-
-// static void PrintSupportedCurrencies (struct http_transaction *in) {
-// 	printf("Supported Currencies: ");
-// 	int i = 0;
-// 	for (i = 0; i < in->get_supported_currencies_response.num_currencies; i++) {
-// 		printf("%s\t", in->get_supported_currencies_response.CurrencyCodes[i]);
-// 	}
-// 	printf("\n");
-// }
-
-/**
- * Helper function that handles decimal/fractional carrying
- */
-static void Carry(Money* amount) {
-	double fractionSize = pow(10, 9);
-	amount->Nanos = amount->Nanos + (int32_t)((double)(amount->Units % 1) * fractionSize);
-	amount->Units = (int64_t)(floor((double)amount->Units) + floor((double)amount->Nanos / fractionSize));
-	amount->Nanos = amount->Nanos % (int32_t)fractionSize;
-	return;
-}
-
-static void Convert(struct http_transaction *txn) {
-	printf("[Convert] received request\n");
-	CurrencyConversionRequest* in = &txn->currency_conversion_req;
-	Money* euros = &txn->currency_conversion_result;
-
-	// Convert: from_currency --> EUR
-	void* data;
-	find_c_map(currency_data_map, in->From.CurrencyCode, &data);
-	euros->Units = (int64_t)((double)in->From.Units/ *(double*)data);
-	euros->Nanos = (int32_t)((double)in->From.Nanos/ *(double*)data);
-
-	Carry(euros);
-	euros->Nanos = (int32_t)(round((double) euros->Nanos));
-
-	// Convert: EUR --> to_currency
-	find_c_map(currency_data_map, in->ToCode, &data);
-	euros->Units = (int64_t)((double)euros->Units/ *(double*)data);
-	euros->Nanos = (int32_t)((double)euros->Nanos/ *(double*)data);
-	Carry(euros);
-
-	euros->Units = (int64_t)(floor((double)(euros->Units)));
-	euros->Nanos = (int32_t)(floor((double)(euros->Nanos)));
-	strcpy(euros->CurrencyCode, in->ToCode);
-
-	printf("[Convert] completed request\n");
 	return;
 }
 
@@ -131,23 +229,8 @@ static void *nf_worker(void *arg)
 			fprintf(stderr, "read() error: %s\n", strerror(errno));
 			return NULL;
 		}
-
-		if (strcmp(txn->rpc_handler, "GetSupportedCurrencies") == 0) {
-			GetSupportedCurrencies(txn);
-		} else if (strcmp(txn->rpc_handler, "Convert") == 0) {
-			Convert(txn);
-		} else {
-			printf("%s() is not supported\n", txn->rpc_handler);
-			printf("\t\t#### Run Mock Test ####\n");
-			GetSupportedCurrencies(txn);
-			PrintSupportedCurrencies(txn);
-			MockCurrencyConversionRequest(txn);
-			Convert(txn);
-			PrintConversionResult(txn);
-		}
-		
-		txn->next_fn = txn->caller_fn;
-		txn->caller_fn = CURRENCY_SVC;
+		// printf("Receive one msg: %s\n", txn->request);
+		httpRequestDispatcher(txn);
 
 		bytes_written = write(pipefd_tx[index][1], &txn,
 		                      sizeof(struct http_transaction *));
@@ -238,16 +321,6 @@ static void *nf_tx(void *arg)
 				        strerror(errno));
 				return NULL;
 			}
-
-			// txn->hop_count++;
-
-			// if (likely(txn->hop_count <
-			//            cfg->route[txn->route_id].length)) {
-			// 	next_node =
-			// 	cfg->route[txn->route_id].node[txn->hop_count];
-			// } else {
-			// 	next_node = 0;
-			// }
 
 			ret = io_tx(txn, txn->next_fn);
 			if (unlikely(ret == -1)) {
@@ -405,8 +478,6 @@ int main(int argc, char **argv)
 		goto error_1;
 	}
 
-	currency_data_map = new_c_map(compare_e, NULL, NULL);
-	getCurrencyData(currency_data_map);
 	ret = nf(nf_id);
 	if (unlikely(ret == -1)) {
 		fprintf(stderr, "nf() error\n");

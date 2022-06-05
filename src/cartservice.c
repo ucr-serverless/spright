@@ -135,7 +135,7 @@ static void GetCartAsync(struct http_transaction *txn) {
 	void *cart;
 	if (clib_true != find_c_map(LocalCartStore, in->UserId, &cart)) {
 		printf("No carts for user %s\n", in->UserId);
-		out->num_items = -1;
+		out->num_items = 0;
 		return;
 	} else {
 		*out = *(Cart*)cart;
@@ -216,17 +216,30 @@ static void *nf_worker(void *arg)
 			return NULL;
 		}
 
-		MockAddItemRequest(txn);
-		AddItem(txn);
-		PrintLocalCartStore();
+		if (strcmp(txn->rpc_handler, "AddItem") == 0) {
+			AddItem(txn);
+		} else if (strcmp(txn->rpc_handler, "GetCart") == 0) {
+			GetCart(txn);
+		} else if (strcmp(txn->rpc_handler, "EmptyCart") == 0) {
+			EmptyCart(txn);
+		} else {
+			printf("%s() is not supported\n", txn->rpc_handler);
+			printf("\t\t#### Run Mock Test ####\n");
+			MockAddItemRequest(txn);
+			AddItem(txn);
+			PrintLocalCartStore();
 
-		MockGetCartRequest(txn);
-		GetCart(txn);
-		PrintGetCartResponse(txn);
+			MockGetCartRequest(txn);
+			GetCart(txn);
+			PrintGetCartResponse(txn);
 
-		MockEmptyCartRequest(txn);
-		EmptyCart(txn);
-		PrintLocalCartStore();
+			MockEmptyCartRequest(txn);
+			EmptyCart(txn);
+			PrintLocalCartStore();
+		}
+		
+		txn->next_fn = txn->caller_fn;
+		txn->caller_fn = CART_SVC;
 
 		bytes_written = write(pipefd_tx[index][1], &txn,
 		                      sizeof(struct http_transaction *));
@@ -269,7 +282,7 @@ static void *nf_tx(void *arg)
 	struct epoll_event event[UINT8_MAX]; /* TODO: Use Macro */
 	struct http_transaction *txn = NULL;
 	ssize_t bytes_read;
-	uint8_t next_node;
+	// uint8_t next_node;
 	uint8_t i;
 	int n_fds;
 	int epfd;
@@ -318,17 +331,17 @@ static void *nf_tx(void *arg)
 				return NULL;
 			}
 
-			txn->hop_count++;
+			// txn->hop_count++;
 
-			if (likely(txn->hop_count <
-			           cfg->route[txn->route_id].length)) {
-				next_node =
-				cfg->route[txn->route_id].node[txn->hop_count];
-			} else {
-				next_node = 0;
-			}
+			// if (likely(txn->hop_count <
+			//            cfg->route[txn->route_id].length)) {
+			// 	next_node =
+			// 	cfg->route[txn->route_id].node[txn->hop_count];
+			// } else {
+			// 	next_node = 0;
+			// }
 
-			ret = io_tx(txn, next_node);
+			ret = io_tx(txn, txn->next_fn);
 			if (unlikely(ret == -1)) {
 				fprintf(stderr, "io_tx() error\n");
 				return NULL;

@@ -276,6 +276,56 @@ recommendationservice()
 		${1}
 }
 
+frontend()
+{
+	if ! [ ${1} ]
+	then
+		print_usage
+		exit 1
+	fi
+
+	if [ ${GO_NF} ] && [ ${GO_NF} -eq 1 ]
+	then
+		go="go_"
+	else
+		go=""
+	fi
+
+	exec bin/${go}frontend_${io} \
+		-l ${CPU_NF[$((${1} - 1))]} \
+		--file-prefix=spright \
+		--proc-type=secondary \
+		--no-telemetry \
+		--no-pci \
+		-- \
+		${1}
+}
+
+checkoutservice()
+{
+	if ! [ ${1} ]
+	then
+		print_usage
+		exit 1
+	fi
+
+	if [ ${GO_NF} ] && [ ${GO_NF} -eq 1 ]
+	then
+		go="go_"
+	else
+		go=""
+	fi
+
+	exec bin/${go}checkoutservice_${io} \
+		-l ${CPU_NF[$((${1} - 1))]} \
+		--file-prefix=spright \
+		--proc-type=secondary \
+		--no-telemetry \
+		--no-pci \
+		-- \
+		${1}
+}
+
 case ${1} in
 	"shm_mgr" )
 		shm_mgr ${2}
@@ -319,6 +369,14 @@ case ${1} in
 
 	"recommendationservice" )
 		recommendationservice ${2}
+	;;
+
+	"frontend" )
+		frontend ${2}
+	;;
+
+	"checkoutservice" )
+		checkoutservice ${2}
 	;;
 
 	* )

@@ -7,19 +7,24 @@
 #define HTTP_H
 
 #include <stdint.h>
+#include <rte_eal.h>
 
 #define HTTP_MSG_LENGTH_HEADER_MAX (1U << 12)
 #define HTTP_MSG_LENGTH_BODY_MAX (1U << 16)
 #define HTTP_MSG_LENGTH_MAX (HTTP_MSG_LENGTH_HEADER_MAX + \
                              HTTP_MSG_LENGTH_BODY_MAX)
 
-// typedef struct _orderResult {
-// 	char OrderId[50];
-// 	char ShippingTrackingId[50];
-// 	Money ShippingCost;
-// 	Address ShippingAddress;  
-// 	Items                [10]OrderItem
-// } OrderResult;
+#define GATEWAY 		(uint8_t)0
+#define FRONTEND 		(uint8_t)1
+#define CURRENCY_SVC 	(uint8_t)2
+#define PRODUCTCATA_SVC (uint8_t)3
+#define CART_SVC		(uint8_t)4
+#define RECOMMEND_SVC	(uint8_t)5
+#define SHIPPING_SVC	(uint8_t)6
+#define CHECKOUT_SVC	(uint8_t)7
+#define PAYMENT_SVC		(uint8_t)8
+#define EMAIL_SVC		(uint8_t)9
+#define AD_SVC			(uint8_t)10
 
 typedef struct _money {
 	char CurrencyCode[10];
@@ -27,10 +32,31 @@ typedef struct _money {
 	int32_t Nanos;
 } Money;
 
+typedef struct _address {
+	char StreetAddress[50];
+	char City[15];
+	char State[15];
+	char Country[15];
+	int32_t ZipCode;
+} Address;
+
 typedef struct _cartItem {
 	char ProductId[50];
 	int32_t Quantity;
 } CartItem;
+
+typedef struct _orderItem {
+	CartItem Item;
+	Money Cost;
+} OrderItem;
+
+typedef struct _orderResult {
+	char OrderId[40];
+	char ShippingTrackingId[100];
+	Money ShippingCost;
+	Address ShippingAddress;
+	OrderItem Items[10];
+} OrderResult;
 
 typedef struct _cart {
 	char UserId[50];
@@ -67,6 +93,17 @@ typedef struct _product {
 	char Categories[10][20];
 } Product;
 
+typedef struct _productView {
+	Product Item;
+	Money Price;
+} productView;
+
+typedef struct _cartItemView {
+	Product Item;
+	int32_t Quantity;
+	Money Price;
+} cartItemView;
+
 typedef struct _listProductsResponse {
 	int num_products;
 	Product Products[9];
@@ -94,21 +131,13 @@ typedef struct _listRecommendationsResponse{
 	char ProductId [20];
 } ListRecommendationsResponse;
 
-typedef struct _address {
-	char StreetAddress[50];
-	char City[15];
-	char State[15];
-	char Country[15];
-	int32_t ZipCode;
-} Address;
-
 typedef struct _shipOrderRequest {
 	Address address;
 	CartItem Items[10];
 } ShipOrderRequest;
 
 typedef struct _shipOrderResponse{
-	char TrackingId[50];
+	char TrackingId[100];
 } ShipOrderResponse;
 
 typedef struct _getQuoteRequest{
@@ -123,6 +152,7 @@ typedef struct _sendOrderConfirmationRequest {
 } SendOrderConfirmationRequest;
 
 typedef struct _getQuoteResponse {
+	bool conversion_flag;
 	Money CostUsd;
 } GetQuoteResponse;
 
@@ -132,6 +162,20 @@ typedef struct _creditCardInfo {
 	int32_t CreditCardExpirationYear;
 	int32_t CreditCardExpirationMonth;
 } CreditCardInfo;
+
+typedef struct _orderPrep {
+	OrderItem orderItems[10];
+	CartItem cartItems[10];
+	Money shippingCostLocalized;
+} orderPrep;
+
+typedef struct _placeOrderRequest{
+	char UserId[50];
+	char UserCurrency[5];
+	Address address;
+	char Email[50];
+	CreditCardInfo CreditCard;
+} PlaceOrderRequest;
 
 typedef struct _chargeRequest {
 	Money Amount;
@@ -170,7 +214,9 @@ typedef struct _adresponse {
 struct http_transaction {
 	int sockfd;
 	uint8_t route_id;
+	uint8_t next_fn;
 	uint8_t hop_count;
+	uint8_t caller_fn;
 
 	uint32_t length_request;
 	uint32_t length_response;
@@ -211,6 +257,22 @@ struct http_transaction {
 
 	ListRecommendationsRequest list_recommendations_request;
 	ListRecommendationsResponse list_recommendations_response;
+
+	productView product_view[9];
+	int productViewCntr;
+
+	cartItemView cart_item_view[10];
+	int cartItemViewCntr;
+	int cartItemCurConvertCntr;
+	Money total_price;
+
+	PlaceOrderRequest place_order_request;
+	orderPrep order_prep;
+	OrderResult order_result;
+	OrderItem order_item_view[10];
+	int orderItemViewCntr;
+	int orderItemCurConvertCntr;
+	uint8_t checkoutsvc_hop_cnt;
 };
 
 #endif /* HTTP_H */

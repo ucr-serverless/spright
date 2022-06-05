@@ -14,6 +14,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <sys/epoll.h>
+#include <uuid/uuid.h>
 
 #include <rte_branch_prediction.h>
 #include <rte_eal.h>
@@ -23,6 +24,7 @@
 #include "http.h"
 #include "io.h"
 #include "spright.h"
+#include "utility.h"
 
 static int pipefd_rx[UINT8_MAX][2];
 static int pipefd_tx[UINT8_MAX][2];
@@ -71,7 +73,6 @@ static void GetQuote(struct http_transaction *txn) {
 	for (i = 0; i < in->num_items; i++) {
 		count += in->Items[i].Quantity;
 	}
-	// printf("count: %d\n", count);
 
 	// 2. Generate a quote based on the total number of items to be shipped.
 	Quote quote = CreateQuoteFromCount(count);
@@ -98,41 +99,42 @@ static void MockGetQuoteRequest(struct http_transaction *txn) {
 	return;
 }
 
-static void PrintGetQuoteResponse(struct http_transaction *txn) {
-	GetQuoteResponse* out = &txn->get_quote_response;
-	printf("Shipping cost: %s %ld.%d\n", out->CostUsd.CurrencyCode, out->CostUsd.Units, out->CostUsd.Nanos);
-}
-
 // getRandomLetterCode generates a code point value for a capital letter.
-static uint32_t getRandomLetterCode() {
-	return 65 + (uint32_t) (rand() % 25);
-}
+// static uint32_t getRandomLetterCode() {
+// 	return 65 + (uint32_t) (rand() % 25);
+// }
 
 // getRandomNumber generates a string representation of a number with the requested number of digits.
-static void getRandomNumber(int digits, char *str) {
-	char tmp[10];
-	int i;
-	for (i = 0; i < digits; i++) {
-		sprintf(tmp, "%d", rand() % 10);
-		strcat(str, tmp);
-	}
+// static void getRandomNumber(int digits, char *str) {
+// 	char tmp[40];
+// 	int i;
+// 	for (i = 0; i < digits; i++) {
+// 		sprintf(tmp, "%d", rand() % 10);
+// 		strcat(str, tmp);
+// 	}
 
-	return;
-}
+// 	return;
+// }
 
 // CreateTrackingId generates a tracking ID.
 static void CreateTrackingId(char *salt, char* out) {
+	// char random_n_1[40]; getRandomNumber(3, random_n_1);
+	// char random_n_2[40]; getRandomNumber(7, random_n_2);
 
-	char random_n_1[10]; getRandomNumber(3, random_n_1);
-	char random_n_2[10]; getRandomNumber(7, random_n_2);
-	sprintf(out, "%c%c-%ld%s-%ld%s",
-		getRandomLetterCode(),
-		getRandomLetterCode(),
-		strlen(salt),
-		random_n_1,
-		strlen(salt)/2,
-		random_n_2
-	);
+	// Use UUID instead of generating a tracking ID
+	uuid_t binuuid; uuid_generate_random(binuuid);
+	uuid_unparse(binuuid, out);
+
+	// 2. Generate a response.
+	// sprintf(out, "%u%u-%ld%s-%ld%s",
+	// // printf("%s%s-%ld%s-%ld%s",
+	// 	getRandomLetterCode(),
+	// 	getRandomLetterCode(),
+	// 	strlen(salt),
+	// 	random_n_1,
+	// 	strlen(salt)/2,
+	// 	random_n_2
+	// );
 
 	return;
 }
@@ -149,12 +151,9 @@ static void ShipOrder(struct http_transaction *txn) {
 	strcat(baseAddress, in->address.City); strcat (baseAddress, ", ");
 	strcat(baseAddress, in->address.State);
 
-	char id[100];
-	CreateTrackingId(baseAddress, id);
-
-	// 2. Generate a response.
 	ShipOrderResponse *out = &txn->ship_order_response;
-	strcpy(out->TrackingId, id);
+	CreateTrackingId(baseAddress, out->TrackingId);
+
 	return;
 }
 
@@ -165,11 +164,6 @@ static void MockShipOrderRequest(struct http_transaction *txn) {
 	strcpy(in->address.State, "CA");
 	strcpy(in->address.Country, "United States");
 	in->address.ZipCode = 94043;
-}
-
-static void PrintShipOrderResponse(struct http_transaction *txn) {
-	ShipOrderResponse *out = &txn->ship_order_response;
-	printf("Tracking ID: %s\n", out->TrackingId);
 }
 
 static void *nf_worker(void *arg)
@@ -190,15 +184,23 @@ static void *nf_worker(void *arg)
 			return NULL;
 		}
 
-		MockShipOrderRequest(txn);
+		if (strcmp(txn->rpc_handler, "ShipOrder") == 0) {
+			ShipOrder(txn);
+		} else if (strcmp(txn->rpc_handler, "GetQuote") == 0) {
+			GetQuote(txn);
+		} else {
+			printf("%s() is not supported\n", txn->rpc_handler);
+			printf("\t\t#### Run Mock Test ####\n");
+			MockShipOrderRequest(txn);
+			ShipOrder(txn);
+			PrintShipOrderResponse(txn);
+			MockGetQuoteRequest(txn);
+			GetQuote(txn);
+			PrintGetQuoteResponse(txn);
+		}
 
-		ShipOrder(txn);
-
-		PrintShipOrderResponse(txn);
-
-		MockGetQuoteRequest(txn);
-		GetQuote(txn);
-		PrintGetQuoteResponse(txn);
+		txn->next_fn = txn->caller_fn;
+		txn->caller_fn = SHIPPING_SVC;
 
 		bytes_written = write(pipefd_tx[index][1], &txn,
 		                      sizeof(struct http_transaction *));
@@ -241,7 +243,6 @@ static void *nf_tx(void *arg)
 	struct epoll_event event[UINT8_MAX]; /* TODO: Use Macro */
 	struct http_transaction *txn = NULL;
 	ssize_t bytes_read;
-	uint8_t next_node;
 	uint8_t i;
 	int n_fds;
 	int epfd;
@@ -290,17 +291,7 @@ static void *nf_tx(void *arg)
 				return NULL;
 			}
 
-			txn->hop_count++;
-
-			if (likely(txn->hop_count <
-			           cfg->route[txn->route_id].length)) {
-				next_node =
-				cfg->route[txn->route_id].node[txn->hop_count];
-			} else {
-				next_node = 0;
-			}
-
-			ret = io_tx(txn, next_node);
+			ret = io_tx(txn, txn->next_fn);
 			if (unlikely(ret == -1)) {
 				fprintf(stderr, "io_tx() error\n");
 				return NULL;

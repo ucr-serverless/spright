@@ -156,11 +156,17 @@ static void *nf_worker(void *arg)
 			return NULL;
 		}
 
-		MockChargeRequest(txn);
+		if (strcmp(txn->rpc_handler, "Charge") == 0) {
+			Charge(txn);
+		} else {
+			printf("%s() is not supported\n", txn->rpc_handler);
+			printf("\t\t#### Run Mock Test ####\n");
+			MockChargeRequest(txn);
+			PrintChargeResponse(txn);
+		}
 
-		Charge(txn);
-
-		PrintChargeResponse(txn);
+		txn->next_fn = txn->caller_fn;
+		txn->caller_fn = PAYMENT_SVC;
 
 		bytes_written = write(pipefd_tx[index][1], &txn,
 		                      sizeof(struct http_transaction *));
@@ -203,7 +209,6 @@ static void *nf_tx(void *arg)
 	struct epoll_event event[UINT8_MAX]; /* TODO: Use Macro */
 	struct http_transaction *txn = NULL;
 	ssize_t bytes_read;
-	uint8_t next_node;
 	uint8_t i;
 	int n_fds;
 	int epfd;
@@ -252,17 +257,7 @@ static void *nf_tx(void *arg)
 				return NULL;
 			}
 
-			txn->hop_count++;
-
-			if (likely(txn->hop_count <
-			           cfg->route[txn->route_id].length)) {
-				next_node =
-				cfg->route[txn->route_id].node[txn->hop_count];
-			} else {
-				next_node = 0;
-			}
-
-			ret = io_tx(txn, next_node);
+			ret = io_tx(txn, txn->next_fn);
 			if (unlikely(ret == -1)) {
 				fprintf(stderr, "io_tx() error\n");
 				return NULL;

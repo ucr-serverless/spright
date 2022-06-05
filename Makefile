@@ -18,7 +18,7 @@ LDLIBS += -lbpf -lm -pthread -luuid
 
 .PHONY: all shm_mgr gateway nf clean
 
-all: bin shm_mgr gateway nf adservice currencyservice emailservice paymentservice shippingservice productcatalogservice cartservice recommendationservice
+all: bin shm_mgr gateway nf adservice currencyservice emailservice paymentservice shippingservice productcatalogservice cartservice recommendationservice frontend checkoutservice
 
 shm_mgr: bin/shm_mgr_rte_ring bin/shm_mgr_sk_msg
 
@@ -62,11 +62,11 @@ bin/adservice_sk_msg: src/io_sk_msg.o src/adservice.o
 
 currencyservice: bin/currencyservice_rte_ring bin/currencyservice_sk_msg
 
-bin/currencyservice_rte_ring: src/io_rte_ring.o src/currencyservice.o
+bin/currencyservice_rte_ring: src/io_rte_ring.o src/currencyservice.o src/utility.o
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS) ./src/cstl/src/libclib.a
 
-bin/currencyservice_sk_msg: src/io_sk_msg.o src/currencyservice.o
+bin/currencyservice_sk_msg: src/io_sk_msg.o src/currencyservice.o src/utility.o
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS) ./src/cstl/src/libclib.a
 
@@ -92,11 +92,11 @@ bin/paymentservice_sk_msg: src/io_sk_msg.o src/paymentservice.o
 
 shippingservice: bin/shippingservice_rte_ring bin/shippingservice_sk_msg
 
-bin/shippingservice_rte_ring: src/io_rte_ring.o src/shippingservice.o
+bin/shippingservice_rte_ring: src/io_rte_ring.o src/shippingservice.o src/utility.o
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
-bin/shippingservice_sk_msg: src/io_sk_msg.o src/shippingservice.o
+bin/shippingservice_sk_msg: src/io_sk_msg.o src/shippingservice.o src/utility.o
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
@@ -104,11 +104,11 @@ bin/shippingservice_sk_msg: src/io_sk_msg.o src/shippingservice.o
 
 productcatalogservice: bin/productcatalogservice_rte_ring bin/productcatalogservice_sk_msg
 
-bin/productcatalogservice_rte_ring: src/io_rte_ring.o src/productcatalogservice.o
+bin/productcatalogservice_rte_ring: src/io_rte_ring.o src/productcatalogservice.o src/utility.o
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS) ./src/cstl/src/libclib.a
 
-bin/productcatalogservice_sk_msg: src/io_sk_msg.o src/productcatalogservice.o
+bin/productcatalogservice_sk_msg: src/io_sk_msg.o src/productcatalogservice.o src/utility.o
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS) ./src/cstl/src/libclib.a
 
@@ -124,11 +124,33 @@ bin/cartservice_sk_msg: src/io_sk_msg.o src/cartservice.o
 
 recommendationservice: bin/recommendationservice_rte_ring bin/recommendationservice_sk_msg
 
-bin/recommendationservice_rte_ring: src/io_rte_ring.o src/recommendationservice.o
+bin/recommendationservice_rte_ring: src/io_rte_ring.o src/recommendationservice.o src/utility.o
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
-bin/recommendationservice_sk_msg: src/io_sk_msg.o src/recommendationservice.o
+bin/recommendationservice_sk_msg: src/io_sk_msg.o src/recommendationservice.o src/utility.o
+	@ echo "CC $@"
+	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
+-include $(patsubst %.o, %.d, $(wildcard src/*.o))
+
+frontend: bin/frontend_rte_ring bin/frontend_sk_msg
+
+bin/frontend_rte_ring: src/io_rte_ring.o src/frontend.o src/utility.o src/shm_rpc.o
+	@ echo "CC $@"
+	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
+
+bin/frontend_sk_msg: src/io_sk_msg.o src/frontend.o src/utility.o src/shm_rpc.o
+	@ echo "CC $@"
+	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
+-include $(patsubst %.o, %.d, $(wildcard src/*.o))
+
+checkoutservice: bin/checkoutservice_rte_ring bin/checkoutservice_sk_msg
+
+bin/checkoutservice_rte_ring: src/io_rte_ring.o src/checkoutservice.o src/utility.o
+	@ echo "CC $@"
+	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
+
+bin/checkoutservice_sk_msg: src/io_sk_msg.o src/checkoutservice.o src/utility.o
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 -include $(patsubst %.o, %.d, $(wildcard src/*.o))

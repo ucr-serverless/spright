@@ -24,6 +24,7 @@
 #include "io.h"
 #include "spright.h"
 #include "c_lib.h"
+#include "utility.h"
 
 static int pipefd_rx[UINT8_MAX][2];
 static int pipefd_tx[UINT8_MAX][2];
@@ -156,20 +157,6 @@ static int compare_e(void* left, void* right ) {
 
 struct clib_map* productcatalog_map;
 
-static void PrintProduct(Product *p) {
-	printf("Product Name: %s\t ID: %s\n", p->Name, p->Id);
-	printf("Product Description: %s\n", p->Description);
-	printf("Product Picture: %s\n", p->Picture);
-	printf("Product Price: %s %ld.%d\n", p->PriceUsd.CurrencyCode, p->PriceUsd.Units, p->PriceUsd.Nanos);
-	printf("Product Categories: ");
-
-	int i = 0;
-    for (i = 0; i < p->num_categories; i++ ) {
-		printf("%d. %s\t", i + 1, p->Categories[i]);
-	}
-	printf("\n\n");
-}
-
 static void parseCatalog(struct clib_map* map) {
     int size = sizeof(product_ids)/sizeof(product_ids[0]);
     int i = 0;
@@ -178,7 +165,6 @@ static void parseCatalog(struct clib_map* map) {
         int key_length = (int)strlen(key) + 1;
         Product value = products[i];
 		printf("Inserting [%s -> %s]\n", key, value.Name);
-		PrintProduct(&value);
         insert_c_map(map, key, key_length, &value, sizeof(Product)); 
         free(key);
     }
@@ -197,23 +183,11 @@ static void ListProducts(struct http_transaction *txn) {
 	return;
 }
 
-static void PrintListProductsResponse(struct http_transaction *txn) {
-	printf("### PrintListProductsResponse ###\n");
-	ListProductsResponse* out = &txn->list_products_response;
-	int size = sizeof(out->Products)/sizeof(out->Products[0]);
-    int i = 0;
-    for (i = 0; i < size; i++) {
-		PrintProduct(&out->Products[i]);
-	}
-	return;
-}
-
 static void MockGetProductRequest(struct http_transaction *txn) {
 	GetProductRequest *req = &txn->get_product_request;
 	strcpy(req->Id, "2ZYFJ3GM2N");
 }
 
-//  (*pb.Product, error) 
 static void GetProduct(struct http_transaction *txn) {
 	GetProductRequest *req = &txn->get_product_request;
 
@@ -224,6 +198,7 @@ static void GetProduct(struct http_transaction *txn) {
     int i = 0;
     for (i = 0; i < size; i++ ) {
 		if (strcmp(req->Id, product_ids[i]) == 0) {
+			printf("Get Product: %s\n", product_ids[i]);
 			num_products++;
 			*found = products[i];
 			break;
@@ -234,11 +209,6 @@ static void GetProduct(struct http_transaction *txn) {
 		printf("no product with ID %s\n", req->Id);
 	}
 	return;
-}
-
-static void PrintGetProductResponse(struct http_transaction *txn) {
-	printf("### PrintGetProductResponse ###\n");
-	PrintProduct(&txn->get_product_response);
 }
 
 static void MockSearchProductsRequest(struct http_transaction *txn) {
@@ -263,16 +233,6 @@ static void SearchProducts(struct http_transaction *txn) {
 	return;
 }
 
-static void PrintSearchProductsResponse(struct http_transaction *txn) {
-	printf("### PrintSearchProductsResponse ###\n");
-	SearchProductsResponse* out = &txn->search_products_response;
-	int i;
-	for (i = 0; i < out->num_products; i++) {
-		PrintProduct(&out->Results[i]);
-	}
-	return;
-}
-
 static void *nf_worker(void *arg)
 {
 	struct http_transaction *txn = NULL;
@@ -291,16 +251,27 @@ static void *nf_worker(void *arg)
 			return NULL;
 		}
 
-		ListProducts(txn);
-		PrintListProductsResponse(txn);
+		if (strcmp(txn->rpc_handler, "ListProducts") == 0) {
+			ListProducts(txn);
+		} else if (strcmp(txn->rpc_handler, "SearchProducts") == 0) {
+			SearchProducts(txn);
+		} else if (strcmp(txn->rpc_handler, "GetProduct") == 0) {
+			GetProduct(txn);
+		} else {
+			printf("%s() is not supported\n", txn->rpc_handler);
+			printf("\t\t#### Run Mock Test ####\n");
+			ListProducts(txn);
+			PrintListProductsResponse(txn);
+			MockGetProductRequest(txn);
+			GetProduct(txn);
+			PrintGetProductResponse(txn);
+			MockSearchProductsRequest(txn);
+			SearchProducts(txn);
+			PrintSearchProductsResponse(txn);
+		}
 
-		MockGetProductRequest(txn);
-		GetProduct(txn);
-		PrintGetProductResponse(txn);
-
-		MockSearchProductsRequest(txn);
-		SearchProducts(txn);
-		PrintSearchProductsResponse(txn);
+		txn->next_fn = txn->caller_fn;
+		txn->caller_fn = PRODUCTCATA_SVC;
 
 		bytes_written = write(pipefd_tx[index][1], &txn,
 		                      sizeof(struct http_transaction *));
@@ -343,7 +314,6 @@ static void *nf_tx(void *arg)
 	struct epoll_event event[UINT8_MAX]; /* TODO: Use Macro */
 	struct http_transaction *txn = NULL;
 	ssize_t bytes_read;
-	uint8_t next_node;
 	uint8_t i;
 	int n_fds;
 	int epfd;
@@ -392,17 +362,8 @@ static void *nf_tx(void *arg)
 				return NULL;
 			}
 
-			txn->hop_count++;
-
-			if (likely(txn->hop_count <
-			           cfg->route[txn->route_id].length)) {
-				next_node =
-				cfg->route[txn->route_id].node[txn->hop_count];
-			} else {
-				next_node = 0;
-			}
-
-			ret = io_tx(txn, next_node);
+			// printf("receive msg\n");
+			ret = io_tx(txn, txn->next_fn);
 			if (unlikely(ret == -1)) {
 				fprintf(stderr, "io_tx() error\n");
 				return NULL;

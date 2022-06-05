@@ -23,6 +23,7 @@
 #include "http.h"
 #include "io.h"
 #include "spright.h"
+#include "utility.h"
 
 static int pipefd_rx[UINT8_MAX][2];
 static int pipefd_tx[UINT8_MAX][2];
@@ -176,12 +177,8 @@ static void ListRecommendations(struct http_transaction *txn){
 	int recommended_product = rand() % product_list_size;
 	
 	// 3. Generate a response.
-	strcpy(out->ProductId, list_products_response->Products[recommended_product].Id);
+	strcpy(out->ProductId, products[recommended_product].Id);
 	return;
-}
-
-static void PrintListRecommendationsResponse(struct http_transaction *txn) {
-	printf("Recommended Product ID: %s\n", txn->list_recommendations_response.ProductId);
 }
 
 static void *nf_worker(void *arg)
@@ -202,9 +199,18 @@ static void *nf_worker(void *arg)
 			return NULL;
 		}
 
-		MockListProductsResponse(txn);
-		ListRecommendations(txn);
-		PrintListRecommendationsResponse(txn);
+		if (strcmp(txn->rpc_handler, "ListRecommendations") == 0) {
+			ListRecommendations(txn);
+		} else {
+			printf("%s() is not supported\n", txn->rpc_handler);
+			printf("\t\t#### Run Mock Test ####\n");
+			MockListProductsResponse(txn);
+			ListRecommendations(txn);
+			PrintListRecommendationsResponse(txn);
+		}
+
+		txn->next_fn = txn->caller_fn;
+		txn->caller_fn = RECOMMEND_SVC;
 
 		bytes_written = write(pipefd_tx[index][1], &txn,
 		                      sizeof(struct http_transaction *));
@@ -247,7 +253,6 @@ static void *nf_tx(void *arg)
 	struct epoll_event event[UINT8_MAX]; /* TODO: Use Macro */
 	struct http_transaction *txn = NULL;
 	ssize_t bytes_read;
-	uint8_t next_node;
 	uint8_t i;
 	int n_fds;
 	int epfd;
@@ -296,17 +301,7 @@ static void *nf_tx(void *arg)
 				return NULL;
 			}
 
-			txn->hop_count++;
-
-			if (likely(txn->hop_count <
-			           cfg->route[txn->route_id].length)) {
-				next_node =
-				cfg->route[txn->route_id].node[txn->hop_count];
-			} else {
-				next_node = 0;
-			}
-
-			ret = io_tx(txn, next_node);
+			ret = io_tx(txn, txn->next_fn);
 			if (unlikely(ret == -1)) {
 				fprintf(stderr, "io_tx() error\n");
 				return NULL;
