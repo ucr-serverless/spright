@@ -1,0 +1,189 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: product-catalog-service-1
+  namespace: default
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "1"
+    spec:
+      containerConcurrency: 32
+      containers:
+      - image: docker.io/shixiongqi/kn-dummy
+        env:
+        - name: SLEEP_TIME
+          value: "600"
+---
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: recommendation-service-2
+  namespace: default
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "1"
+    spec:
+      containerConcurrency: 32
+      containers:
+      - image: docker.io/shixiongqi/kn-dummy
+        env:
+        - name: SLEEP_TIME
+          value: "2500"
+---
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: checkout-service-3
+  namespace: default
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "1"
+    spec:
+      containerConcurrency: 32
+      containers:
+      - image: docker.io/shixiongqi/kn-dummy
+        env:
+        - name: SLEEP_TIME
+          value: "260000"
+---
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: currency-service-4
+  namespace: default
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "1"
+    spec:
+      containerConcurrency: 32
+      containers:
+      - image: docker.io/shixiongqi/kn-dummy
+        env:
+        - name: SLEEP_TIME
+          value: "900"
+---
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: ad-service-5
+  namespace: default
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "1"
+    spec:
+      containerConcurrency: 32
+      containers:
+      - image: docker.io/shixiongqi/kn-dummy
+        env:
+        - name: SLEEP_TIME
+          value: "1100"
+---
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: email-service-6
+  namespace: default
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "1"
+    spec:
+      containerConcurrency: 32
+      containers:
+      - image: docker.io/shixiongqi/kn-dummy
+        env:
+        - name: SLEEP_TIME
+          value: "500"
+---
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: payment-service-7
+  namespace: default
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "1"
+    spec:
+      containerConcurrency: 32
+      containers:
+      - image: docker.io/shixiongqi/kn-dummy
+        env:
+        - name: SLEEP_TIME
+          value: "440"
+---
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: shipping-service-8
+  namespace: default
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "1"
+    spec:
+      containerConcurrency: 32
+      containers:
+      - image: docker.io/shixiongqi/kn-dummy
+        env:
+        - name: SLEEP_TIME
+          value: "200"
+---
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: cart-service-9
+  namespace: default
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "1"
+    spec:
+      containerConcurrency: 32
+      containers:
+      - image: docker.io/shixiongqi/kn-dummy
+        env:
+        - name: SLEEP_TIME
+          value: "1200"
+---
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: redis-10
+  namespace: default
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "1"
+    spec:
+      containerConcurrency: 32
+      containers:
+      - image: docker.io/shixiongqi/kn-dummy
+        env:
+        - name: SLEEP_TIME
+          value: "1000"
