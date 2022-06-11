@@ -91,7 +91,7 @@ adservice()
 		go=""
 	fi
 
-	exec bin/${go}adservice_${io} \
+	exec bin/${go}nf_adservice_${io} \
 		-l ${CPU_NF[$((${1} - 1))]} \
 		--file-prefix=spright \
 		--proc-type=secondary \
@@ -116,7 +116,7 @@ currencyservice()
 		go=""
 	fi
 
-	exec bin/${go}currencyservice_${io} \
+	exec bin/${go}nf_currencyservice_${io} \
 		-l ${CPU_NF[$((${1} - 1))]} \
 		--file-prefix=spright \
 		--proc-type=secondary \
@@ -141,7 +141,7 @@ emailservice()
 		go=""
 	fi
 
-	exec bin/${go}emailservice_${io} \
+	exec bin/${go}nf_emailservice_${io} \
 		-l ${CPU_NF[$((${1} - 1))]} \
 		--file-prefix=spright \
 		--proc-type=secondary \
@@ -166,7 +166,7 @@ paymentservice()
 		go=""
 	fi
 
-	exec bin/${go}paymentservice_${io} \
+	exec bin/${go}nf_paymentservice_${io} \
 		-l ${CPU_NF[$((${1} - 1))]} \
 		--file-prefix=spright \
 		--proc-type=secondary \
@@ -191,7 +191,7 @@ shippingservice()
 		go=""
 	fi
 
-	exec bin/${go}shippingservice_${io} \
+	exec bin/${go}nf_shippingservice_${io} \
 		-l ${CPU_NF[$((${1} - 1))]} \
 		--file-prefix=spright \
 		--proc-type=secondary \
@@ -216,7 +216,7 @@ productcatalogservice()
 		go=""
 	fi
 
-	exec bin/${go}productcatalogservice_${io} \
+	exec bin/${go}nf_productcatalogservice_${io} \
 		-l ${CPU_NF[$((${1} - 1))]} \
 		--file-prefix=spright \
 		--proc-type=secondary \
@@ -241,7 +241,7 @@ cartservice()
 		go=""
 	fi
 
-	exec bin/${go}cartservice_${io} \
+	exec bin/${go}nf_cartservice_${io} \
 		-l ${CPU_NF[$((${1} - 1))]} \
 		--file-prefix=spright \
 		--proc-type=secondary \
@@ -266,7 +266,7 @@ recommendationservice()
 		go=""
 	fi
 
-	exec bin/${go}recommendationservice_${io} \
+	exec bin/${go}nf_recommendationservice_${io} \
 		-l ${CPU_NF[$((${1} - 1))]} \
 		--file-prefix=spright \
 		--proc-type=secondary \
@@ -276,7 +276,7 @@ recommendationservice()
 		${1}
 }
 
-frontend()
+frontendservice()
 {
 	if ! [ ${1} ]
 	then
@@ -291,7 +291,7 @@ frontend()
 		go=""
 	fi
 
-	exec bin/${go}frontend_${io} \
+	exec bin/${go}nf_frontendservice_${io} \
 		-l ${CPU_NF[$((${1} - 1))]} \
 		--file-prefix=spright \
 		--proc-type=secondary \
@@ -316,7 +316,7 @@ checkoutservice()
 		go=""
 	fi
 
-	exec bin/${go}checkoutservice_${io} \
+	exec bin/${go}nf_checkoutservice_${io} \
 		-l ${CPU_NF[$((${1} - 1))]} \
 		--file-prefix=spright \
 		--proc-type=secondary \
@@ -371,8 +371,8 @@ case ${1} in
 		recommendationservice ${2}
 	;;
 
-	"frontend" )
-		frontend ${2}
+	"frontendservice" )
+		frontendservice ${2}
 	;;
 
 	"checkoutservice" )
