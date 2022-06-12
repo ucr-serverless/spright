@@ -26,7 +26,7 @@ export MYMOUNT=/mydata
 ## 2. Install SPRIGHT on the master node (**node-0**) 
 ### Install dependencies (apt)
 ```bash
-sudo apt install -y flex bison build-essential dwarves libssl-dev libelf-dev \
+sudo apt update && sudo apt install -y flex bison build-essential dwarves libssl-dev libelf-dev \
                     libnuma-dev pkg-config python3-pip python3-pyelftools \
                     libconfig-dev golang clang gcc-multilib uuid-dev
 ```
@@ -53,7 +53,7 @@ sudo make install
 cd ..
 ```
 
-### Reboot system
+### Reboot master node (**node-0**)
 ```bash
 sudo reboot
 ```
@@ -90,33 +90,64 @@ cd ../..
 
 ### Set up hugepages
 ```bash
-sudo sysctl -w vm.nr_hugepages=16384
+$ sudo sysctl -w vm.nr_hugepages=16384
 ```
 
 ### Build SPRIGHT
-```bash
-cd /mydata # Use the extended disk with enough space
+```shell=
+$ cd /mydata # Use the extended disk with enough space
 
-git clone https://github.com/ucr-serverless/spright.git
-cd spright/src/cstl && make
-cd ../../ && make
+mydata$ cd spright/src/cstl && make
+cstl$ cd ../../ && make
 ```
 
 ## 3. Install Kubernetes control plane and Knative
 ### Setting up the Kubernetes master node (**node-0**).
-1. Run `export MYMOUNT=/mydata`
+```shell=
+$ cd /mydata/spright
+
+spright$ export MYMOUNT=/mydata
+
+spright$ ./sigcomm-experiment/env-setup/100-docker_install.sh
+
+spright$ source ~/.bashrc
+
+spright$ ./sigcomm-experiment/env-setup/200-k8s_install.sh master 10.10.1.1
+
+## Once the installation of Kuberentes control plane is done, 
+## it will print out an token `kubeadm join ...`. 
+## **PLEASE copy and save this token somewhere**. 
+## The worker node (**node-1**) needs this token to join the Kuberentes control plane.
+
+spright$ echo 'source <(kubectl completion bash)' >>~/.bashrc && source ~/.bashrc
+```
+<!-- 1. Run `export MYMOUNT=/mydata`
 2. Run `./sigcomm-experiment/env-setup/100-docker_install.sh` without *sudo*
 3. Run `source ~/.bashrc`
 4. Run `./sigcomm-experiment/env-setup/200-k8s_install.sh master 10.10.1.1`. 
 5. Once the installation of Kuberentes control plane is done, it will print out an token `kubeadm join ...`. **PLEASE copy and save this token somewhere**. The worker node (**node-1**) needs this token to join the Kuberentes control plane.
-6. run `echo 'source <(kubectl completion bash)' >>~/.bashrc && source ~/.bashrc`
+6. run `echo 'source <(kubectl completion bash)' >>~/.bashrc && source ~/.bashrc` -->
 
 ### Setting up the Kubernetes worker node (**node-1**).
-1. Run `export MYMOUNT=/mydata`
+```shell=
+$ cd /mydata/spright
+
+spright$ export MYMOUNT=/mydata
+
+spright$ ./sigcomm-experiment/env-setup/100-docker_install.sh
+
+spright$ source ~/.bashrc
+
+spright$ ./sigcomm-experiment/env-setup/200-k8s_install.sh slave
+
+# Use the token returned from the master node (**node-0**) to join the Kubernetes control plane. Run `sudo kubeadm join ...` with the token just saved. Please run the `kubeadm join` command with *sudo*
+spright$ sudo kubeadm join <control-plane-token>
+```
+<!-- 1. Run `export MYMOUNT=/mydata`
 2. Run `./sigcomm-experiment/env-setup/100-docker_install.sh` without *sudo*
 3. Run `source ~/.bashrc`
 4. Run `./sigcomm-experiment/env-setup/200-k8s_install.sh slave`
-5. Use the token returned from the master node (**node-0**) to join the Kubernetes control plane. Run `sudo kubeadm join ...` with the token just saved. Please run the `kubeadm join` command with *sudo*
+5. Use the token returned from the master node (**node-0**) to join the Kubernetes control plane. Run `sudo kubeadm join ...` with the token just saved. Please run the `kubeadm join` command with *sudo* -->
 
 ### Enable pod placement on master node (**node-0**) and taint worker node (**node-1**):
 ```bash
@@ -138,7 +169,7 @@ kubectl taint nodes <slave-node-name> location=slave:NoSchedule
 ### Setting up the Knative.
 1. On the master node (**node-0**), run
 ```bash
-./sigcomm-experiment/env-setup/300-kn_install.sh
+./sigcomm-experiment/env-setup/300-knative_install.sh
 ```
 2. Disable activator in Knative
 ```bash
@@ -149,8 +180,6 @@ kubectl -n knative-serving edit configmap config-autoscaler
 # Add "target-burst-capacity: 0" under the "data" field
 # Then save and exit, do :wq
 ```
-3. Configure the Istio ingress gateway
-
 
 ## 4. Experiment Workflow
 Note: We will run the SPRIGHT components directly as a binary for fast demonstration and testing purpose. To run SPRIGHT as a function pod, please refer to
@@ -291,7 +320,7 @@ $ cd /mydata/spright/sigcomm-experiment/expt-1-online-boutique/load-generator
 
 load-generator$ source ~/.bashrc
 
-load-generator$ locust -u 25000 -r 500 -t 3m --csv kn --csv-full-history  --headless  -H http://10.10.1.1:8080 --master --expect-workers=16
+load-generator$ locust -u 25000 -r 500 -t 3m --csv kn --csv-full-history -f spright-locustfile.py --headless  -H http://10.10.1.1:8080 --master --expect-workers=16
 ```
 
 **Terminal-2** to **Terminal-17**: run the worker process of Locust generator
@@ -417,7 +446,7 @@ $ cd /mydata/spright/sigcomm-experiment/expt-1-online-boutique/load-generator
 
 load-generator$ source ~/.bashrc
 
-load-generator$ locust -u 25000 -r 500 -t 3m --csv kn --csv-full-history  --headless  -H http://10.10.1.1:8080 --master --expect-workers=16
+load-generator$ locust -u 25000 -r 500 -t 3m --csv kn --csv-full-history -f spright-locustfile.py --headless  -H http://10.10.1.1:8080 --master --expect-workers=16
 ```
 
 **Terminal-2** to **Terminal-17**: run the worker process of Locust generator
@@ -476,7 +505,7 @@ $ cd /mydata/spright/sigcomm-experiment/expt-1-online-boutique/load-generator
 
 load-generator$ source ~/.bashrc
 
-load-generator$ locust -u 5000 -r 200 -t 3m --csv kn --csv-full-history  --headless  -H http://<istio-ingress-ip>:<istio-ingress-port> --master --expect-workers=16
+load-generator$ locust -u 5000 -r 200 -t 3m --csv kn --csv-full-history -f kn-locustfile.py --headless  -H http://<istio-ingress-ip>:<istio-ingress-port> --master --expect-workers=16
 ```
 
 **Terminal-2** to **Terminal-17**: run the worker process of Locust generator
@@ -505,7 +534,7 @@ $ cd /mydata/spright
 spright$ kubectl apply -f sigcomm-experiment/expt-1-online-boutique/manifests/kubernetes
 
 # Get the IP of Frontend Service
-spright$ kubectl get po frontend -o wide
+spright$ kubectl get po -l app=frontend -o wide
 
 # Record the IP of Frontend Service, it will be used by the load generator on worker node
 ```
@@ -530,7 +559,7 @@ $ cd /mydata/spright/sigcomm-experiment/expt-1-online-boutique/load-generator
 
 load-generator$ source ~/.bashrc
 
-load-generator$ locust -u 5000 -r 200 -t 3m --csv kn --csv-full-history  --headless  -H http://<frontend-service-ip>:8080 --master --expect-workers=16
+load-generator$ locust -u 5000 -r 200 -t 3m --csv kn --csv-full-history -f kn-locustfile.py --headless  -H http://<frontend-service-ip>:8080 --master --expect-workers=16
 ```
 
 **Terminal-2** to **Terminal-17**: run the worker process of Locust generator
