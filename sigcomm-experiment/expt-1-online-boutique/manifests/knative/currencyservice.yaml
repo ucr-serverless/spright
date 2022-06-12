@@ -1,0 +1,46 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2022 University of California, Riverside
+
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: kn-currencyservice
+  namespace: default
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "1"
+    spec:
+      containerConcurrency: 32
+      containers:
+      - image: shixiongqi/kn-currencyservice:v1.0.0
+        name: kn-currencyservice
+        ports:
+        - name: h2c
+          containerPort: 7000
+        env:
+        # - name: PORT
+        #   value: "7000"
+        - name: DISABLE_TRACING
+          value: "1"
+        - name: DISABLE_PROFILER
+          value: "1"
+        - name: DISABLE_DEBUGGER
+          value: "1"
+        - name: DISABLE_STATS
+          value: "1"
+        readinessProbe:
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:7000"]
+        livenessProbe:
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:7000"]
+        # resources:
+          # requests:
+          #   cpu: 100m
+          #   memory: 64Mi
+          # limits:
+          #   cpu: 200m
+          #   memory: 128Mi

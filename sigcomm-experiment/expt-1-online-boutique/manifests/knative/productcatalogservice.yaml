@@ -1,0 +1,46 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2022 University of California, Riverside
+
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: kn-productcatalogservice
+  namespace: default
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "1"
+    spec:
+      containerConcurrency: 32
+      containers:
+      - image: shixiongqi/kn-productcatalogservice:v1.0.0
+        name: kn-productcatalogservice
+        ports:
+        - name: h2c
+          containerPort: 3550
+        env:
+        # - name: PORT
+        #   value: "3550"
+        - name: DISABLE_STATS
+          value: "1"
+        - name: DISABLE_TRACING
+          value: "1"
+        - name: DISABLE_PROFILER
+          value: "1"
+        # - name: JAEGER_SERVICE_ADDR
+        #   value: "jaeger-collector:14268"
+        readinessProbe:
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:3550"]
+        livenessProbe:
+          exec:
+            command: ["/bin/grpc_health_probe", "-addr=:3550"]
+        # resources:
+        #   requests:
+        #     cpu: 100m
+        #     memory: 64Mi
+        #   limits:
+        #     cpu: 200m
+        #     memory: 128Mi
