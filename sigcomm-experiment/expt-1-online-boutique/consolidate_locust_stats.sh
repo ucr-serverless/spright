@@ -16,6 +16,8 @@ for j in {2..17}
 do
     if [ ! -d "locust_worker_${j}/" ] ; then
       echo "locust_worker_${j}/ DOES NOT exists."
+      exit 1
+    else
       cat $STAT_PATH/locust_worker_${j}/stats.csv >> $STAT_PATH/stats_${ALTERNATIVE}.csv
     fi
 done
