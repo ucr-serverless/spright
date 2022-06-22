@@ -28,6 +28,7 @@ done
 if [ $ARCH == "s-spright" ]; then
   echo "Testing S-SPRIGHT..."
   tmux send-keys -t 1 "sudo ./run.sh shm_mgr cfg/online-boutique-concurrency-32.cfg" Enter
+  sleep 1
   tmux send-keys -t 2 "sudo ./run.sh gateway" Enter
   sleep 10
   tmux send-keys -t 3 "sudo ./run.sh frontendservice 1" Enter
@@ -52,6 +53,7 @@ if [ $ARCH == "s-spright" ]; then
 else
   echo "Testing D-SPRIGHT..."
   tmux send-keys -t 1 "sudo RTE_RING=1 ./run.sh shm_mgr cfg/online-boutique-concurrency-32.cfg" Enter
+  sleep 1
   tmux send-keys -t 2 "sudo RTE_RING=1 ./run.sh gateway" Enter
   sleep 10
   tmux send-keys -t 3 "sudo RTE_RING=1 ./run.sh frontendservice 1" Enter
@@ -86,7 +88,10 @@ if [ ! -d "online-boutique-results/" ] ; then
 fi
 
 cd online-boutique-results
-pidstat 1 180 -C gateway_sk_msg > skmsg_gw.cpu & pidstat 1 180 -C nf_ > skmsg_fn.cpu
-
+if [ $ARCH == "s-spright" ]; then
+    pidstat 1 180 -C gateway_sk_msg > skmsg_gw.cpu & pidstat 1 180 -C nf_ > skmsg_fn.cpu
+else
+    pidstat 1 180 -C gateway_rte_rin > dpdk_gw.cpu  & pidstat 1 180 -C nf_ > dpdk_nf.cpu
+fi
 echo "CPU usage collection is done!"
 # tmux kill-pane -t 0
