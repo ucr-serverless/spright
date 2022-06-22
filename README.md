@@ -210,7 +210,6 @@ spright$ kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{
 $ cd /mydata/spright/sigcomm-experiment/expt-1-online-boutique/
 
 expt-1-online-boutique$ ./run_kn.sh
-
 ```
 ---
 > **Worker node (node-1) operations**
@@ -302,18 +301,7 @@ Run load generator
 ```shell=
 $ cd /mydata/spright/sigcomm-experiment/expt-2-motion-detection/load-generator
 
-load-generator$ python3 motion-generator.py --ip 10.10.1.1 --port 8080
-```
----
-> **Download metric logs**
-- **Prerequisite**: create a "results" directory on your local machine if you do not have
-```shell=
-$ cd $HOME/results
-results$ mkdir motion && cd motion
-motion$ scp <cloudlab-userid>@<node-0-hostname>:/mydata/<path-to-cpu-logfile>/skmsg_gw.motion.cpu ./
-motion$ scp <cloudlab-userid>@<node-0-hostname>:/mydata/<path-to-cpu-logfile>/skmsg_fn.motion.cpu ./
-
-motion$ scp <cloudlab-userid>@<node-1-hostname>:/mydata/<path-to-latency-logfile>/motion_output.csv ./
+load-generator$ python3 spright-motion-generator.py --ip 10.10.1.1 --port 8080
 ```
 
 #### 2.2 Run Motion Detection using Knative
@@ -357,19 +345,7 @@ Run load generator
 $ cd /mydata/spright/sigcomm-experiment/expt-2-motion-detection/load-generator
 
 # use the IP of motion proxy obtained from master node
-load-generator$ python3 motion-generator.py --ip <motion-proxy-ip> --port 80
-```
----
-> **Download metric logs**
-- **Prerequisite**: create a "results" directory on your local machine if you do not have
-```shell=
-$ cd $HOME/results
-results$ mkdir motion && cd motion
-motion$ scp <cloudlab-userid>@<node-0-hostname>:/mydata/<path-to-cpu-logfile>/kn-queue.motion.cpu ./
-motion$ scp <cloudlab-userid>@<node-0-hostname>:/mydata/<path-to-cpu-logfile>/kn-gw.motion.cpu ./
-motion$ scp <cloudlab-userid>@<node-0-hostname>:/mydata/<path-to-cpu-logfile>/kn-fn.motion.cpu ./
-
-motion$ scp <cloudlab-userid>@<node-1-hostname>:/mydata/<path-to-latency-logfile>/motion.cpu ./
+load-generator$ python3 kn-motion-generator.py --ip <motion-proxy-ip> --port 80
 ```
 
 ### 3 - Parking detection & Charging.
@@ -395,17 +371,6 @@ Run load generator
 $ cd /mydata/spright/sigcomm-experiment/expt-3-parking/load-generator
 
 load-generator$ python3 skmsg-parking.py --ip 10.10.1.1 --port 8080
-```
----
-> **Download metric logs**
-- **Prerequisite**: create a "results" directory on your local machine if you do not have
-```shell=
-$ cd $HOME/results
-results$ mkdir parking && cd parking
-parking$ scp <user>@<node-0>:/mydata/<path-to-cpu-logfile>/skmsg_gw.parking.cpu ./
-parking$ scp <user>@<node-0>:/mydata/<path-to-cpu-logfile>/skmsg_fn.parking.cpu ./
-
-parking$ scp <user>@<node-1>:/mydata/<path-to-latency-logfile>/skmsg.parking_output.csv ./
 ```
 
 #### 3.2 Run the parking detection function chain using Knative
@@ -457,20 +422,122 @@ $ cd /mydata/spright/sigcomm-experiment/expt-3-parking/load-generator
 # use the IP of parking proxy, the IP of Istio Ingress and the Port of Istio Ingress obtained from master node
 load-generator$ python3 kn-parking.py --nginxip <motion-proxy-ip> --nginxport 80 --istioip <istio-ingress-ip> --istioport <istio-ingress-port>
 ```
----
-> **Download metric logs**
-- **Prerequisite**: create a "results" directory on your local machine if you do not have
-```shell=
-$ cd $HOME/results
-results$ mkdir parking && cd parking
-parking$ scp <user>@<node-0>:/mydata/<path-to-cpu-logfile>/kn-queue.parking.cpu ./
-parking$ scp <user>@<node-0>:/mydata/<path-to-cpu-logfile>/kn-gw.parking.cpu ./
-parking$ scp <user>@<node-0>:/mydata/<path-to-cpu-logfile>/kn-fn.parking.cpu ./
 
-parking$ scp <user>@<node-1>:/mydata/<path-to-latency-logfile>/kn.parking_output.csv ./
+## 5. Download metric logs to your local machine.
+- **Prerequisite**: create a "results" directory on your local machine if you do not have
+
+### Download Online Boutique experiment raw metric files
+```shell=
+# Go to the "results" directory on your local machine
+$ cd $HOME/results
+
+# Creating a directory to put parking experiment related metric files
+results$ mkdir online_boutique && cd online_boutique
+
+# Replace the correct user ID and hostname of your cloudlab machine
+# Download metric files on the master node
+online_boutique$ scp <cloudlab-userid>@<node-0-hostname>:/mydata/online-boutique-results/dpdk_gw.cpu ./
+online_boutique$ scp <cloudlab-userid>@<node-0-hostname>:/mydata/online-boutique-results/dpdk_nf.cpu ./
+online_boutique$ scp <cloudlab-userid>@<node-0-hostname>:/mydata/online-boutique-results/grpc-recom.cpu ./
+online_boutique$ scp <cloudlab-userid>@<node-0-hostname>:/mydata/online-boutique-results/grpc-front-prod.cpu ./
+online_boutique$ scp <cloudlab-userid>@<node-0-hostname>:/mydata/online-boutique-results/grpc-others.cpu ./
+online_boutique$ scp <cloudlab-userid>@<node-0-hostname>:/mydata/online-boutique-results/kn-gw.cpu ./online_boutique$ scp <cloudlab-userid>@<node-0-hostname>:/mydata/online-boutique-results/kn-queue.cpu ./
+online_boutique$ scp <cloudlab-userid>@<node-0-hostname>:/mydata/online-boutique-results/kn-front-prod.cpu ./
+online_boutique$ scp <cloudlab-userid>@<node-0-hostname>:/mydata/online-boutique-results/kn-others.cpu ./
+online_boutique$ scp <cloudlab-userid>@<node-0-hostname>:/mydata/online-boutique-results/kn-recom.cpu ./
+online_boutique$ scp <cloudlab-userid>@<node-0-hostname>:/mydata/online-boutique-results/skmsg_fn.cpu ./
+online_boutique$ scp <cloudlab-userid>@<node-0-hostname>:/mydata/online-boutique-results/skmsg_gw.cpu ./
+
+# Download metric files on the worker node
+online_boutique$ scp <cloudlab-userid>@<node-1-hostname>:/mydata/spright/sigcomm-experiment/expt-1-online-boutique/rps_stats_d-spright.csv ./
+online_boutique$ scp <cloudlab-userid>@<node-1-hostname>:/mydata/spright/sigcomm-experiment/expt-1-online-boutique/latency_of_each_req_stats_d-spright.csv ./
+online_boutique$ scp <cloudlab-userid>@<node-1-hostname>:/mydata/spright/sigcomm-experiment/expt-1-online-boutique/rps_stats_s-spright.csv ./
+online_boutique$ scp <cloudlab-userid>@<node-1-hostname>:/mydata/spright/sigcomm-experiment/expt-1-online-boutique/latency_of_each_req_stats_s-spright.csv ./
+online_boutique$ scp <cloudlab-userid>@<node-1-hostname>:/mydata/spright/sigcomm-experiment/expt-1-online-boutique/rps_stats_grpc.csv ./
+online_boutique$ scp <cloudlab-userid>@<node-1-hostname>:/mydata/spright/sigcomm-experiment/expt-1-online-boutique/latency_of_each_req_stats_grpc.csv ./
+online_boutique$ scp <cloudlab-userid>@<node-1-hostname>:/mydata/spright/sigcomm-experiment/expt-1-online-boutique/rps_stats_kn.csv ./
+online_boutique$ scp <cloudlab-userid>@<node-1-hostname>:/mydata/spright/sigcomm-experiment/expt-1-online-boutique/latency_of_each_req_stats_kn.csv ./
+
+
 ```
 
-## 5. Misc.
+### Download Motion Detection experiment raw metric files
+```shell=
+# Go to the "results" directory on your local machine
+$ cd $HOME/results
+
+# Creating a directory to put parking experiment related metric files
+results$ mkdir motion && cd motion
+
+# Replace the correct user ID and hostname of your cloudlab machine
+# Download metric files on the master node
+motion$ scp <cloudlab-userid>@<node-0-hostname>:/mydata/motion-detection-results/kn-queue.motion.cpu ./
+motion$ scp <cloudlab-userid>@<node-0-hostname>:/mydata/motion-detection-results/kn-gw.motion.cpu ./
+motion$ scp <cloudlab-userid>@<node-0-hostname>:/mydata/motion-detection-results/kn-fn.motion.cpu ./
+motion$ scp <cloudlab-userid>@<node-0-hostname>:/mydata/motion-detection-results/skmsg_gw.motion.cpu ./
+motion$ scp <cloudlab-userid>@<node-0-hostname>:/mydata/motion-detection-results/skmsg_fn.motion.cpu ./
+
+# Download metric files on the worker node
+motion$ scp <cloudlab-userid>@<node-1-hostname>:/mydata/spright/sigcomm-experiment/expt-2-motion-detection/load-generator/skmsg_motion_output.csv ./
+motion$ scp <cloudlab-userid>@<node-1-hostname>:/mydata/spright/sigcomm-experiment/expt-2-motion-detection/load-generator/kn_motion_output.csv ./
+```
+
+### Download Parking experiment raw metric files
+```shell=
+# Go to the "results" directory on your local machine
+$ cd $HOME/results
+
+# Creating a directory to put parking experiment related metric files
+results$ mkdir parking && cd parking
+
+# Replace the correct user ID and hostname of your cloudlab machine
+# Download metric files on the master node
+parking$ scp <cloudlab-userid>@<node-0-hostname>:/mydata/parking-results/kn-queue.parking.cpu ./
+parking$ scp <cloudlab-userid>@<node-0-hostname>:/mydata/parking-results/kn-gw.parking.cpu ./
+parking$ scp <cloudlab-userid>@<node-0-hostname>:/mydata/parking-results/kn-fn.parking.cpu ./
+parking$ scp <cloudlab-userid>@<node-0-hostname>:/mydata/parking-results/skmsg_gw.parking.cpu ./
+parking$ scp <cloudlab-userid>@<node-0-hostname>:/mydata/parking-results/skmsg_fn.parking.cpu ./
+
+# Download metric files on the worker node
+parking$ scp <cloudlab-userid>@<node-1-hostname>:/mydata/spright/sigcomm-experiment/expt-3-parking/load-generator/kn.parking_output.csv ./
+parking$ scp <cloudlab-userid>@<node-1-hostname>:/mydata/spright/sigcomm-experiment/expt-3-parking/load-generator/skmsg.parking_output.csv ./
+```
+
+## 6. Re-producing figures (camera-ready version) in the manuscript (on your local machine).
+
+### Download script to the 'results' directory
+```bash
+# Go to the "results" directory on your local machine
+$ cd $HOME/results
+
+results$ git clone 
+```
+
+```shell=
+# Figure-9: RPS for online boutique workload: {Knative, gRPC} at 5K & {D-SPRIGHT, S-SPRIGHT } at 25K concurrency.
+python3 fig-9.py
+
+# Figure-10 (a) - (i)
+python3 fig-10-a.py
+python3 fig-10-b.py
+python3 fig-10-c.py
+python3 fig-10-d.py
+python3 fig-10-e.py
+python3 fig-10-f.py
+python3 fig-10-g.py
+python3 fig-10-h.py
+python3 fig-10-i.py
+
+# Figure-11 (a), (b)
+python3 fig-11-a.py
+python3 fig-11-b.py
+
+# Figure-12 (a), (b)
+python3 fig-12-a.py
+python3 fig-12-b.py
+```
+
+## 7. Misc.
 ### Compile the eBPF code into an object file
 ```bash
 cd ebpf/

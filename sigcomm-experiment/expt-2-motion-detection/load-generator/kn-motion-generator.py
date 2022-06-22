@@ -62,7 +62,7 @@ print("\n* * * * * * * EVENT GENERATION BEGIN * * * * * *")
 # ----------------------------------------------- #
 # -------------- Open output file --------------- #
 # ----------------------------------------------- #
-stat_file = open('motion_output.csv', 'w')
+stat_file = open('kn_motion_output.csv', 'w')
 
 def post(http_url, output_file, send_time):
     print("Send a request at {}".format(send_time))
