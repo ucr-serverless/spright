@@ -1,7 +1,9 @@
 #!/bin/bash
 
 ARCH=$1
-LOAD_GEN_PATH=$2
+IP=$2
+PORT=$3
+LOAD_GEN_PATH=$4
 
 if [ -z "$ARCH" ] ; then
   echo "Usage: $0 <ARCH> <LOAD_GEN_PATH>"
@@ -54,7 +56,7 @@ if [ $ARCH == "spright" ]; then
   tmux send-keys -t 1 "locust -u 25000 -r 500 -t 3m --csv kn --csv-full-history -f spright-locustfile.py --headless  -H http://10.10.1.1:8080 --master --expect-workers=16" Enter
 else
   echo "Run Knative's locust master"
-  tmux send-keys -t 1 "locust -u 5000 -r 200 -t 3m --csv kn --csv-full-history -f kn-locustfile.py --headless  -H http://<frontend-service-ip>:8080 --master --expect-workers=16" Enter
+  tmux send-keys -t 1 "locust -u 5000 -r 200 -t 3m --csv kn --csv-full-history -f kn-locustfile.py --headless  -H http://${IP}:${PORT} --master --expect-workers=16" Enter
 fi
 
 sleep 0.1

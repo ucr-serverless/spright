@@ -7,7 +7,7 @@ if [ -z "$ALTERNATIVE" ] ; then
   exit 1
 fi
 
-STAT_PATH="/mydata/spright/sigcomm-experiment/expt-1-online-boutique/"
+STAT_PATH="/mydata/spright/sigcomm-experiment/expt-1-online-boutique"
 
 cd $STAT_PATH
 
@@ -22,4 +22,4 @@ do
     fi
 done
 
-cp $STAT_PATH/locust_worker_1/kn_stats_history.csv >> $STAT_PATH/rps_stats_${ALTERNATIVE}.csv
+cp $STAT_PATH/locust_worker_1/kn_stats_history.csv $STAT_PATH/rps_stats_${ALTERNATIVE}.csv

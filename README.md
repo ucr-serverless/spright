@@ -24,81 +24,23 @@ export MYMOUNT=/mydata
 ```
 
 ## 2. Install SPRIGHT on the master node (**node-0**) 
-### Install dependencies (apt)
+### Update Kernel of the master node
 ```bash
-sudo apt update && sudo apt install -y flex bison build-essential dwarves libssl-dev libelf-dev \
-                    libnuma-dev pkg-config python3-pip python3-pyelftools \
-                    libconfig-dev golang clang gcc-multilib uuid-dev
+$ cd /mydata/spright
+
+spright$ ./sigcomm-experiment/env-setup/001-env_setup_master.sh
+
+# The master node will be rebooted after the script is complete
+# Rebooting usually takes 5 - 10 minutes
 ```
 
-### Install dependencies (pip)
+### Re-login to master node after rebooting (**node-0**)
+
+### Install libbpf, dpdk and SPRIGHT
 ```bash
-sudo pip3 install meson ninja
-```
+$ cd /mydata/spright
 
-### Install Linux
-```bash
-cd /mydata # Use the extended disk with enough space
-
-wget --no-hsts https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.16.tar.xz
-tar -xf linux-5.16.tar.xz
-cd linux-5.16
-make olddefconfig
-scripts/config --set-str SYSTEM_TRUSTED_KEYS ""
-scripts/config --set-str SYSTEM_REVOCATION_KEYS ""
-make -j $(nproc)
-find -name *.ko -exec strip --strip-unneeded {} +
-sudo make modules_install -j $(nproc)
-sudo make install
-cd ..
-```
-
-### Reboot master node (**node-0**)
-```bash
-sudo reboot
-```
-
-### Install libbpf
-```bash
-cd /mydata # Use the extended disk with enough space
-
-git clone --single-branch https://github.com/libbpf/libbpf.git
-cd libbpf
-git switch --detach v0.6.0
-cd src
-make -j $(nproc)
-sudo make install
-echo "/usr/lib64/" | sudo tee -a /etc/ld.so.conf
-sudo ldconfig
-cd ../..
-```
-
-### Install DPDK
-```bash
-cd /mydata # Use the extended disk with enough space
-
-git clone --single-branch git://dpdk.org/dpdk
-cd dpdk
-git switch --detach v21.11
-meson build
-cd build
-ninja
-sudo ninja install
-sudo ldconfig
-cd ../..
-```
-
-### Set up hugepages
-```bash
-$ sudo sysctl -w vm.nr_hugepages=16384
-```
-
-### Build SPRIGHT
-```shell=
-$ cd /mydata # Use the extended disk with enough space
-
-mydata$ cd spright/src/cstl && make
-cstl$ cd ../../ && make
+spright$ ./sigcomm-experiment/env-setup/002-env_setup_master.sh
 ```
 
 ## 3. Install Kubernetes control plane and Knative
@@ -121,12 +63,6 @@ spright$ ./sigcomm-experiment/env-setup/200-k8s_install.sh master 10.10.1.1
 
 spright$ echo 'source <(kubectl completion bash)' >>~/.bashrc && source ~/.bashrc
 ```
-<!-- 1. Run `export MYMOUNT=/mydata`
-2. Run `./sigcomm-experiment/env-setup/100-docker_install.sh` without *sudo*
-3. Run `source ~/.bashrc`
-4. Run `./sigcomm-experiment/env-setup/200-k8s_install.sh master 10.10.1.1`. 
-5. Once the installation of Kuberentes control plane is done, it will print out an token `kubeadm join ...`. **PLEASE copy and save this token somewhere**. The worker node (**node-1**) needs this token to join the Kuberentes control plane.
-6. run `echo 'source <(kubectl completion bash)' >>~/.bashrc && source ~/.bashrc` -->
 
 ### Setting up the Kubernetes worker node (**node-1**).
 ```shell=
@@ -143,33 +79,18 @@ spright$ ./sigcomm-experiment/env-setup/200-k8s_install.sh slave
 # Use the token returned from the master node (**node-0**) to join the Kubernetes control plane. Run `sudo kubeadm join ...` with the token just saved. Please run the `kubeadm join` command with *sudo*
 spright$ sudo kubeadm join <control-plane-token>
 ```
-<!-- 1. Run `export MYMOUNT=/mydata`
-2. Run `./sigcomm-experiment/env-setup/100-docker_install.sh` without *sudo*
-3. Run `source ~/.bashrc`
-4. Run `./sigcomm-experiment/env-setup/200-k8s_install.sh slave`
-5. Use the token returned from the master node (**node-0**) to join the Kubernetes control plane. Run `sudo kubeadm join ...` with the token just saved. Please run the `kubeadm join` command with *sudo* -->
 
 ### Enable pod placement on master node (**node-0**) and taint worker node (**node-1**):
-```bash
-# Please run the following commands on MASTER node (node-0)
-kubectl taint nodes --all node-role.kubernetes.io/master-
-
-kubectl get node # This command will return the names of the master node and worker node
-
-# Replace <master-node-name> with node-0's name returned by "kubectl get node"
-kubectl label nodes <master-node-name> location=master
-
-# Replace <slave-node-name> with node-1's name returned by "kubectl get node"
-kubectl label nodes <slave-node-name> location=slave
-
-# Replace <slave-node-name> with node-1's name returned by "kubectl get node"
-kubectl taint nodes <slave-node-name> location=slave:NoSchedule
+```shell=
+$ cd /mydata/spright
+spright$ ./sigcomm-experiment/env-setup/201-taint_nodes.sh
 ```
 
 ### Setting up the Knative.
 1. On the master node (**node-0**), run
-```bash
-./sigcomm-experiment/env-setup/300-knative_install.sh
+```shell=
+$ cd /mydata/spright
+spright$ ./sigcomm-experiment/env-setup/300-knative_install.sh
 ```
 2. Disable activator in Knative
 ```bash
@@ -192,283 +113,80 @@ Note: We will run the SPRIGHT components directly as a binary for fast demonstra
 
 #### 1.0 Install Deps of Locust generator on worker node (**node-1**)
 > **Worker node (node-1) operations**
-- **Prerequisite**: Create 1 terminals (Terminal-1) on worker node (**node-1**)
 
-**Terminal-1**: install deps of Locust load generator
+Install Locust load generator
 ```shell=
-$ cd /mydata/spright/sigcomm-experiment/expt-1-online-boutique/load-generator
+$ cd /mydata/spright/sigcomm-experiment/env-setup/
 
-load-generator$ sudo apt update && sudo apt install -y python3-pip
+env-setup$ ./400-install_locust.sh
 
-# Install dependencies
-load-generator$ pip3 install -r requirements.txt
-
-# Install Locust
-load-generator$ pip3 install locust
-
-# export the locust path to locust
-load-generator$ echo export PATH="$HOME/.local/bin:$PATH" >> ~/.bashrc
-load-generator$ source ~/.bashrc
 ```
 
 #### 1.1 Run Online boutique using S-SPRIGHT (SKMSG)
 
 > **Master node (node-0) operations**
-- **Prerequisite**: Create 13 terminals (Terminal-1, Terminal-2, Terminal-3, Terminal-4, ... Terminal-12) on master node (**node-0**)
-
-**Terminal-1**: start shared memory manager
 ```shell=
-$ cd /mydata/spright
+$ cd /mydata/spright/sigcomm-experiment/expt-1-online-boutique/
 
-spright$ sudo ./run.sh shm_mgr cfg/online-boutique-concurrency-32.cfg
-```
+expt-1-online-boutique$ ./run_spright.sh s-spright
 
-**Terminal-2**: start SPRIGHT gateway
-```shell=
-$ cd /mydata/spright
-
-spright$ sudo ./run.sh gateway
-```
-
-**Terminal-3**: start frontend service
-```shell=
-$ cd /mydata/spright
-
-spright$ sudo ./run.sh frontendservice 1
-```
-
-**Terminal-4**: start currency service
-```shell=
-$ cd /mydata/spright
-
-spright$ sudo ./run.sh currencyservice 2
-```
-
-**Terminal-5**: start productcatalog service
-```shell=
-$ cd /mydata/spright
-
-spright$ sudo ./run.sh productcatalogservice 3
-```
-
-**Terminal-6**: start cart service
-```shell=
-$ cd /mydata/spright
-
-spright$ sudo ./run.sh cartservice 4
-```
-
-**Terminal-7**: start recommendation service
-```shell=
-$ cd /mydata/spright
-
-spright$ sudo ./run.sh recommendationservice 5
-```
-
-**Terminal-8**: start shipping service
-```shell=
-$ cd /mydata/spright
-
-spright$ sudo ./run.sh shippingservice 6
-```
-
-**Terminal-9**: start checkout service
-```shell=
-$ cd /mydata/spright
-
-spright$ sudo ./run.sh checkoutservice 7
-```
-
-**Terminal-10**: start payment service
-```shell=
-$ cd /mydata/spright
-
-spright$ sudo ./run.sh paymentservice 8
-```
-
-**Terminal-11**: start email service
-```shell=
-$ cd /mydata/spright
-
-spright$ sudo ./run.sh emailservice 9
-```
-
-**Terminal-12**: start ad service
-```shell=
-$ cd /mydata/spright
-
-spright$ sudo ./run.sh adservice 10
-```
-
-**Terminal-13**: CPU usage collection
-```shell= 
-$ cd /mydata
-
-mydatas$ mkdir online-boutique-results
-
-mydatas$ cd online-boutique-results
-
-online-boutique-results$ pidstat 1 180 -C gateway_sk_msg > skmsg_gw.cpu & pidstat 1 180 -C nf_ > skmsg_fn.cpu &
+# After the experiment is done (~3 minutes)
+# Enter Ctrl+B then D to detach from tmux
 ```
 ---
 > **Worker node (node-1) operations**
-- **Prerequisite**: Create 17 terminal (Terminal-1, ... ,Terminal-17) on worker node (**node-1**). Terminal-1 is to run the master process of Locust generator. ***Terminal-2 to Terminal-17** are to run the worker process of Locust generator. Each terminal runs only one worker process. The reason we need so many worker process is to distribute load generation to achieve enough load. See: https://docs.locust.io/en/stable/running-distributed.html
-
-**Terminal-1**: run the master process of Locust generator
 ```shell=
-$ cd /mydata/spright/sigcomm-experiment/expt-1-online-boutique/load-generator
+$ cd /mydata/spright/sigcomm-experiment/expt-1-online-boutique/
 
-load-generator$ source ~/.bashrc
+expt-1-online-boutique$ ./run_load_generators.sh spright 10.10.1.1 8080
 
-load-generator$ locust -u 25000 -r 500 -t 3m --csv kn --csv-full-history -f spright-locustfile.py --headless  -H http://10.10.1.1:8080 --master --expect-workers=16
+# After the experiment is done (~3 minutes)
+# Enter Ctrl+B then D to detach from tmux
 ```
-
-**Terminal-2** to **Terminal-17**: run the worker process of Locust generator
+---
+> **Prepare raw metric files**
 ```shell=
-$ cd /mydata/spright/sigcomm-experiment/expt-1-online-boutique/load-generator
+$ cd /mydata/spright/sigcomm-experiment/expt-1-online-boutique/
 
-# make sure locust can have enough file descriptor to use in each terminal
-load-generator$ ulimit -aS
-load-generator$ ulimit -HSn 102400
+expt-1-online-boutique$ ./consolidate_locust_stats.sh s-spright
 
-load-generator$ source ~/.bashrc
-
-# Start the worker process of Locust. The master process will wait until all the workers are ready
-load-generator$ locust -f spright-locustfile.py --worker
 ```
 
 #### 1.2 Run Online boutique using D-SPRIGHT (DPDK's RTE rings)
 
 > **Master node (node-0) operations**
-- **Prerequisite**: Create 13 terminals (Terminal-1, Terminal-2, Terminal-3, Terminal-4, ... Terminal-12) on master node (**node-0**)
-
-**Terminal-1**: start shared memory manager
 ```shell=
-$ cd /mydata/spright
+$ cd /mydata/spright/sigcomm-experiment/expt-1-online-boutique/
 
-spright$ sudo ./run.sh RTE_RING=1 shm_mgr cfg/online-boutique-concurrency-32.cfg
-```
+expt-1-online-boutique$ ./run_spright.sh d-spright
 
-**Terminal-2**: start SPRIGHT gateway
-```shell=
-$ cd /mydata/spright
-
-spright$ sudo ./run.sh RTE_RING=1 gateway
-```
-
-**Terminal-3**: start frontend service
-```shell=
-$ cd /mydata/spright
-
-spright$ sudo ./run.sh RTE_RING=1 frontendservice 1
-```
-
-**Terminal-4**: start currency service
-```shell=
-$ cd /mydata/spright
-
-spright$ sudo ./run.sh RTE_RING=1 currencyservice 2
-```
-
-**Terminal-5**: start productcatalog service
-```shell=
-$ cd /mydata/spright
-
-spright$ sudo ./run.sh RTE_RING=1 productcatalogservice 3
-```
-
-**Terminal-6**: start cart service
-```shell=
-$ cd /mydata/spright
-
-spright$ sudo ./run.sh RTE_RING=1 cartservice 4
-```
-
-**Terminal-7**: start recommendation service
-```shell=
-$ cd /mydata/spright
-
-spright$ sudo ./run.sh RTE_RING=1 recommendationservice 5
-```
-
-**Terminal-8**: start shipping service
-```shell=
-$ cd /mydata/spright
-
-spright$ sudo ./run.sh RTE_RING=1 shippingservice 6
-```
-
-**Terminal-9**: start checkout service
-```shell=
-$ cd /mydata/spright
-
-spright$ sudo ./run.sh RTE_RING=1 checkoutservice 7
-```
-
-**Terminal-10**: start payment service
-```shell=
-$ cd /mydata/spright
-
-spright$ sudo ./run.sh RTE_RING=1 paymentservice 8
-```
-
-**Terminal-11**: start email service
-```shell=
-$ cd /mydata/spright
-
-spright$ sudo ./run.sh RTE_RING=1 emailservice 9
-```
-
-**Terminal-12**: start ad service
-```shell=
-$ cd /mydata/spright
-
-spright$ sudo ./run.sh RTE_RING=1 adservice 10
-```
-
-**Terminal-13**: CPU usage collection
-```shell= 
-$ cd /mydata
-
-mydatas$ mkdir online-boutique-results
-
-mydatas$ cd online-boutique-results
-
-online-boutique-results$ pidstat 1 180 -C gateway_rte_rin > dpdk_gw.cpu  & pidstat 1 180 -C nf_ > dpdk_nf.cpu &
+# After the experiment is done (~3 minutes)
+# Enter Ctrl+B then D to detach from tmux
 ```
 ---
 > **Worker node (node-1) operations**
-- **Prerequisite**: Create 17 terminal (Terminal-1, ... ,Terminal-17) on worker node (**node-1**). Terminal-1 is to run the master process of Locust generator. ***Terminal-2 to Terminal-17** are to run the worker process of Locust generator. Each terminal runs only one worker process. The reason we need so many worker process is to distribute load generation to achieve enough load. See: https://docs.locust.io/en/stable/running-distributed.html
-
-**Terminal-1**: run the master process of Locust generator
 ```shell=
-$ cd /mydata/spright/sigcomm-experiment/expt-1-online-boutique/load-generator
+$ cd /mydata/spright/sigcomm-experiment/expt-1-online-boutique/
 
-load-generator$ source ~/.bashrc
+expt-1-online-boutique$ ./run_load_generators.sh spright 10.10.1.1 8080
 
-load-generator$ locust -u 25000 -r 500 -t 3m --csv kn --csv-full-history -f spright-locustfile.py --headless  -H http://10.10.1.1:8080 --master --expect-workers=16
+# After the experiment is done (~3 minutes)
+# Enter Ctrl+B then D to detach from tmux
 ```
-
-**Terminal-2** to **Terminal-17**: run the worker process of Locust generator
+---
+> **Prepare raw metric files**
 ```shell=
-$ cd /mydata/spright/sigcomm-experiment/expt-1-online-boutique/load-generator
+$ cd /mydata/spright/sigcomm-experiment/expt-1-online-boutique/
 
-# make sure locust can have enough file descriptor to use in each terminal
-load-generator$ ulimit -aS
-load-generator$ ulimit -HSn 102400
+expt-1-online-boutique$ ./consolidate_locust_stats.sh d-spright
 
-load-generator$ source ~/.bashrc
-
-# Start the worker process of Locust. The master process will wait until all the workers are ready
-load-generator$ locust -f spright-locustfile.py --worker
 ```
 
 #### 1.3 Run Online boutique using Knative
 
 > **Master node (node-0) operations**
-- **Prerequisite**: Create 2 terminals (Terminal-1, Terminal-2) on master node (**node-0**)
 
-**Terminal-1**: start Knative functions
+**Step-1**: start Knative functions
 ```shell=
 $ cd /mydata/spright/sigcomm-experiment/expt-1-online-boutique/
 
@@ -485,49 +203,28 @@ spright$ kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{
 # Record the IP of parking proxy, the IP of Istio Ingress and the Port of Istio Ingress, they will be used by the load generator on worker node
 ```
 
-**Terminal-2**: CPU usage collection
+**Step-2**: Start CPU usage collection
 ```shell= 
-$ cd /mydata
+$ cd /mydata/spright/sigcomm-experiment/expt-1-online-boutique/
 
-mydatas$ mkdir online-boutique-results
+expt-1-online-boutique$ ./run_kn.sh
 
-mydatas$ cd online-boutique-results
-
-online-boutique-results$ pidstat 1 180 -G ^queue$ > kn-queue.cpu &  pidstat 1 180 -C envoy > kn-gw.cpu & pidstat 1 180 -G ^server$ > kn-front-prod.cpu & pidstat 1 180 -C recommend > kn-recom.cpu & pidstat 1 180 -C service > kn-others.cpu &
 ```
 ---
 > **Worker node (node-1) operations**
-- **Prerequisite**: Create 17 terminal (Terminal-1, ... ,Terminal-17) on worker node (**node-1**). Terminal-1 is to run the master process of Locust generator. ***Terminal-2 to Terminal-17** are to run the worker process of Locust generator. Each terminal runs only one worker process. The reason we need so many worker process is to distribute load generation to achieve enough load. See: https://docs.locust.io/en/stable/running-distributed.html
+```shell= 
+$ cd /mydata/spright/sigcomm-experiment/expt-1-online-boutique/
 
-**Terminal-1**: run the master process of Locust generator
-```shell=
-$ cd /mydata/spright/sigcomm-experiment/expt-1-online-boutique/load-generator
+# Please use the IP and Port obtained on master node (Step-1 of Knative online boutique)
+expt-1-online-boutique$ ./run_load_generators.sh kn $ISTIO_INGRESS_GW_IP $ISTIO_INGRESS_GW_PORT
 
-load-generator$ source ~/.bashrc
-
-load-generator$ locust -u 5000 -r 200 -t 3m --csv kn --csv-full-history -f kn-locustfile.py --headless  -H http://<istio-ingress-ip>:<istio-ingress-port> --master --expect-workers=16
-```
-
-**Terminal-2** to **Terminal-17**: run the worker process of Locust generator
-```shell=
-$ cd /mydata/spright/sigcomm-experiment/expt-1-online-boutique/load-generator
-
-# make sure locust can have enough file descriptor to use in each terminal
-load-generator$ ulimit -aS
-load-generator$ ulimit -HSn 102400
-
-load-generator$ source ~/.bashrc
-
-# Start the worker process of Locust. The master process will wait until all the workers are ready
-load-generator$ locust -f kn-locustfile.py --worker
 ```
 
 #### 1.4 Run Online boutique using gRPC
 
 > **Master node (node-0) operations**
-- **Prerequisite**: Create 2 terminals (Terminal-1, Terminal-2) on master node (**node-0**)
 
-**Terminal-1**: start Knative functions
+**Step-1**: start gRPC functions
 ```shell=
 $ cd /mydata/spright
 
@@ -539,41 +236,19 @@ spright$ kubectl get po -l app=frontend -o wide
 # Record the IP of Frontend Service, it will be used by the load generator on worker node
 ```
 
-**Terminal-2**: CPU usage collection
+**Step-2**: CPU usage collection
 ```shell= 
-$ cd /mydata
+$ cd /mydata/spright/sigcomm-experiment/expt-1-online-boutique/
 
-mydatas$ mkdir online-boutique-results
-
-mydatas$ cd online-boutique-results
-
-online-boutique-results$ pidstat 1 180 -G ^server$ > grpc-front-prod.cpu & pidstat 1 180 -C recommend > grpc-recom.cpu & pidstat 1 180 -C service > grpc-others.cpu &
+expt-1-online-boutique$ ./run_grpc.sh
 ```
 ---
 > **Worker node (node-1) operations**
-- **Prerequisite**: Create 17 terminal (Terminal-1, ... ,Terminal-17) on worker node (**node-1**). Terminal-1 is to run the master process of Locust generator. ***Terminal-2 to Terminal-17** are to run the worker process of Locust generator. Each terminal runs only one worker process. The reason we need so many worker process is to distribute load generation to achieve enough load. See: https://docs.locust.io/en/stable/running-distributed.html
-
-**Terminal-1**: run the master process of Locust generator
 ```shell=
-$ cd /mydata/spright/sigcomm-experiment/expt-1-online-boutique/load-generator
+$ cd /mydata/spright/sigcomm-experiment/expt-1-online-boutique/
 
-load-generator$ source ~/.bashrc
-
-load-generator$ locust -u 5000 -r 200 -t 3m --csv kn --csv-full-history -f kn-locustfile.py --headless  -H http://<frontend-service-ip>:8080 --master --expect-workers=16
-```
-
-**Terminal-2** to **Terminal-17**: run the worker process of Locust generator
-```shell=
-$ cd /mydata/spright/sigcomm-experiment/expt-1-online-boutique/load-generator
-
-# make sure locust can have enough file descriptor to use in each terminal
-load-generator$ ulimit -aS
-load-generator$ ulimit -HSn 102400
-
-load-generator$ source ~/.bashrc
-
-# Start the worker process of Locust. The master process will wait until all the workers are ready
-load-generator$ locust -f kn-locustfile.py --worker
+# Please use the IP of frontend service obtained on master node (Step-1 of gRPC online boutique)
+expt-1-online-boutique$ ./run_load_generators.sh kn $FRONTEND_SVC_IP 8080
 ```
 
 ### 2 - Motion detection
