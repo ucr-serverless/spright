@@ -510,7 +510,8 @@ parking$ scp <cloudlab-userid>@<node-1-hostname>:/mydata/spright/sigcomm-experim
 # Go to the "results" directory on your local machine
 $ cd $HOME/results
 
-results$ git clone 
+results$ git clone https://github.com/ucr-serverless/spright-figures.git
+results$ cp spright-figures/* ./
 ```
 
 ```shell=
