@@ -92,15 +92,6 @@ spright$ ./sigcomm-experiment/env-setup/201-taint_nodes.sh
 $ cd /mydata/spright
 spright$ ./sigcomm-experiment/env-setup/300-knative_install.sh
 ```
-2. Disable activator in Knative
-```bash
-# Enter editing mode of Knative's autoscaler config
-kubectl -n knative-serving edit configmap config-autoscaler
-
-# Change target-burst-capacity in config/core/configmaps/autoscaler.yaml to 0
-# Add "target-burst-capacity: 0" under the "data" field
-# Then save and exit, do :wq
-```
 
 ## 4. Experiment Workflow
 Note: We will run the SPRIGHT components directly as a binary for fast demonstration and testing purpose. To run SPRIGHT as a function pod, please refer to
