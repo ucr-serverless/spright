@@ -18,6 +18,8 @@ do
       echo "locust_worker_${j}/ DOES NOT exists."
       exit 1
     else
-      cat $STAT_PATH/locust_worker_${j}/stats.csv >> $STAT_PATH/stats_${ALTERNATIVE}.csv
+      cat $STAT_PATH/locust_worker_${j}/stats.csv >> $STAT_PATH/latency_of_each_req_stats_${ALTERNATIVE}.csv
     fi
 done
+
+cp $STAT_PATH/locust_worker_1/kn_stats_history.csv >> $STAT_PATH/rps_stats_${ALTERNATIVE}.csv
