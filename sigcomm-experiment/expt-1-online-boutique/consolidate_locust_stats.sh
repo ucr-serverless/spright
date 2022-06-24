@@ -11,6 +11,9 @@ STAT_PATH="/mydata/spright/sigcomm-experiment/expt-1-online-boutique"
 
 cd $STAT_PATH
 
+echo "Deleting the old stats files..."
+rm $STAT_PATH/latency_of_each_req_stats_${ALTERNATIVE}.csv
+
 echo "Consolidating Locust stats files from each Locust worker..."
 for j in {2..17}
 do
