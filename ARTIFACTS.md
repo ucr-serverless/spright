@@ -234,6 +234,15 @@ $ cd /mydata/spright/sigcomm-experiment/expt-1-online-boutique/
 
 expt-1-online-boutique$ ./consolidate_locust_stats.sh grpc
 ```
+---
+Clean up gRPC functions: run the following command on **master node (node-0)**.
+```shell=
+# Make sure you are on the master node (node-0)
+$ cd /mydata/spright/
+
+spright$ kubectl delete -f sigcomm-experiment/expt-1-online-boutique/manifests/kubernetes
+```
+
 
 ### 2 - Motion detection
 **Check-List**:
