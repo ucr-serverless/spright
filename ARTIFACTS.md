@@ -381,7 +381,7 @@ load-generator$ python3 kn-parking.py --nginxip 192.168.166.209 --nginxport 80 -
 # Go to the "results" directory on your local machine
 $ cd $HOME/results
 
-# Creating a directory to put parking experiment related metric files
+# Creating a directory to put Online Boutique experiment related metric files
 results$ mkdir online_boutique && cd online_boutique
 
 # Run the folllowing commands in the 'online_boutique' directory
@@ -413,7 +413,7 @@ scp sqi009@c220g5-111008.wisc.cloudlab.us:/mydata/spright/sigcomm-experiment/exp
 # Go to the "results" directory on your local machine
 $ cd $HOME/results
 
-# Creating a directory to put parking experiment related metric files
+# Creating a directory to put Motion Detection experiment related metric files
 results$ mkdir motion && cd motion
 
 # Run the following commands in the 'motion' directory
