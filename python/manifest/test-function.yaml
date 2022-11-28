@@ -1,0 +1,5 @@
+socketPath: /run/flame/socket_test.s
+sockmap_server_ip: 127.0.0.1
+sockmap_server_port: 8081
+rpc_server_ip: 127.0.0.1
+rpc_server_port: 8082
