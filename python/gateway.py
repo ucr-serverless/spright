@@ -21,22 +21,22 @@ class SPRIGHTGateway(object):
         self.rpc_server_port   = rpc_server_port
 
         self.succ_req = 0
-        print("Initialize test Gateway")
+        logger.info("Initialize SPRIGHT Gateway")
 
-        print('Connecting to sockmap server {}:{}...'.format(sockmap_server_ip, sockmap_server_port))
+        logger.info('Connecting to sockmap server {}:{}...'.format(sockmap_server_ip, sockmap_server_port))
         self.sockmap_sock = self.sockmapClient(self.sockmap_server_ip, self.sockmap_server_port)
 
         self.pid = os.getpid()
         self.sock_fd = self.sockmap_sock.fileno()
         self.fn_id = 0
-        print("SKMSG metadata: PID {}; socket FD {}; Fn ID {}".format(self.pid, self.sock_fd, self.fn_id))
+        logger.info("SKMSG metadata: PID {}; socket FD {}; Fn ID {}".format(self.pid, self.sock_fd, self.fn_id))
 
-        print('Connecting to RPC server {}:{}...'.format(rpc_server_ip, rpc_server_port))
+        logger.info('Connecting to RPC server {}:{}...'.format(rpc_server_ip, rpc_server_port))
         self.rpc_sock = self.RpcClient(self.rpc_server_ip, self.rpc_server_port)
 
         skmsg_md = [self.pid, self.sock_fd, self.fn_id]
         skmsg_md_bytes = b''.join([skmsg_md[0].to_bytes(4, byteorder = 'little'), skmsg_md[1].to_bytes(4, byteorder = 'little'), skmsg_md[2].to_bytes(4, byteorder = 'little')])
-        print(skmsg_md_bytes)
+        logger.debug("Socket metadata: {}".format(skmsg_md_bytes))
 
         self.rpc_sock.send(skmsg_md_bytes)
         self.rpc_sock.close()
@@ -46,7 +46,7 @@ class SPRIGHTGateway(object):
         # self.shm_pool = {}
         # self.init_shm_pool()
 
-        print('Gateway is running..')
+        logger.info('Gateway is running..')
 
     def createSocket(self):
         try:
@@ -61,7 +61,7 @@ class SPRIGHTGateway(object):
         sock = self.createSocket()
 
         sock.connect((remote_ip, port))
-        print('Connected to RPC server {}:{}'.format(remote_ip, port))
+        logger.info('Connected to RPC server {}:{}'.format(remote_ip, port))
 
         return sock
 
@@ -70,17 +70,17 @@ class SPRIGHTGateway(object):
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
         sock.connect((remote_ip, port))
-        print('Connected to sockmap server {}:{}'.format(remote_ip, port))
+        logger.info('Connected to sockmap server {}:{}'.format(remote_ip, port))
 
         return sock
 
     def gw_rx(self):
         skmsg_md_bytes = self.sockmap_sock.recv(1024).strip()
-        print("Gateway completes #{} request: {}".format(self.succ_req, skmsg_md_bytes))
+        logger.debug("Gateway completes #{} request: {}".format(self.succ_req, skmsg_md_bytes))
         self.succ_req = self.succ_req + 1
 
     def gw_tx(self, next_fn):
-        print("Gateway TX thread sends SKMSG to {}".format(next_fn))
+        logger.debug("Gateway TX thread sends SKMSG to {}".format(next_fn))
         skmsg_md_bytes = b''.join([next_fn.to_bytes(4, byteorder = 'little'), \
                                     self.succ_req.to_bytes(4, byteorder = 'little')])
         self.sockmap_sock.sendall(skmsg_md_bytes)
@@ -105,12 +105,12 @@ class SPRIGHTGateway(object):
     
 class httpHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        print("SPRIGHT Gateway received a new request")
+        logger.debug("SPRIGHT Gateway is handling GET request")
 
         # Handover request to SPRIGHT gateway core
         gw.core()
 
-        print("SPRIGHT Gateway prepares a response")
+        logger.debug("SPRIGHT Gateway prepares a response")
         self.send_response(200)
         self.send_header("Content-type", "text/html")
         self.end_headers()
@@ -121,7 +121,7 @@ class httpHandler(BaseHTTPRequestHandler):
         self.wfile.write(bytes("</body></html>", "utf-8"))
 
     def do_POST(self):
-        print("SPRIGHT Gateway prepares a response")
+        logger.debug("SPRIGHT Gateway is handling POST request")
         self.send_response(200)
         self.send_header("Content-type", "text/html")
         self.end_headers()
@@ -149,7 +149,7 @@ if __name__ == "__main__":
         # Starting the HTTP frontend
         server = HTTPServer(('', 8080), httpHandler)
         server.serve_forever()
-        print("HTTP server is running...")
+        logger.info("HTTP server is running...")
 
     # Print bpf trace logs
     while True:
