@@ -9,9 +9,10 @@ DEFAULT_LOG_LEVEL='info'
 logger = logging.getLogger(__name__)
 
 class testFunction(object):
-    def __init__(self, fn_id, n_threads, sockmap_server_ip, sockmap_server_port, rpc_server_ip, rpc_server_port):
+    def __init__(self, fn_id, n_threads, params, sockmap_server_ip, sockmap_server_port, rpc_server_ip, rpc_server_port):
         self.fn_id = fn_id
         self.n_threads = n_threads
+        self.params = params # {'memory_mb': val, 'sleep_ms': val, 'compute': val}
         logger.info("Initialize test function {} with {} worker threads".format(fn_id, n_threads))
 
         self.sockmap_server_ip   = sockmap_server_ip
@@ -133,7 +134,7 @@ class testFunction(object):
             sock.sendall(skmsg_md_bytes)
 
     def nf_worker(self, worker_thx_id, rx_q, tx_q):
-        logger.info("Worker thread {} is running".format(worker_thx_id))
+        logger.debug("Worker thread {} is running".format(worker_thx_id))
         n_worker_req = 0
         while(1):
             # Receiving descriptor from RX thread
@@ -144,7 +145,7 @@ class testFunction(object):
             # TODO: Using descriptor to access shared memory
             # shm_obj = self.shm_pool[shm_obj_name]
             # TODO: Performing application logic
-            # self.autoscale_sleep(5)
+            self.autoscale_sleep(self.params['sleep_ms'])
 
             # Send descriptor to TX thread
             tx_q.put(shm_obj_name)
@@ -153,7 +154,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='A test python function for SPRIGHT')
     parser.add_argument('--config-file', help='Path of the config file')
     parser.add_argument('--fn-id', help='Function ID', type=int)
-    parser.add_argument('--n-threads', help='# of worker threads', type=int)
+    # parser.add_argument('--n-threads', help='# of worker threads', type=int)
     parser.add_argument('--log-level', help='Log level', default = DEFAULT_LOG_LEVEL)
     args = parser.parse_args()
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.getLevelName(args.log_level.upper()))
@@ -161,5 +162,15 @@ if __name__ == "__main__":
     with open(args.config_file) as config_file:
         config = yaml.load(config_file)
         logger.debug("Config %s", config)
-        func = testFunction(args.fn_id, args.n_threads, config['sockmap_server_ip'], config['sockmap_server_port'], config['rpc_server_ip'], config['rpc_server_port'])
-    func.run()
+        sockmap_mgr_config = config['sockmap_manager']
+        fn_config = config['function_metadata']
+
+        for i in range(0, len(fn_config)):
+            if args.fn_id == fn_config[i]['fn_id']:
+                n_threads = fn_config[i]['n_threads']
+                params = fn_config[i]['params'] # {'memory_mb': val, 'sleep_ms': val, 'compute': val}
+                logger.info("Function#{}: {}, {} threads ".format(args.fn_id, fn_config[i]['fn_name'], n_threads))
+                func = testFunction(args.fn_id, n_threads, params, sockmap_mgr_config['sockmap_server_ip'], sockmap_mgr_config['sockmap_server_port'], sockmap_mgr_config['rpc_server_ip'], sockmap_mgr_config['rpc_server_port'])
+                func.run()
+
+        logger.warning("Function#{} has no matched configuration".format(args.fn_id))

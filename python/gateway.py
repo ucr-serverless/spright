@@ -143,8 +143,9 @@ if __name__ == "__main__":
         config = yaml.load(config_file)
         logger.debug("Config %s", config)
 
+        sockmap_mgr_config = config['sockmap_manager']
         # Creating a SPRIGHT gateway object
-        gw = SPRIGHTGateway(config['sockmap_server_ip'], config['sockmap_server_port'], config['rpc_server_ip'], config['rpc_server_port'])
+        gw = SPRIGHTGateway(sockmap_mgr_config['sockmap_server_ip'], sockmap_mgr_config['sockmap_server_port'], sockmap_mgr_config['rpc_server_ip'], sockmap_mgr_config['rpc_server_port'])
 
         # Starting the HTTP frontend
         server = HTTPServer(('', 8080), httpHandler)
