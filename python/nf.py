@@ -55,8 +55,7 @@ class testFunction(object):
 
         # Start RX/TX threads
         start_new_thread(self.io_rx, (self.sockmap_sock, ))
-        # start_new_thread(self.io_tx, (sock, ))
-        self.io_tx(self.sockmap_sock)
+        self.io_tx(self.sockmap_sock) # start_new_thread(self.io_tx, (sock, ))
 
     def createSocket(self):
         try:
@@ -97,35 +96,57 @@ class testFunction(object):
         n_rx_req = 0
         rx_q_id = 0
         while(1):
+            # Receiving SKMSG from socket
             rx_q_id = (rx_q_id + 1) % self.n_threads
             skmsg_md_bytes = sock.recv(1024).strip()
             print("RX thread-{} received #{} request".format(rx_q_id, n_rx_req))
-            print(skmsg_md_bytes)
+
+            # Parse SKMSG; Check if SKMSG is allowed or not
+            target_fn_id = int.from_bytes(skmsg_md_bytes[0:3], "little")
+            shm_obj_name = int.from_bytes(skmsg_md_bytes[4:7], "little")
+            if target_fn_id != self.fn_id:
+                print("WARNING: Fn#{} received unexpected SKMSG [{}:{}]".format(self.fn_id, target_fn_id, shm_obj_name))
+            print("Fn#{} received SKMSG [{}:{}]".format(self.fn_id, target_fn_id, shm_obj_name))
             n_rx_req = n_rx_req + 1
-            # Disable pipe
-            # self.rx_queues[rx_q_id].put(shm_obj_name)
+
+            # Handover descriptor to the worker thread
+            self.rx_queues[rx_q_id].put(shm_obj_name)
 
     def io_tx(self, sock):
         print("Function {} starts TX thread".format(self.fn_id))
         n_tx_req = 0
         tx_q_id = 0
         while(1):
+            # Receiving descriptor from worker thread
             tx_q_id = (tx_q_id + 1) % self.n_threads
             shm_obj_name = self.tx_queues[tx_q_id].get()
             print("TX thread-{} received #{} request".format(tx_q_id, n_tx_req))
             n_tx_req = n_tx_req + 1
-            sock.send(shm_obj_name)
+
+            # Preparing SKMSG for next hop
+            next_fn = 0 # Hard code the next step as SPRIGHT gateway
+            skmsg_md_bytes = b''.join([next_fn.to_bytes(4, byteorder = 'little'), \
+                                       n_tx_req.to_bytes(4, byteorder = 'little')])
+            
+            # Send SKMSG to next hop
+            print(skmsg_md_bytes)
+            sock.sendall(skmsg_md_bytes)
 
     def nf_worker(self, worker_thx_id, rx_q, tx_q):
         print("Worker thread {} is running".format(worker_thx_id))
         n_worker_req = 0
         while(1):
+            # Receiving descriptor from RX thread
             shm_obj_name = rx_q.get()
             print("Worker thread-{} received #{} request".format(worker_thx_id, n_worker_req))
             n_worker_req = n_worker_req + 1
-            # shm_obj = self.shm_pool[shm_obj_name]
-            self.autoscale_sleep(1)   
 
+            # TODO: Using descriptor to access shared memory
+            # shm_obj = self.shm_pool[shm_obj_name]
+            # TODO: Performing application logic
+            # self.autoscale_sleep(5)
+
+            # Send descriptor to TX thread
             tx_q.put(shm_obj_name)
 
 if __name__ == "__main__":

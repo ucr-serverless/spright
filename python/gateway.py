@@ -5,11 +5,15 @@ import argparse, logging, yaml
 from _thread import *
 
 # from bcc import BPF, BPFAttachType, lib
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 DEFAULT_LOG_LEVEL='info'
 logger = logging.getLogger(__name__)
 
-class testGateway(object):
+# Expose gw as a global obj to be referred by http handler
+global gw
+
+class SPRIGHTGateway(object):
     def __init__(self, sockmap_server_ip, sockmap_server_port, rpc_server_ip, rpc_server_port):
         self.sockmap_server_ip   = sockmap_server_ip
         self.sockmap_server_port = sockmap_server_port
@@ -42,11 +46,7 @@ class testGateway(object):
         # self.shm_pool = {}
         # self.init_shm_pool()
 
-    def run(self):
         print('Gateway is running..')
-
-        start_new_thread(self.gw_rx, (self.sockmap_sock, ))
-        self.gw_tx(self.sockmap_sock)
 
     def createSocket(self):
         try:
@@ -74,26 +74,62 @@ class testGateway(object):
 
         return sock
 
-    def gw_rx(self, sock):
-        print("Gateway starts RX thread")
+    def gw_rx(self):
+        skmsg_md_bytes = self.sockmap_sock.recv(1024).strip()
+        print("Gateway completes #{} request: {}".format(self.succ_req, skmsg_md_bytes))
+        self.succ_req = self.succ_req + 1
 
-        while(1):
-            # shm_obj_name = sock.recv(1024).strip()
-            skmsg_md_bytes = sock.recv(1024).strip()
-            print("Gateway completes #{} request: {}".format(self.succ_req, skmsg_md_bytes))
-            self.succ_req = self.succ_req + 1
-
-    def gw_tx(self, sock):
-        print("Gateway starts TX thread")
-        
+    def gw_tx(self, next_fn):
+        print("Gateway TX thread sends SKMSG to {}".format(next_fn))
+        skmsg_md_bytes = b''.join([next_fn.to_bytes(4, byteorder = 'little'), \
+                                    self.succ_req.to_bytes(4, byteorder = 'little')])
+        self.sockmap_sock.sendall(skmsg_md_bytes)
+    
+    # core() is the frontend of SPRIGHT gateway
+    # It's used to interact between the http handler and function chains
+    def core(self):
+        # TODO: add routing logic
         # Hard code the next fn id as 1
-        next_fn = 2
+        next_fn = 1
+        self.gw_tx(next_fn)
 
         while(1):
-            skmsg_md_bytes = b''.join([next_fn.to_bytes(4, byteorder = 'little'), \
-                                       self.succ_req.to_bytes(4, byteorder = 'little')])
-            sock.sendall(skmsg_md_bytes)
-            time.sleep(3)
+            self.gw_rx()
+
+            # TODO: add routing logic
+            next_fn = 0 # Testing only
+            if next_fn == 0:
+                break
+            else:
+                self.gw_tx(next_fn)
+    
+class httpHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        print("SPRIGHT Gateway received a new request")
+
+        # Handover request to SPRIGHT gateway core
+        gw.core()
+
+        print("SPRIGHT Gateway prepares a response")
+        self.send_response(200)
+        self.send_header("Content-type", "text/html")
+        self.end_headers()
+        self.wfile.write(bytes("<html><head><title>https://pythonbasics.org</title></head>", "utf-8"))
+        self.wfile.write(bytes("<p>Request: %s</p>" % self.path, "utf-8"))
+        self.wfile.write(bytes("<body>", "utf-8"))
+        self.wfile.write(bytes("<p>This is an example web server.</p>", "utf-8"))
+        self.wfile.write(bytes("</body></html>", "utf-8"))
+
+    def do_POST(self):
+        print("SPRIGHT Gateway prepares a response")
+        self.send_response(200)
+        self.send_header("Content-type", "text/html")
+        self.end_headers()
+        self.wfile.write(bytes("<html><head><title>https://pythonbasics.org</title></head>", "utf-8"))
+        self.wfile.write(bytes("<p>Request: %s</p>" % self.path, "utf-8"))
+        self.wfile.write(bytes("<body>", "utf-8"))
+        self.wfile.write(bytes("<p>This is an example web server.</p>", "utf-8"))
+        self.wfile.write(bytes("</body></html>", "utf-8"))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='A test SPRIGHT Gateway')
@@ -103,10 +139,17 @@ if __name__ == "__main__":
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.getLevelName(args.log_level.upper()))
 
     with open(args.config_file) as config_file:
+        # Loading configurations of SPRIGHT gateway and HTTP frontend
         config = yaml.load(config_file)
         logger.debug("Config %s", config)
-        gw = testGateway(config['sockmap_server_ip'], config['sockmap_server_port'], config['rpc_server_ip'], config['rpc_server_port'])
-    gw.run()
+
+        # Creating a SPRIGHT gateway object
+        gw = SPRIGHTGateway(config['sockmap_server_ip'], config['sockmap_server_port'], config['rpc_server_ip'], config['rpc_server_port'])
+
+        # Starting the HTTP frontend
+        server = HTTPServer(('', 8080), httpHandler)
+        server.serve_forever()
+        print("HTTP server is running...")
 
     # Print bpf trace logs
     while True:
@@ -114,4 +157,6 @@ if __name__ == "__main__":
             # bpf.trace_print()
             time.sleep(1)
         except KeyboardInterrupt:
+            server.server_close()
+            print("Gateway stopped.")
             sys.exit(0)
