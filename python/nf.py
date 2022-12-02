@@ -9,10 +9,11 @@ DEFAULT_LOG_LEVEL='info'
 logger = logging.getLogger(__name__)
 
 class testFunction(object):
-    def __init__(self, fn_id, n_threads, params, sockmap_server_ip, sockmap_server_port, rpc_server_ip, rpc_server_port):
+    def __init__(self, fn_id, n_threads, fn_params, route, sockmap_server_ip, sockmap_server_port, rpc_server_ip, rpc_server_port):
         self.fn_id = fn_id
         self.n_threads = n_threads
-        self.params = params # {'memory_mb': val, 'sleep_ms': val, 'compute': val}
+        self.fn_params = fn_params # {'memory_mb': val, 'sleep_ms': val, 'compute': val}
+        self.route = route
         logger.info("Initialize test function {} with {} worker threads".format(fn_id, n_threads))
 
         self.sockmap_server_ip   = sockmap_server_ip
@@ -104,6 +105,7 @@ class testFunction(object):
 
             # Parse SKMSG; Check if SKMSG is allowed or not
             target_fn_id = int.from_bytes(skmsg_md_bytes[0:3], "little")
+            # TODO: parse shm_obj_name from skmsg_md_bytes
             shm_obj_name = int.from_bytes(skmsg_md_bytes[4:7], "little")
             if target_fn_id != self.fn_id:
                 logger.info("WARNING: Fn#{} received unexpected SKMSG [{}:{}]".format(self.fn_id, target_fn_id, shm_obj_name))
@@ -126,6 +128,8 @@ class testFunction(object):
 
             # Preparing SKMSG for next hop
             next_fn = 0 # Hard code the next step as SPRIGHT gateway
+            # TODO: use shm_obj_name to replace "n_tx_req" in skmsg_md_bytes
+            # Different shm_obj_name must have same size
             skmsg_md_bytes = b''.join([next_fn.to_bytes(4, byteorder = 'little'), \
                                        n_tx_req.to_bytes(4, byteorder = 'little')])
             
@@ -142,10 +146,11 @@ class testFunction(object):
             logger.debug("Worker thread-{} received #{} request".format(worker_thx_id, n_worker_req))
             n_worker_req = n_worker_req + 1
 
-            # TODO: Using descriptor to access shared memory
+            # TODO: Using shm_obj_name to access shared memory
+            # print the shared memory obj
             # shm_obj = self.shm_pool[shm_obj_name]
             # TODO: Performing application logic
-            self.autoscale_sleep(self.params['sleep_ms'])
+            self.autoscale_sleep(self.fn_params['sleep_ms'])
 
             # Send descriptor to TX thread
             tx_q.put(shm_obj_name)
@@ -164,13 +169,17 @@ if __name__ == "__main__":
         logger.debug("Config %s", config)
         sockmap_mgr_config = config['sockmap_manager']
         fn_config = config['function_metadata']
+        route_config = config['routes']
+        route_id = config['route_id']
+        route = route_config[route_id - 1]['sequence']
+        logger.info("Using {}: {}".format(route_config[route_id - 1]['route_name'], route_config[route_id - 1]['sequence']))
 
         for i in range(0, len(fn_config)):
             if args.fn_id == fn_config[i]['fn_id']:
                 n_threads = fn_config[i]['n_threads']
-                params = fn_config[i]['params'] # {'memory_mb': val, 'sleep_ms': val, 'compute': val}
+                fn_params = fn_config[i]['params'] # {'memory_mb': val, 'sleep_ms': val, 'compute': val}
                 logger.info("Function#{}: {}, {} threads ".format(args.fn_id, fn_config[i]['fn_name'], n_threads))
-                func = testFunction(args.fn_id, n_threads, params, sockmap_mgr_config['sockmap_server_ip'], sockmap_mgr_config['sockmap_server_port'], sockmap_mgr_config['rpc_server_ip'], sockmap_mgr_config['rpc_server_port'])
+                func = testFunction(args.fn_id, n_threads, fn_params, route, sockmap_mgr_config['sockmap_server_ip'], sockmap_mgr_config['sockmap_server_port'], sockmap_mgr_config['rpc_server_ip'], sockmap_mgr_config['rpc_server_port'])
                 func.run()
 
         logger.warning("Function#{} has no matched configuration".format(args.fn_id))

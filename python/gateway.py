@@ -14,11 +14,13 @@ logger = logging.getLogger(__name__)
 global gw
 
 class SPRIGHTGateway(object):
-    def __init__(self, sockmap_server_ip, sockmap_server_port, rpc_server_ip, rpc_server_port):
+    def __init__(self, route, sockmap_server_ip, sockmap_server_port, rpc_server_ip, rpc_server_port):
         self.sockmap_server_ip   = sockmap_server_ip
         self.sockmap_server_port = sockmap_server_port
         self.rpc_server_ip     = rpc_server_ip
         self.rpc_server_port   = rpc_server_port
+
+        self.route = route
 
         self.succ_req = 0
         logger.info("Initialize SPRIGHT Gateway")
@@ -81,6 +83,8 @@ class SPRIGHTGateway(object):
 
     def gw_tx(self, next_fn):
         logger.debug("Gateway TX thread sends SKMSG to {}".format(next_fn))
+        # TODO: use shm_obj_name to replace "succ_req" in skmsg_md_bytes
+        # Different shm_obj_name must have same size
         skmsg_md_bytes = b''.join([next_fn.to_bytes(4, byteorder = 'little'), \
                                     self.succ_req.to_bytes(4, byteorder = 'little')])
         self.sockmap_sock.sendall(skmsg_md_bytes)
@@ -91,7 +95,7 @@ class SPRIGHTGateway(object):
         # TODO: add routing logic
         # Hard code the next fn id as 1
         next_fn = 1
-        self.gw_tx(next_fn)
+        self.gw_tx(next_fn) # TODO: pass shm_obj_name to gw_tx()
 
         while(1):
             self.gw_rx()
@@ -106,6 +110,9 @@ class SPRIGHTGateway(object):
 class httpHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         logger.debug("SPRIGHT Gateway is handling GET request")
+
+        # TODO: Write request into a shared memory object
+        # Return a shm_obj_name. Use it as the input of gw.core()
 
         # Handover request to SPRIGHT gateway core
         gw.core()
@@ -134,6 +141,7 @@ class httpHandler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='A test SPRIGHT Gateway')
     parser.add_argument('--config-file', help='Path of the config file')
+    # parser.add_argument('--route-id', help='ID of the route config (for testing only)', type=int)
     parser.add_argument('--log-level', help='Log level', default = DEFAULT_LOG_LEVEL)
     args = parser.parse_args()
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.getLevelName(args.log_level.upper()))
@@ -144,8 +152,20 @@ if __name__ == "__main__":
         logger.debug("Config %s", config)
 
         sockmap_mgr_config = config['sockmap_manager']
+        route_config = config['routes']
+        route_id = config['route_id']
+        route = route_config[route_id - 1]['sequence']
+        logger.info("Using {}: {}".format(route_config[route_id - 1]['route_name'], route_config[route_id - 1]['sequence']))
+        # for i in range(0, len(route_config)):
+        #     if args.route_id == route_config[i]['route_id']:
+        #         logger.info("Using {}: {}".format(route_config[i]['route_name'], route_config[i]['sequence']))
+        #         route = route_config[i]['sequence']
+        #         break
+        # if len(route) == 0:
+        #     logger.error("No matched route!")
+
         # Creating a SPRIGHT gateway object
-        gw = SPRIGHTGateway(sockmap_mgr_config['sockmap_server_ip'], sockmap_mgr_config['sockmap_server_port'], sockmap_mgr_config['rpc_server_ip'], sockmap_mgr_config['rpc_server_port'])
+        gw = SPRIGHTGateway(route, sockmap_mgr_config['sockmap_server_ip'], sockmap_mgr_config['sockmap_server_port'], sockmap_mgr_config['rpc_server_ip'], sockmap_mgr_config['rpc_server_port'])
 
         # Starting the HTTP frontend
         server = HTTPServer(('', 8080), httpHandler)
