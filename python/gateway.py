@@ -56,10 +56,10 @@ class SPRIGHTGateway(object):
         self.shm_free_dict = SharedMemoryDict(name = self.shm_free_dict_name, size = 32000) # TODO: get size as well
 
         # creating a pool of pre-attached shm blocks
-        self.shm_pre_attached_pool = {}
+        self.shm_obj_pool = {}
         for key in self.shm_free_dict.keys():
-            shm_temp = shared_memory.SharedMemory(key)
-            self.shm_pre_attached_pool[key] = shm_temp
+            shm_obj = shared_memory.SharedMemory(key)
+            self.shm_obj_pool[key] = shm_obj
 
         logger.info('Gateway is running..')
 
@@ -99,13 +99,14 @@ class SPRIGHTGateway(object):
 
     def write_to_free_block(self, content_length, binary_data):
         free_item = self.shm_free_dict.popitem()
-        block_name = free_item[0]
-        logger.debug("free_block_name: {}".format(block_name))
+        shm_obj_name = free_item[0]
+        logger.debug("free_shm_obj_name: {}".format(shm_obj_name))
 
-        shm_block = shared_memory.SharedMemory(block_name)
-        shm_block.buf[:content_length] = binary_data
-        shm_block.close()
-        return block_name
+        # shm_block = shared_memory.SharedMemory(shm_obj_name)
+        shm_obj = self.shm_obj_pool[shm_obj_name]
+        shm_obj.buf[:content_length] = binary_data
+        shm_obj.close()
+        return shm_obj_name
     
     def gw_rx(self):
         skmsg_md_bytes = self.sockmap_sock.recv(1024).strip()
