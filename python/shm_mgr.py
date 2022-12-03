@@ -24,7 +24,7 @@ class SharedMemoryManager(object):
 
         logger.info("Creating {} blocks of {} bytes each.. \n".format(num_of_blocks, block_size))
 
-        sm_dict_free = SharedMemoryDict(name = shm_free_pool_dict_name, size = num_of_blocks*32) # contains set of shm blocks that are free at any given point
+        sm_dict_free = SharedMemoryDict(name = shm_free_pool_dict_name, size = num_of_blocks * 32) # contains set of shm blocks that are free at any given point
 
         sm_dict_all = SharedMemoryDict(name = "sm_dict_all", size = num_of_blocks*32) # contains all shm blocks, used only to free up all shm blocks during sys exit
 
