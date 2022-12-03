@@ -1,8 +1,10 @@
 #!/usr/bin/python
 
-import time, socket, os
+import time, socket, os, sys
 import argparse, logging, yaml
 from _thread import *
+from shared_memory_dict import SharedMemoryDict
+from multiprocessing import shared_memory
 
 # from bcc import BPF, BPFAttachType, lib
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -14,11 +16,13 @@ logger = logging.getLogger(__name__)
 global gw
 
 class SPRIGHTGateway(object):
-    def __init__(self, route, sockmap_server_ip, sockmap_server_port, rpc_server_ip, rpc_server_port):
+    def __init__(self, route, sockmap_server_ip, sockmap_server_port, rpc_server_ip, rpc_server_port,smm_server_ip, smm_server_port):
         self.sockmap_server_ip   = sockmap_server_ip
         self.sockmap_server_port = sockmap_server_port
         self.rpc_server_ip     = rpc_server_ip
         self.rpc_server_port   = rpc_server_port
+        self.smm_server_ip     = smm_server_ip
+        self.smm_server_port   = smm_server_port
 
         self.route = route
 
@@ -47,6 +51,13 @@ class SPRIGHTGateway(object):
         # print("Remap shared memory pool")
         # self.shm_pool = {}
         # self.init_shm_pool()
+        logger.info('Connecting to SMM server {}:{}...'.format(smm_server_ip, smm_server_port))
+        self.smm_sock = self.SmmClient(self.smm_server_ip, self.smm_server_port)
+        self.shm_free_dict_name = self.smm_sock.recv(1024).decode("utf-8")
+        logger.debug("SMM shm_free_dict_name: {}".format(self.shm_free_dict_name))
+
+        logger.debug("attaching to shared mem dict")
+        self.shm_free_dict = SharedMemoryDict(name=self.shm_free_dict_name, size=32000) # TODO get size as well
 
         logger.info('Gateway is running..')
 
@@ -76,26 +87,43 @@ class SPRIGHTGateway(object):
 
         return sock
 
+    def SmmClient(self, remote_ip, port):
+        sock = self.createSocket()
+
+        sock.connect((remote_ip, port))
+        logger.info('Connected to SHM server {}:{}'.format(remote_ip, port))
+
+        return sock
+
+    def write_to_free_block(self, content_length, binary_data):
+        free_item = self.shm_free_dict.popitem()
+        block_name = free_item[0]
+        logging.info("free_block_name:{}".format(block_name))
+        shm_block = shared_memory.SharedMemory(block_name)
+        shm_block.buf[:content_length] = binary_data
+        shm_block.close()
+        return block_name
+    
     def gw_rx(self):
         skmsg_md_bytes = self.sockmap_sock.recv(1024).strip()
         logger.debug("Gateway completes #{} request: {}".format(self.succ_req, skmsg_md_bytes))
         self.succ_req = self.succ_req + 1
 
-    def gw_tx(self, next_fn):
+    def gw_tx(self, next_fn, shm_obj_name):
         logger.debug("Gateway TX thread sends SKMSG to {}".format(next_fn))
         # TODO: use shm_obj_name to replace "succ_req" in skmsg_md_bytes
         # Different shm_obj_name must have same size
         skmsg_md_bytes = b''.join([next_fn.to_bytes(4, byteorder = 'little'), \
-                                    self.succ_req.to_bytes(4, byteorder = 'little')])
+                                    shm_obj_name.to_bytes(12, byteorder = 'little')])
         self.sockmap_sock.sendall(skmsg_md_bytes)
     
     # core() is the frontend of SPRIGHT gateway
     # It's used to interact between the http handler and function chains
-    def core(self):
+    def core(self, shm_obj_name):
         # TODO: add routing logic
         # Hard code the next fn id as 1
         next_fn = 1
-        self.gw_tx(next_fn) # TODO: pass shm_obj_name to gw_tx()
+        self.gw_tx(next_fn, shm_obj_name) # TODO: pass shm_obj_name to gw_tx()
 
         while(1):
             self.gw_rx()
@@ -113,9 +141,10 @@ class httpHandler(BaseHTTPRequestHandler):
 
         # TODO: Write request into a shared memory object
         # Return a shm_obj_name. Use it as the input of gw.core()
+        shm_obj_name = gw.write_to_free_block(content_length=3, binary_data=b'xyz')
 
         # Handover request to SPRIGHT gateway core
-        gw.core()
+        gw.core(shm_obj_name)
 
         logger.debug("SPRIGHT Gateway prepares a response")
         self.send_response(200)
@@ -165,7 +194,7 @@ if __name__ == "__main__":
         #     logger.error("No matched route!")
 
         # Creating a SPRIGHT gateway object
-        gw = SPRIGHTGateway(route, sockmap_mgr_config['sockmap_server_ip'], sockmap_mgr_config['sockmap_server_port'], sockmap_mgr_config['rpc_server_ip'], sockmap_mgr_config['rpc_server_port'])
+        gw = SPRIGHTGateway(route, sockmap_mgr_config['sockmap_server_ip'], sockmap_mgr_config['sockmap_server_port'], sockmap_mgr_config['rpc_server_ip'], sockmap_mgr_config['rpc_server_port'],sockmap_mgr_config['smm_server_ip'], sockmap_mgr_config['smm_server_port'])
 
         # Starting the HTTP frontend
         server = HTTPServer(('', 8080), httpHandler)

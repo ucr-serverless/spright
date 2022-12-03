@@ -1,0 +1,86 @@
+import time, socket, os, sys
+import argparse, logging, yaml
+from multiprocessing import shared_memory
+from shared_memory_dict import SharedMemoryDict
+
+DEFAULT_LOG_LEVEL='info'
+logger = logging.getLogger(__name__)
+
+class SharedMemoryManager(object):
+    
+    def __init__(self,shm_block_count,shm_block_size,shm_free_pool_dict_name):
+
+        self.shm_block_count = shm_block_count # no of SHM blocks
+        self.shm_block_size = shm_block_size # size of each SHM block
+        self.shm_free_pool_dict_name = shm_free_pool_dict_name # name of the shared mem dict having free shm blocks
+
+        self.shm_free_pool_dict_size = shm_block_count * 32  # 32 bytes for each dict entry
+
+        self.shm_free_pool_dict, self.shm_dict_all = self.create_shm_pool(self.shm_block_count, self.shm_block_size, self.shm_free_pool_dict_name)
+        
+
+    def create_shm_pool(self, num_of_blocks, block_size, shm_free_pool_dict_name):
+
+        print("Creating {} blocks of {} bytes each.. \n".format(num_of_blocks, block_size))
+
+        sm_dict_free = SharedMemoryDict(name=shm_free_pool_dict_name, size=num_of_blocks*32) # contains set of shm blocks that are free at any given point
+
+        sm_dict_all = SharedMemoryDict(name="sm_dict_all", size=num_of_blocks*32) # contains all shm blocks, used only to free up all shm blocks during sys exit
+
+        for i in range(num_of_blocks):
+            temp_block = shared_memory.SharedMemory(create=True, size=block_size)
+            sm_dict_free[str(temp_block.name)] = 'FREE'
+            sm_dict_all[str(temp_block.name)] = ''
+        
+        return (sm_dict_free,sm_dict_all)
+
+    def createSocket(self):
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        except socket.error as msg:
+            print('Failed to create socket. Error code: {}, Error message: {}'.format(str(msg[0]), msg[1]))
+            sys.exit()
+
+        return sock
+    
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='SHM Manager')
+    parser.add_argument('--config-file', help='Path of the config file')
+    parser.add_argument('--block-count', help='no of shm blocks', default=10)
+    parser.add_argument('--block-size', help='size of each shm block',default=8)
+    parser.add_argument('--pool-name', help='name of shm free dict', default='shm_free_dict')
+    parser.add_argument('--log-level', help='Log level', default = DEFAULT_LOG_LEVEL)
+    args = parser.parse_args()
+
+    with open(args.config_file) as config_file:
+        config = yaml.load(config_file)
+        logger.debug("Config %s", config)
+        sockmap_mgr_config = config['sockmap_manager']
+
+    sm_mgr = SharedMemoryManager(shm_block_count=int(args.block_count),shm_block_size=int(args.block_size),shm_free_pool_dict_name=args.pool_name)
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind((sockmap_mgr_config['smm_server_ip'], sockmap_mgr_config['smm_server_port'])) 
+    s.listen()
+    
+    while True:
+        try:
+            conn, addr = s.accept()
+            logger.debug('Got connection from', addr )
+            logger.debug('Sending free pool dict name:{}'.format(sm_mgr.shm_free_pool_dict_name))
+            conn.send(bytes(sm_mgr.shm_free_pool_dict_name,"utf-8"))
+            time.sleep(1)
+        except KeyboardInterrupt:
+            # unlink all shm blocks & sm dict
+            for key in sm_mgr.shm_dict_all.keys():
+                shm_temp = shared_memory.SharedMemory(key)
+                shm_temp.unlink()
+            
+            sm_mgr.shm_free_pool_dict.shm.unlink()
+            sm_mgr.shm_dict_all.shm.unlink()
+
+            s.close()
+            print("SHM Manager stopped.")
+            sys.exit(0)
