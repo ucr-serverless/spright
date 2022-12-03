@@ -4,12 +4,14 @@ import time, math, socket, os
 import argparse, logging, yaml
 from _thread import *
 from queue import Queue
+from multiprocessing import shared_memory
+from shared_memory_dict import SharedMemoryDict
 
 DEFAULT_LOG_LEVEL='info'
 logger = logging.getLogger(__name__)
 
 class testFunction(object):
-    def __init__(self, fn_id, n_threads, fn_params, route, sockmap_server_ip, sockmap_server_port, rpc_server_ip, rpc_server_port):
+    def __init__(self, fn_id, n_threads, fn_params, route, sockmap_server_ip, sockmap_server_port, rpc_server_ip, rpc_server_port,smm_server_ip, smm_server_port):
         self.fn_id = fn_id
         self.n_threads = n_threads
         self.fn_params = fn_params # {'memory_mb': val, 'sleep_ms': val, 'compute': val}
@@ -20,6 +22,8 @@ class testFunction(object):
         self.sockmap_server_port = sockmap_server_port
         self.rpc_server_ip     = rpc_server_ip
         self.rpc_server_port   = rpc_server_port
+        self.smm_server_ip     = smm_server_ip
+        self.smm_server_port   = smm_server_port
 
         logger.info('Connecting to sockmap server {}:{}...'.format(sockmap_server_ip, sockmap_server_port))
         self.sockmap_sock = self.sockmapClient(self.sockmap_server_ip, self.sockmap_server_port)
@@ -38,10 +42,20 @@ class testFunction(object):
         self.rpc_sock.send(skmsg_md_bytes)
         self.rpc_sock.close()
 
-        # TODO: attach to shared memory pool
-        # print("Remap shared memory pool")
-        # self.shm_pool = {}
-        # self.init_shm_pool()
+        # Attach to shared memory pool
+        logger.info('Connecting to SMM server {}:{}...'.format(smm_server_ip, smm_server_port))
+        self.smm_sock = self.SmmClient(self.smm_server_ip, self.smm_server_port)
+        self.shm_free_dict_name = self.smm_sock.recv(1024).decode("utf-8")
+        logger.debug("SMM shm_free_dict_name: {}".format(self.shm_free_dict_name))
+
+        logger.debug("Attaching to shared mem dict...")
+        self.shm_free_dict = SharedMemoryDict(name = self.shm_free_dict_name, size = 32000) # TODO get size as well
+
+        # creating a pool of pre-attached shm blocks
+        self.shm_pre_attached_pool = {}
+        for key in self.shm_free_dict.keys():
+            shm_temp = shared_memory.SharedMemory(key)
+            self.shm_pre_attached_pool[key] = shm_temp
 
         logger.info("Initialize {} RX pipes and {} TX pipes".format(n_threads, n_threads))
         self.rx_queues = []
@@ -84,6 +98,14 @@ class testFunction(object):
 
         return sock
 
+    def SmmClient(self, remote_ip, port):
+        sock = self.createSocket()
+
+        sock.connect((remote_ip, port))
+        logger.info('Connected to SHM server {}:{}'.format(remote_ip, port))
+
+        return sock
+
     def autoscale_sleep(self, interval):
         logger.debug("Function {} sleeps for {} seconds".format(self.fn_id, interval))
         time.sleep(interval)
@@ -105,10 +127,10 @@ class testFunction(object):
 
             # Parse SKMSG; Check if SKMSG is allowed or not
             target_fn_id = int.from_bytes(skmsg_md_bytes[0:3], "little")
-            # TODO: parse shm_obj_name from skmsg_md_bytes
-            shm_obj_name = int.from_bytes(skmsg_md_bytes[4:7], "little")
+            shm_obj_name = skmsg_md_bytes[4:].decode("utf-8")
+            logger.debug("io_rx - shm_obj_name: {}".format(shm_obj_name))
             if target_fn_id != self.fn_id:
-                logger.info("WARNING: Fn#{} received unexpected SKMSG [{}:{}]".format(self.fn_id, target_fn_id, shm_obj_name))
+                logger.warning("Fn#{} received unexpected SKMSG [{}:{}]".format(self.fn_id, target_fn_id, shm_obj_name))
             logger.debug("Fn#{} received SKMSG [{}:{}]".format(self.fn_id, target_fn_id, shm_obj_name))
             n_rx_req = n_rx_req + 1
 
@@ -128,10 +150,8 @@ class testFunction(object):
 
             # Preparing SKMSG for next hop
             next_fn = 0 # Hard code the next step as SPRIGHT gateway
-            # TODO: use shm_obj_name to replace "n_tx_req" in skmsg_md_bytes
-            # Different shm_obj_name must have same size
             skmsg_md_bytes = b''.join([next_fn.to_bytes(4, byteorder = 'little'), \
-                                       n_tx_req.to_bytes(4, byteorder = 'little')])
+                                       bytes(shm_obj_name, 'utf-8')])
             
             # Send SKMSG to next hop
             logger.debug("SKMSG {}".format(skmsg_md_bytes))
@@ -143,12 +163,14 @@ class testFunction(object):
         while(1):
             # Receiving descriptor from RX thread
             shm_obj_name = rx_q.get()
-            logger.debug("Worker thread-{} received #{} request".format(worker_thx_id, n_worker_req))
+            logger.debug("Worker thread-{} received #{} request (shm_obj_name): {}".format(worker_thx_id, n_worker_req, shm_obj_name))
             n_worker_req = n_worker_req + 1
 
-            # TODO: Using shm_obj_name to access shared memory
-            # print the shared memory obj
-            # shm_obj = self.shm_pool[shm_obj_name]
+            # NOTE: Using shm_obj_name to access shared memory from pre-attached pool
+            shm_temp = self.shm_pre_attached_pool[shm_obj_name]
+            logger.debug("Content in shared memory object: {}".format(bytes(shm_temp.buf)))
+            shm_temp.close()
+        
             # TODO: Performing application logic
             self.autoscale_sleep(self.fn_params['sleep_ms'])
 
@@ -167,7 +189,7 @@ if __name__ == "__main__":
     with open(args.config_file) as config_file:
         config = yaml.load(config_file)
         logger.debug("Config %s", config)
-        sockmap_mgr_config = config['sockmap_manager']
+        spright_cp_config = config['spright_control_plane']
         fn_config = config['function_metadata']
         route_config = config['routes']
         route_id = config['route_id']
@@ -179,7 +201,13 @@ if __name__ == "__main__":
                 n_threads = fn_config[i]['n_threads']
                 fn_params = fn_config[i]['params'] # {'memory_mb': val, 'sleep_ms': val, 'compute': val}
                 logger.info("Function#{}: {}, {} threads ".format(args.fn_id, fn_config[i]['fn_name'], n_threads))
-                func = testFunction(args.fn_id, n_threads, fn_params, route, sockmap_mgr_config['sockmap_server_ip'], sockmap_mgr_config['sockmap_server_port'], sockmap_mgr_config['rpc_server_ip'], sockmap_mgr_config['rpc_server_port'])
+                func = testFunction(args.fn_id, n_threads, fn_params, route, \
+                                    spright_cp_config['sockmap_server_ip'], \
+                                    spright_cp_config['sockmap_server_port'], \
+                                    spright_cp_config['rpc_server_ip'], \
+                                    spright_cp_config['rpc_server_port'], \
+                                    spright_cp_config['smm_server_ip'], \
+                                    spright_cp_config['smm_server_port'])
                 func.run()
 
         logger.warning("Function#{} has no matched configuration".format(args.fn_id))

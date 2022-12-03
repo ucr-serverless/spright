@@ -1,9 +1,11 @@
 route_id: 1
-sockmap_manager:
+spright_control_plane:
   sockmap_server_ip: 127.0.0.1
   sockmap_server_port: 8081
   rpc_server_ip: 127.0.0.1
   rpc_server_port: 8082
+  smm_server_ip: 127.0.0.1
+  smm_server_port: 8083
 function_metadata:
   - fn_id: 1
     fn_name: "Fn-1"
