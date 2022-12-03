@@ -51,11 +51,11 @@ class testFunction(object):
         logger.debug("Attaching to shared mem dict...")
         self.shm_free_dict = SharedMemoryDict(name = self.shm_free_dict_name, size = 32000) # TODO get size as well
 
-        # creating a pool of pre-attached shm blocks
-        self.shm_pre_attached_pool = {}
+        # Creating a pool of pre-attached shm blocks
+        self.shm_obj_pool = {}
         for key in self.shm_free_dict.keys():
-            shm_temp = shared_memory.SharedMemory(key)
-            self.shm_pre_attached_pool[key] = shm_temp
+            shm_obj = shared_memory.SharedMemory(key)
+            self.shm_obj_pool[key] = shm_obj
 
         logger.info("Initialize {} RX pipes and {} TX pipes".format(n_threads, n_threads))
         self.rx_queues = []
@@ -71,7 +71,7 @@ class testFunction(object):
 
         # Start RX/TX threads
         start_new_thread(self.io_rx, (self.sockmap_sock, ))
-        self.io_tx(self.sockmap_sock) # start_new_thread(self.io_tx, (sock, ))
+        self.io_tx(self.sockmap_sock)
 
     def createSocket(self):
         try:
@@ -115,6 +115,15 @@ class testFunction(object):
             if (n % i) == 0:
                 break 
 
+    def router(self, cur_hop):
+        if cur_hop == len(self.route):
+            # NOTE: The route ends. Back to Gateway
+            next_fn = 0
+        else:
+            next_fn = self.route[cur_hop]
+        logger.debug("Routing result: current hop#{}, next function ID is {}".format(cur_hop, next_fn))
+        return next_fn
+
     def io_rx(self, sock):
         logger.info("Function {} starts RX thread".format(self.fn_id))
         n_rx_req = 0
@@ -122,20 +131,40 @@ class testFunction(object):
         while(1):
             # Receiving SKMSG from socket
             rx_q_id = (rx_q_id + 1) % self.n_threads
-            skmsg_md_bytes = sock.recv(1024).strip()
-            logger.debug("RX thread-{} received #{} request".format(rx_q_id, n_rx_req))
+            skmsg_md_bytes = sock.recv(1024)
+            logger.debug("RX thread-{} received #{} request: {}".format(rx_q_id, n_rx_req, skmsg_md_bytes))
 
             # Parse SKMSG; Check if SKMSG is allowed or not
             target_fn_id = int.from_bytes(skmsg_md_bytes[0:3], "little")
-            shm_obj_name = skmsg_md_bytes[4:].decode("utf-8")
-            logger.debug("io_rx - shm_obj_name: {}".format(shm_obj_name))
             if target_fn_id != self.fn_id:
-                logger.warning("Fn#{} received unexpected SKMSG [{}:{}]".format(self.fn_id, target_fn_id, shm_obj_name))
-            logger.debug("Fn#{} received SKMSG [{}:{}]".format(self.fn_id, target_fn_id, shm_obj_name))
+                logger.warning("Fn#{} received unexpected SKMSG! target_fn_id: {}".format(self.fn_id, target_fn_id))
             n_rx_req = n_rx_req + 1
 
             # Handover descriptor to the worker thread
-            self.rx_queues[rx_q_id].put(shm_obj_name)
+            # NOTE: Deliver the entire skmsg_md_bytes over pipe may increase overhead
+            self.rx_queues[rx_q_id].put(skmsg_md_bytes)
+
+    def nf_worker(self, worker_thx_id, rx_q, tx_q):
+        logger.debug("Worker thread {} is running".format(worker_thx_id))
+        n_worker_req = 0
+        while(1):
+            # Receiving SKMSG from RX thread
+            skmsg_md_bytes = rx_q.get()
+            shm_obj_name = skmsg_md_bytes[8:].decode("utf-8")
+            logger.debug("Worker thread-{} received #{} request (shm_obj_name): {}".format(worker_thx_id, n_worker_req, shm_obj_name))
+            n_worker_req = n_worker_req + 1
+
+            # NOTE: Using shm_obj_name to access shared memory from pre-attached pool
+            shm_temp = self.shm_obj_pool[shm_obj_name]
+            logger.debug("Content in shared memory object: {}".format(bytes(shm_temp.buf)))
+            # shm_temp.close()
+
+            # TODO: Performing application logic
+            self.autoscale_sleep(self.fn_params['sleep_ms'])
+
+            # Send SKMSG to TX thread
+            # NOTE: Deliver the entire skmsg_md_bytes over pipe may increase overhead
+            tx_q.put(skmsg_md_bytes)
 
     def io_tx(self, sock):
         logger.info("Function {} starts TX thread".format(self.fn_id))
@@ -144,44 +173,26 @@ class testFunction(object):
         while(1):
             # Receiving descriptor from worker thread
             tx_q_id = (tx_q_id + 1) % self.n_threads
-            shm_obj_name = self.tx_queues[tx_q_id].get()
+            skmsg_md_bytes = self.tx_queues[tx_q_id].get()
             logger.debug("TX thread-{} received #{} request".format(tx_q_id, n_tx_req))
             n_tx_req = n_tx_req + 1
 
             # Preparing SKMSG for next hop
-            next_fn = 0 # Hard code the next step as SPRIGHT gateway
+            cur_hop = int.from_bytes(skmsg_md_bytes[4:7], "little")
+            next_fn = self.router(cur_hop)
+            next_hop = cur_hop + 1
             skmsg_md_bytes = b''.join([next_fn.to_bytes(4, byteorder = 'little'), \
-                                       bytes(shm_obj_name, 'utf-8')])
+                                       next_hop.to_bytes(4, byteorder = 'little'), \
+                                       skmsg_md_bytes[8:]])
             
             # Send SKMSG to next hop
             logger.debug("SKMSG {}".format(skmsg_md_bytes))
             sock.sendall(skmsg_md_bytes)
 
-    def nf_worker(self, worker_thx_id, rx_q, tx_q):
-        logger.debug("Worker thread {} is running".format(worker_thx_id))
-        n_worker_req = 0
-        while(1):
-            # Receiving descriptor from RX thread
-            shm_obj_name = rx_q.get()
-            logger.debug("Worker thread-{} received #{} request (shm_obj_name): {}".format(worker_thx_id, n_worker_req, shm_obj_name))
-            n_worker_req = n_worker_req + 1
-
-            # NOTE: Using shm_obj_name to access shared memory from pre-attached pool
-            shm_temp = self.shm_pre_attached_pool[shm_obj_name]
-            logger.debug("Content in shared memory object: {}".format(bytes(shm_temp.buf)))
-            shm_temp.close()
-        
-            # TODO: Performing application logic
-            self.autoscale_sleep(self.fn_params['sleep_ms'])
-
-            # Send descriptor to TX thread
-            tx_q.put(shm_obj_name)
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='A test python function for SPRIGHT')
     parser.add_argument('--config-file', help='Path of the config file')
-    parser.add_argument('--fn-id', help='Function ID', type=int)
-    # parser.add_argument('--n-threads', help='# of worker threads', type=int)
+    parser.add_argument('--fn-id', help='Function ID', type = int)
     parser.add_argument('--log-level', help='Log level', default = DEFAULT_LOG_LEVEL)
     args = parser.parse_args()
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.getLevelName(args.log_level.upper()))

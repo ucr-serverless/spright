@@ -19,56 +19,56 @@ function_metadata:
     n_threads: 32
     params:
       memory_mb: 0
-      sleep_ns: 2.5
+      sleep_ms: 2.5
       compute: 0
   - fn_id: 3
     fn_name: "Fn-3"
     n_threads: 32
     params:
       memory_mb: 0
-      sleep_ns: 260
+      sleep_ms: 260
       compute: 0
   - fn_id: 4
     fn_name: "Fn-4"
     n_threads: 32
     params:
       memory_mb: 0
-      sleep_ns: 0.9
+      sleep_ms: 0.9
       compute: 0
   - fn_id: 5
     fn_name: "Fn-5"
     n_threads: 32
     params:
       memory_mb: 0
-      sleep_ns: 1.1
+      sleep_ms: 1.1
       compute: 0
   - fn_id: 6
     fn_name: "Fn-6"
     n_threads: 32
     params:
       memory_mb: 0
-      sleep_ns: 0.5
+      sleep_ms: 0.5
       compute: 0
   - fn_id: 7
     fn_name: "Fn-7"
     n_threads: 32
     params:
       memory_mb: 0
-      sleep_ns: 0.44
+      sleep_ms: 0.44
       compute: 0
   - fn_id: 8
     fn_name: "Fn-8"
     n_threads: 32
     params:
       memory_mb: 0
-      sleep_ns: 0.2
+      sleep_ms: 0.2
       compute: 0
   - fn_id: 9
     fn_name: "Fn-9"
     n_threads: 32
     params:
       memory_mb: 0
-      sleep_ns: 1.2
+      sleep_ms: 1.2
       compute: 0
 routes:
   - route_id: 1

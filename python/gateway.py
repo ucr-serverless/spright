@@ -55,7 +55,7 @@ class SPRIGHTGateway(object):
         logger.debug("Attaching to shared mem dict...")
         self.shm_free_dict = SharedMemoryDict(name = self.shm_free_dict_name, size = 32000) # TODO: get size as well
 
-        # creating a pool of pre-attached shm blocks
+        # Creating a pool of pre-attached shm blocks
         self.shm_obj_pool = {}
         for key in self.shm_free_dict.keys():
             shm_obj = shared_memory.SharedMemory(key)
@@ -102,49 +102,50 @@ class SPRIGHTGateway(object):
         shm_obj_name = free_item[0]
         logger.debug("free_shm_obj_name: {}".format(shm_obj_name))
 
-        # shm_block = shared_memory.SharedMemory(shm_obj_name)
         shm_obj = self.shm_obj_pool[shm_obj_name]
         shm_obj.buf[:content_length] = binary_data
-        shm_obj.close()
+        # shm_obj.close()
         return shm_obj_name
-    
+
     def gw_rx(self):
-        skmsg_md_bytes = self.sockmap_sock.recv(1024).strip()
+        skmsg_md_bytes = self.sockmap_sock.recv(1024)
         logger.debug("Gateway completes #{} request: {}".format(self.succ_req, skmsg_md_bytes))
         self.succ_req = self.succ_req + 1
 
-    def gw_tx(self, next_fn, shm_obj_name):
-        logger.debug("Gateway TX thread sends SKMSG to {}".format(next_fn))
-        # TODO: use shm_obj_name to replace "succ_req" in skmsg_md_bytes
-        # Different shm_obj_name must have same size
+    def gw_tx(self, next_fn, cur_hop, shm_obj_name):
+        logger.debug("Gateway TX thread sends SKMSG to Fn#{}".format(next_fn))
+        next_hop = cur_hop + 1
         skmsg_md_bytes = b''.join([next_fn.to_bytes(4, byteorder = 'little'), \
+                                   next_hop.to_bytes(4, byteorder = 'little'), \
                                    shm_obj_name.encode("utf-8")])
         self.sockmap_sock.sendall(skmsg_md_bytes)
+
+    def router(self, cur_hop):
+        if cur_hop == len(self.route):
+            # NOTE: The route ends. Back to Gateway
+            next_fn = 0
+        else:
+            next_fn = self.route[cur_hop]
+        logger.debug("Routing result: current hop#{}, next function ID is {}".format(cur_hop, next_fn))
+        return next_fn
 
     # core() is the frontend of SPRIGHT gateway
     # It's used to interact between the http handler and function chains
     def core(self, shm_obj_name):
-        # TODO: add routing logic
-        # Hard code the next fn id as 1
-        next_fn = 1
-        self.gw_tx(next_fn, shm_obj_name) # TODO: pass shm_obj_name to gw_tx()
+        cur_hop = 0 # NOTE: The function chain always starts from hop#0
+        next_fn = self.router(cur_hop)
+        if next_fn == 0:
+            logger.debug("No route found. Gateway returns response directly")
+            return
+        self.gw_tx(next_fn, cur_hop, shm_obj_name)
 
-        while(1):
-            self.gw_rx()
-
-            # TODO: add routing logic
-            next_fn = 0 # Testing only
-            if next_fn == 0:
-                break
-            else:
-                self.gw_tx(next_fn)
+        self.gw_rx()
     
 class httpHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         logger.debug("SPRIGHT Gateway is handling GET request")
 
-        # TODO: Write request into a shared memory object
-        # Return a shm_obj_name. Use it as the input of gw.core()
+        # Write request into a shared memory object
         shm_obj_name = gw.write_to_free_block(content_length = 3, binary_data = b'xyz')
 
         # Handover request to SPRIGHT gateway core
