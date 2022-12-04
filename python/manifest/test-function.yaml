@@ -1,4 +1,4 @@
-route_id: 1
+route_id: 7
 spright_control_plane:
   sockmap_server_ip: 127.0.0.1
   sockmap_server_port: 8081
@@ -12,14 +12,14 @@ function_metadata:
     n_threads: 32
     params:
       memory_mb: 0
-      sleep_ms: 0.6
+      sleep_ms: 0 # 0.6
       compute: 0
   - fn_id: 2
     fn_name: "Fn-2"
     n_threads: 32
     params:
       memory_mb: 0
-      sleep_ms: 2.5
+      sleep_ms: 0 # 2.5
       compute: 0
   - fn_id: 3
     fn_name: "Fn-3"

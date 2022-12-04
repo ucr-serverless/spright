@@ -51,6 +51,7 @@ class SPRIGHTGateway(object):
         self.smm_sock = self.SmmClient(self.smm_server_ip, self.smm_server_port)
         self.shm_free_dict_name = self.smm_sock.recv(1024).decode("utf-8")
         logger.debug("SMM shm_free_dict_name: {}".format(self.shm_free_dict_name))
+        self.smm_sock.close()
 
         logger.debug("Attaching to shared mem dict...")
         self.shm_free_dict = SharedMemoryDict(name = self.shm_free_dict_name, size = 32000) # TODO: get size as well
@@ -104,7 +105,7 @@ class SPRIGHTGateway(object):
 
         shm_obj = self.shm_obj_pool[shm_obj_name]
         shm_obj.buf[:content_length] = binary_data
-        # shm_obj.close()
+        shm_obj.close()
         return shm_obj_name
 
     def gw_rx(self):

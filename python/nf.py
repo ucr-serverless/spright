@@ -47,6 +47,7 @@ class testFunction(object):
         self.smm_sock = self.SmmClient(self.smm_server_ip, self.smm_server_port)
         self.shm_free_dict_name = self.smm_sock.recv(1024).decode("utf-8")
         logger.debug("SMM shm_free_dict_name: {}".format(self.shm_free_dict_name))
+        self.smm_sock.close()
 
         logger.debug("Attaching to shared mem dict...")
         self.shm_free_dict = SharedMemoryDict(name = self.shm_free_dict_name, size = 32000) # TODO get size as well
@@ -157,7 +158,7 @@ class testFunction(object):
             # NOTE: Using shm_obj_name to access shared memory from pre-attached pool
             shm_temp = self.shm_obj_pool[shm_obj_name]
             logger.debug("Content in shared memory object: {}".format(bytes(shm_temp.buf)))
-            # shm_temp.close()
+            shm_temp.close()
 
             # TODO: Performing application logic
             self.autoscale_sleep(self.fn_params['sleep_ms'])
