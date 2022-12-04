@@ -26,9 +26,10 @@ class SharedMemoryManager(object):
 
         sm_dict_free = SharedMemoryDict(name = shm_free_pool_dict_name, size = num_of_blocks * 32) # contains set of shm blocks that are free at any given point
 
-        sm_dict_all = SharedMemoryDict(name = "sm_dict_all", size = num_of_blocks*32) # contains all shm blocks, used only to free up all shm blocks during sys exit
-
+        sm_dict_all = SharedMemoryDict(name = "sm_dict_all", size = num_of_blocks * 32) # contains all shm blocks, used only to free up all shm blocks during sys exit
+        print("Shm obj created")
         for i in range(num_of_blocks):
+            print("block# {} created".format(i))
             temp_block = shared_memory.SharedMemory(create = True, size = block_size)
             sm_dict_free[str(temp_block.name)] = 'FREE'
             sm_dict_all[str(temp_block.name)] = ''
@@ -52,16 +53,20 @@ if __name__ == "__main__":
     parser.add_argument('--pool-name', help='name of shm free dict', default = 'shm_free_dict')
     parser.add_argument('--log-level', help='Log level', default = DEFAULT_LOG_LEVEL)
     args = parser.parse_args()
+    logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.getLevelName(args.log_level.upper()))
 
+    logger.debug('Read config')
     with open(args.config_file) as config_file:
         config = yaml.load(config_file)
         logger.debug("Config %s", config)
         spright_cp_config = config['spright_control_plane']
 
+    logger.debug('Creating shared memory...')
     sm_mgr = SharedMemoryManager(shm_block_count = int(args.block_count), \
                                  shm_block_size = int(args.block_size), \
                                  shm_free_pool_dict_name = args.pool_name)
 
+    logger.debug('Starting socket in SMM server...')
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind((spright_cp_config['smm_server_ip'], spright_cp_config['smm_server_port'])) 
     s.listen()
@@ -69,8 +74,8 @@ if __name__ == "__main__":
     while True:
         try:
             conn, addr = s.accept()
-            logger.debug('Got connection from', addr )
-            logger.debug('Sending free pool dict name:{}'.format(sm_mgr.shm_free_pool_dict_name))
+            logger.debug('Got connection from {}'.format(addr))
+            logger.debug('Sending free pool dict name: {}'.format(sm_mgr.shm_free_pool_dict_name))
             conn.send(bytes(sm_mgr.shm_free_pool_dict_name, "utf-8"))
             time.sleep(1)
         except KeyboardInterrupt:

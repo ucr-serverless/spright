@@ -152,6 +152,9 @@ class httpHandler(BaseHTTPRequestHandler):
         # Handover request to SPRIGHT gateway core
         gw.core(shm_obj_name)
 
+        # Recycle the used shm_obj
+        # gw.shm_free_dict[shm_obj_name] = 'FREE'
+
         logger.debug("SPRIGHT Gateway prepares a response")
         self.send_response(200)
         self.send_header("Content-type", "text/html")
