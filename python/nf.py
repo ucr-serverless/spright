@@ -158,7 +158,7 @@ class testFunction(object):
             # NOTE: Using shm_obj_name to access shared memory from pre-attached pool
             shm_temp = self.shm_obj_pool[shm_obj_name]
             logger.debug("Content in shared memory object: {}".format(bytes(shm_temp.buf)))
-            shm_temp.close()
+            # shm_temp.close()
 
             # TODO: Performing application logic
             self.autoscale_sleep(self.fn_params['sleep_ms'])

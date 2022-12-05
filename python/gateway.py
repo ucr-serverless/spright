@@ -105,7 +105,7 @@ class SPRIGHTGateway(object):
 
         shm_obj = self.shm_obj_pool[shm_obj_name]
         shm_obj.buf[:content_length] = binary_data
-        shm_obj.close()
+        # shm_obj.close()
         return shm_obj_name
 
     def gw_rx(self):
@@ -141,7 +141,7 @@ class SPRIGHTGateway(object):
         self.gw_tx(next_fn, cur_hop, shm_obj_name)
 
         self.gw_rx()
-    
+
 class httpHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         logger.debug("SPRIGHT Gateway is handling GET request")
@@ -153,7 +153,7 @@ class httpHandler(BaseHTTPRequestHandler):
         gw.core(shm_obj_name)
 
         # Recycle the used shm_obj
-        # gw.shm_free_dict[shm_obj_name] = 'FREE'
+        gw.shm_free_dict[shm_obj_name] = 'FREE'
 
         logger.debug("SPRIGHT Gateway prepares a response")
         self.send_response(200)

@@ -9,27 +9,28 @@ DEFAULT_LOG_LEVEL='info'
 logger = logging.getLogger(__name__)
 
 class SharedMemoryManager(object):
-    
     def __init__(self, shm_block_count, shm_block_size, shm_free_pool_dict_name):
-
         self.shm_block_count = shm_block_count # number of SHM blocks
         self.shm_block_size = shm_block_size # size of each SHM block
         self.shm_free_pool_dict_name = shm_free_pool_dict_name # name of the shared mem dict having free shm blocks
 
         self.shm_free_pool_dict_size = shm_block_count * 32  # 32 bytes for each dict entry
 
-        self.shm_free_pool_dict, self.shm_dict_all = self.create_shm_pool(self.shm_block_count, self.shm_block_size, self.shm_free_pool_dict_name)
+        self.shm_free_pool_dict, self.shm_dict_all = self.create_shm_pool(self.shm_block_count, \
+                                                                          self.shm_block_size, \
+                                                                          self.shm_free_pool_dict_name)
 
     def create_shm_pool(self, num_of_blocks, block_size, shm_free_pool_dict_name):
+        logger.info("Creating {} blocks of {} bytes each...".format(num_of_blocks, block_size))
 
-        logger.info("Creating {} blocks of {} bytes each.. \n".format(num_of_blocks, block_size))
+        # NOTE: sm_dict_free contains set of shm blocks that are free at any given point
+        sm_dict_free = SharedMemoryDict(name = shm_free_pool_dict_name, size = num_of_blocks * 32)
+        # NOTE: sm_dict_all contains all shm blocks, used only to free up all shm blocks during sys exit
+        sm_dict_all = SharedMemoryDict(name = "sm_dict_all", size = num_of_blocks * 32)
 
-        sm_dict_free = SharedMemoryDict(name = shm_free_pool_dict_name, size = num_of_blocks * 32) # contains set of shm blocks that are free at any given point
-
-        sm_dict_all = SharedMemoryDict(name = "sm_dict_all", size = num_of_blocks * 32) # contains all shm blocks, used only to free up all shm blocks during sys exit
-        print("Shm obj created")
         for i in range(num_of_blocks):
-            print("block# {} created".format(i))
+            if i % 1000 == 0:
+                logger.info("{} block created".format(i))
             temp_block = shared_memory.SharedMemory(create = True, size = block_size)
             sm_dict_free[str(temp_block.name)] = 'FREE'
             sm_dict_all[str(temp_block.name)] = ''
@@ -55,7 +56,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.getLevelName(args.log_level.upper()))
 
-    logger.debug('Read config')
     with open(args.config_file) as config_file:
         config = yaml.load(config_file)
         logger.debug("Config %s", config)
