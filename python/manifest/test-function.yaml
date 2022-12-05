@@ -1,0 +1,94 @@
+route_id: 7
+spright_control_plane:
+  sockmap_server_ip: 127.0.0.1
+  sockmap_server_port: 8081
+  rpc_server_ip: 127.0.0.1
+  rpc_server_port: 8082
+  smm_server_ip: 127.0.0.1
+  smm_server_port: 8083
+function_metadata:
+  - fn_id: 1
+    fn_name: "Fn-1"
+    n_threads: 32
+    params:
+      memory_mb: 0
+      sleep_ms: 0 # 0.6
+      compute: 0
+  - fn_id: 2
+    fn_name: "Fn-2"
+    n_threads: 32
+    params:
+      memory_mb: 0
+      sleep_ms: 0 # 2.5
+      compute: 0
+  - fn_id: 3
+    fn_name: "Fn-3"
+    n_threads: 32
+    params:
+      memory_mb: 0
+      sleep_ms: 260
+      compute: 0
+  - fn_id: 4
+    fn_name: "Fn-4"
+    n_threads: 32
+    params:
+      memory_mb: 0
+      sleep_ms: 0.9
+      compute: 0
+  - fn_id: 5
+    fn_name: "Fn-5"
+    n_threads: 32
+    params:
+      memory_mb: 0
+      sleep_ms: 1.1
+      compute: 0
+  - fn_id: 6
+    fn_name: "Fn-6"
+    n_threads: 32
+    params:
+      memory_mb: 0
+      sleep_ms: 0.5
+      compute: 0
+  - fn_id: 7
+    fn_name: "Fn-7"
+    n_threads: 32
+    params:
+      memory_mb: 0
+      sleep_ms: 0.44
+      compute: 0
+  - fn_id: 8
+    fn_name: "Fn-8"
+    n_threads: 32
+    params:
+      memory_mb: 0
+      sleep_ms: 0.2
+      compute: 0
+  - fn_id: 9
+    fn_name: "Fn-9"
+    n_threads: 32
+    params:
+      memory_mb: 0
+      sleep_ms: 1.2
+      compute: 0
+routes:
+  - route_id: 1
+    route_name: "Route-1"
+    sequence: [4, 1, 9, 4, 4, 4, 4, 4, 4, 4, 4, 5]
+  - route_id: 2
+    route_name: "Route-2"
+    sequence: [4, 9, 2, 1, 1, 1, 1, 1, 8, 4, 1, 4]
+  - route_id: 3
+    route_name: "Route-3"
+    sequence: [1, 9]
+  - route_id: 4
+    route_name: "Route-4"
+    sequence: [3, 1, 7, 8, 6, 2, 1, 1, 1, 1, 1, 4]
+  - route_id: 5
+    route_name: "Route-5"
+    sequence: [1, 4, 9, 4, 2, 1, 1, 1, 1, 1, 5]
+  - route_id: 6
+    route_name: "Route-6"
+    sequence: [4]
+  - route_id: 7
+    route_name: "Route-7"
+    sequence: [1, 2]

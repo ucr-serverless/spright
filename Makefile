@@ -18,9 +18,15 @@ LDLIBS += -lbpf -lm -pthread -luuid
 
 .PHONY: all shm_mgr gateway nf clean
 
-all: bin shm_mgr gateway nf adservice currencyservice emailservice paymentservice shippingservice productcatalogservice cartservice recommendationservice frontendservice checkoutservice
+all: bin shm_mgr gateway nf sockmap_manager adservice currencyservice emailservice paymentservice shippingservice productcatalogservice cartservice recommendationservice frontendservice checkoutservice
 
 shm_mgr: bin/shm_mgr_rte_ring bin/shm_mgr_sk_msg
+
+sockmap_manager: bin/sockmap_manager
+
+bin/sockmap_manager: src/sockmap_manager.o
+	@ echo "CC $@"
+	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
 bin/shm_mgr_rte_ring: src/io_rte_ring.o src/shm_mgr.o
 	@ echo "CC $@"

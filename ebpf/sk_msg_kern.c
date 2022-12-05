@@ -25,6 +25,7 @@
 //};
 
 #define MAX_FUNC 100 // A kubernetes worker node can have up to 100 pods
+#define MAX_SOCK_MAP_MAP_ENTRIES 65535
 
 /* This is the data record stored in the map */
 struct datarec {
@@ -39,10 +40,10 @@ struct bpf_map_def SEC("maps") skmsg_stats_map = {
 };
 
 struct bpf_map_def SEC("maps") sock_map = {
-        .type = BPF_MAP_TYPE_SOCKMAP,
+        .type = BPF_MAP_TYPE_SOCKHASH,
         .key_size = sizeof(int),
         .value_size = sizeof(int),
-        .max_entries = 16,
+        .max_entries = MAX_SOCK_MAP_MAP_ENTRIES,
         .map_flags = 0
 };
 
@@ -65,7 +66,12 @@ int bpf_skmsg_tx(struct sk_msg_md *msg)
 
     rec->rx_packets++;
 
-    return bpf_msg_redirect_map(msg, &sock_map, next_fn_id, BPF_F_INGRESS);
+    int ret = 0;
+    ret = bpf_msg_redirect_map(msg, &sock_map, next_fn_id, BPF_F_INGRESS);
+
+    bpf_printk("try redirect to fn#%d\\n", next_fn_id);
+    if (ret != SK_PASS)
+        bpf_printk("redirect to fn#%d failed\\n", next_fn_id);
     // if(ret == SK_PASS) {
     //     bpf_printk("[sk_msg] redirect success");
     // }else if(ret == SK_DROP) {
@@ -73,7 +79,7 @@ int bpf_skmsg_tx(struct sk_msg_md *msg)
     // }else{
     //     bpf_printk("[sk_msg] unknown redirect result");
     // }
-    // return ret;
+    return ret;
 }
 
 char _license[] SEC("license") = "GPL";
