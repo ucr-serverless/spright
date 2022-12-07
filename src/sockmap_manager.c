@@ -208,7 +208,7 @@ static int init_sockmap_mgr(void)
 	}
 
 	printf("Loading eBPF programs...\n");
-	ret = bpf_prog_load("obj/sk_msg_kern.o", BPF_PROG_TYPE_SK_MSG, &obj,
+	ret = bpf_prog_load("ebpf/sk_msg_kern.o", BPF_PROG_TYPE_SK_MSG, &obj,
 	                    &fd_sk_msg_prog);
 	if (unlikely(ret < 0)) {
 		fprintf(stderr, "bpf_prog_load() error: %s\n", strerror(-ret));

@@ -40,7 +40,7 @@ struct bpf_map_def SEC("maps") skmsg_stats_map = {
 };
 
 struct bpf_map_def SEC("maps") sock_map = {
-        .type = BPF_MAP_TYPE_SOCKHASH,
+        .type = BPF_MAP_TYPE_SOCKMAP,
         .key_size = sizeof(int),
         .value_size = sizeof(int),
         .max_entries = MAX_SOCK_MAP_MAP_ENTRIES,
@@ -72,13 +72,7 @@ int bpf_skmsg_tx(struct sk_msg_md *msg)
     bpf_printk("try redirect to fn#%d\\n", next_fn_id);
     if (ret != SK_PASS)
         bpf_printk("redirect to fn#%d failed\\n", next_fn_id);
-    // if(ret == SK_PASS) {
-    //     bpf_printk("[sk_msg] redirect success");
-    // }else if(ret == SK_DROP) {
-    //     bpf_printk("[sk_msg] redirect error");
-    // }else{
-    //     bpf_printk("[sk_msg] unknown redirect result");
-    // }
+
     return ret;
 }
 
