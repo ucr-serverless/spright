@@ -9,6 +9,7 @@ import grpc
 import unary_pb2_grpc as pb2_grpc
 import unary_pb2 as pb2
 from concurrent import futures
+import threading
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
@@ -17,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 # Expose gw as a global obj to be referred by http handler
 global gw
+global gw_lock
 
 class SPRIGHTGateway(object):
     def __init__(self, route, sockmap_server_ip, sockmap_server_port, rpc_server_ip, rpc_server_port, smm_server_ip, smm_server_port):
@@ -191,8 +193,12 @@ class UnaryService(pb2_grpc.UnaryServicer):
 
         logger.debug("SPRIGHT Gateway is handling GET request")
 
+        thread_name =  threading.currentThread().getName()
+        logger.debug("Current thread:{}".format(thread_name))
+
         # Write request into a shared memory object
-        shm_obj_name = gw.write_to_free_block(content_length = 3, binary_data = b'xyz')
+        with gw_lock:
+            shm_obj_name = gw.write_to_free_block(content_length = 3, binary_data = b'xyz')
 
         # Handover request to SPRIGHT gateway core
         gw.core(shm_obj_name)
@@ -233,6 +239,8 @@ if __name__ == "__main__":
                             spright_cp_config['rpc_server_port'], \
                             spright_cp_config['smm_server_ip'], \
                             spright_cp_config['smm_server_port'])
+
+        gw_lock = threading.Lock()
 
         # # Starting the HTTP frontend
         # server = HTTPServer(('', 8080), httpHandler)
