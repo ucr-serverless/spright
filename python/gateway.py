@@ -5,6 +5,10 @@ import argparse, logging, yaml
 from _thread import *
 from shared_memory_dict import SharedMemoryDict
 from multiprocessing import shared_memory
+import grpc
+import unary_pb2_grpc as pb2_grpc
+import unary_pb2 as pb2
+from concurrent import futures
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
@@ -176,6 +180,34 @@ class httpHandler(BaseHTTPRequestHandler):
         self.wfile.write(bytes("<p>This is an example web server.</p>", "utf-8"))
         self.wfile.write(bytes("</body></html>", "utf-8"))
 
+class UnaryService(pb2_grpc.UnaryServicer):
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def GetServerResponse(self, request, context):
+
+        time.sleep(0.1)
+
+        logger.debug("SPRIGHT Gateway is handling GET request")
+
+        # Write request into a shared memory object
+        shm_obj_name = gw.write_to_free_block(content_length = 3, binary_data = b'xyz')
+
+        # Handover request to SPRIGHT gateway core
+        gw.core(shm_obj_name)
+
+        # Recycle the used shm_obj
+        gw.shm_free_dict[shm_obj_name] = 'FREE'
+
+        logger.debug("SPRIGHT Gateway prepares a response")
+        message = request.message
+        resp = "Received msg: " + message
+        result = {'message': resp, 'received': True}
+
+        return pb2.MessageResponse(**result)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = 'A test SPRIGHT Gateway')
     parser.add_argument('--config-file', help = 'Path of the config file')
@@ -202,10 +234,20 @@ if __name__ == "__main__":
                             spright_cp_config['smm_server_ip'], \
                             spright_cp_config['smm_server_port'])
 
-        # Starting the HTTP frontend
-        server = HTTPServer(('', 8080), httpHandler)
-        server.serve_forever()
-        logger.info("HTTP server is running...")
+        # # Starting the HTTP frontend
+        # server = HTTPServer(('', 8080), httpHandler)
+        # server.serve_forever()
+        # logger.info("HTTP server is running...")
+        
+        # Starting the gRPC frontend
+        server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+        pb2_grpc.add_UnaryServicer_to_server(UnaryService(), server)
+        server.add_insecure_port('[::]:50051')
+        server.start()
+        server.wait_for_termination()
+
+        logger.info("gRPC server is running...")
+
 
     # Print bpf trace logs
     while True:
@@ -213,6 +255,6 @@ if __name__ == "__main__":
             # bpf.trace_print()
             time.sleep(1)
         except KeyboardInterrupt:
-            server.server_close()
+            server.stop()
             print("Gateway stopped.")
             sys.exit(0)
