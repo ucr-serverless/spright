@@ -189,7 +189,7 @@ class UnaryService(pb2_grpc.UnaryServicer):
 
     def GetServerResponse(self, request, context):
 
-        time.sleep(0.1)
+        # time.sleep(0.1)
 
         logger.debug("SPRIGHT Gateway is handling GET request")
 
