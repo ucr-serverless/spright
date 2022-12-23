@@ -204,7 +204,8 @@ class UnaryService(pb2_grpc.UnaryServicer):
         gw.core(shm_obj_name)
 
         # Recycle the used shm_obj
-        gw.shm_free_dict[shm_obj_name] = 'FREE'
+        with gw_lock:
+            gw.shm_free_dict[shm_obj_name] = 'FREE'
 
         logger.debug("SPRIGHT Gateway prepares a response")
         message = request.message
