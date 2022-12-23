@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package spright;
+package unary;
 
 service Unary{
  rpc GetServerResponse(Message) returns (MessageResponse) {}
