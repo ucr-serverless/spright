@@ -202,11 +202,11 @@ class UnaryService(pb2_grpc.UnaryServicer):
 
         # shm_obj_name = gw.write_to_free_block(content_length = 3, binary_data = b'xyz')
         # add payload to write q here instead of write_to_free_block call
-        write_queue.put(3, b'xyz')
+        write_queue.put((3, b'xyz'))
 
         # get shm_obj_name from the shm thread's queue
         shm_obj_name = shm_obj_queue.get()
-        
+
         # Handover request to SPRIGHT gateway core
         gw.core(shm_obj_name) 
         # how to get the shm_obj_name here ?
@@ -222,11 +222,11 @@ class UnaryService(pb2_grpc.UnaryServicer):
         return pb2.MessageResponse(**result)
 
 
-def shm_consumer(write_queue, free_queue):
+def shm_consumer(write_q, free_q):
     while True:
         try:
             # write to free block based on data from write_queue
-            data = write_queue.get()
+            data = write_q.get()
             shm_obj_name = gw.write_to_free_block(content_length = data[0], binary_data = data[1])
             shm_obj_queue.put(shm_obj_name)
         except Queue.empty:
@@ -236,7 +236,7 @@ def shm_consumer(write_queue, free_queue):
 
         try:
             # free up & recyclce used block from free_queue
-            used_shm_obj_name = free_queue.get()
+            used_shm_obj_name = free_q.get()
             gw.shm_free_dict[used_shm_obj_name] = 'FREE'
         except Queue.empty:
             pass
