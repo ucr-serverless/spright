@@ -280,6 +280,7 @@ if __name__ == "__main__":
         shm_obj_queue = Queue()
 
         shm_thread = Thread(target = shm_consumer, args =(write_queue, free_queue))
+        shm_thread.daemon = True
         shm_thread.start()
 
         logger.info("shm_thread is running...")
