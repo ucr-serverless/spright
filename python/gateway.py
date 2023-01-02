@@ -279,24 +279,24 @@ if __name__ == "__main__":
         free_queue = Queue()
         shm_obj_queue = Queue()
 
+        shm_thread = Thread(target = shm_consumer, args =(write_queue, free_queue))
+        shm_thread.start()
+
+        logger.info("shm_thread is running...")
+
         # # Starting the HTTP frontend
         # server = HTTPServer(('', 8080), httpHandler)
         # server.serve_forever()
         # logger.info("HTTP server is running...")
         
         # Starting the gRPC frontend
+        logger.info("gRPC server is starting...")
         server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
         pb2_grpc.add_UnaryServicer_to_server(UnaryService(), server)
         server.add_insecure_port('[::]:50051')
         server.start()
         server.wait_for_termination()
 
-        logger.info("gRPC server is running...")
-
-        shm_thread = Thread(target = shm_consumer, args =(write_queue, free_queue))
-        shm_thread.start()
-
-        logger.info("shm_thread is running...")
 
 
 
