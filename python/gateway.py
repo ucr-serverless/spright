@@ -228,7 +228,7 @@ def shm_consumer(write_q, free_q):
     while True:
         try:
             # write to free block based on data from write_queue
-            logger.debug("shm_consumer::write_queue:{}".format(list(write_queue.queue)))
+            logger.debug("shm_consumer::write_queue:{}".format(list(write_q.queue)))
             data = write_q.get()
             shm_obj_name = gw.write_to_free_block(content_length = data[0], binary_data = data[1])
             shm_obj_queue.put(shm_obj_name)
@@ -239,6 +239,7 @@ def shm_consumer(write_q, free_q):
 
         try:
             # free up & recyclce used block from free_queue
+            logger.debug("shm_consumer::free_queue:{}".format(list(free_q.queue)))
             used_shm_obj_name = free_q.get()
             gw.shm_free_dict[used_shm_obj_name] = 'FREE'
         except Queue.empty:
@@ -278,11 +279,6 @@ if __name__ == "__main__":
         free_queue = Queue()
         shm_obj_queue = Queue()
 
-
-        shm_thread = Thread(target = shm_consumer, args =(write_queue, free_queue))
-        shm_thread.start()
-
-
         # # Starting the HTTP frontend
         # server = HTTPServer(('', 8080), httpHandler)
         # server.serve_forever()
@@ -296,6 +292,12 @@ if __name__ == "__main__":
         server.wait_for_termination()
 
         logger.info("gRPC server is running...")
+
+        shm_thread = Thread(target = shm_consumer, args =(write_queue, free_queue))
+        shm_thread.start()
+
+        logger.info("shm_thread is running...")
+
 
 
     # Print bpf trace logs
