@@ -224,14 +224,14 @@ class UnaryService(pb2_grpc.UnaryServicer):
         return pb2.MessageResponse(**result)
 
 
-def shm_consumer(write_q, free_q):
+def shm_consumer(write_q, free_q, shm_obj_q):
     while True:
         try:
             # write to free block based on data from write_queue
             logger.debug("shm_consumer::write_queue:{}".format(list(write_q.queue)))
             data = write_q.get()
             shm_obj_name = gw.write_to_free_block(content_length = data[0], binary_data = data[1])
-            shm_obj_queue.put(shm_obj_name)
+            shm_obj_q.put(shm_obj_name)
         except Queue.empty:
             pass
         except:
@@ -279,7 +279,7 @@ if __name__ == "__main__":
         free_queue = Queue()
         shm_obj_queue = Queue()
 
-        shm_thread = Thread(target = shm_consumer, args =(write_queue, free_queue))
+        shm_thread = Thread(target = shm_consumer, args =(write_queue, free_queue, shm_obj_queue))
         shm_thread.daemon = True
         shm_thread.start()
 
