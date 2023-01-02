@@ -204,6 +204,8 @@ class UnaryService(pb2_grpc.UnaryServicer):
         # add payload to write q here instead of write_to_free_block call
         write_queue.put((3, b'xyz'))
 
+        logger.debug("write_queue:{}".format(list(write_queue.queue)))
+
         # get shm_obj_name from the shm thread's queue
         shm_obj_name = shm_obj_queue.get()
 
@@ -226,6 +228,7 @@ def shm_consumer(write_q, free_q):
     while True:
         try:
             # write to free block based on data from write_queue
+            logger.debug("shm_consumer::write_queue:{}".format(list(write_queue.queue)))
             data = write_q.get()
             shm_obj_name = gw.write_to_free_block(content_length = data[0], binary_data = data[1])
             shm_obj_queue.put(shm_obj_name)
