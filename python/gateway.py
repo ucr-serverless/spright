@@ -204,17 +204,21 @@ class UnaryService(pb2_grpc.UnaryServicer):
         # add payload to write q here instead of write_to_free_block call
         write_queue.put((3, b'xyz'))
 
+        
+        # get shm_obj_name from the shm thread's queue
+        logger.debug("GET handler of {}::shm_obj_queue:{}".format(thread_name,list(shm_obj_queue.queue)))
         logger.debug("write_queue:{}".format(list(write_queue.queue)))
 
-        # get shm_obj_name from the shm thread's queue
         shm_obj_name = shm_obj_queue.get()
+
+        logger.debug("GET handler::shm_obj_name:{}".format(shm_obj_name))
 
         # Handover request to SPRIGHT gateway core
         gw.core(shm_obj_name) 
-        # how to get the shm_obj_name here ?
 
         # Recycle the used shm_obj
-        gw.shm_free_dict[shm_obj_name] = 'FREE'
+        free_queue.put(shm_obj_name)
+        # gw.shm_free_dict[shm_obj_name] = 'FREE'
 
         logger.debug("SPRIGHT Gateway prepares a response")
         message = request.message
@@ -233,7 +237,7 @@ def shm_consumer(write_q, free_q, shm_obj_q):
             shm_obj_name = gw.write_to_free_block(content_length = data[0], binary_data = data[1])
             shm_obj_q.put(shm_obj_name)
         except Queue.empty:
-            pass
+            logger.debug("queue empty exception during write_to_free_block from write_queue")
         except:
             logger.debug("exception during write_to_free_block from write_queue")
 
@@ -243,7 +247,7 @@ def shm_consumer(write_q, free_q, shm_obj_q):
             used_shm_obj_name = free_q.get()
             gw.shm_free_dict[used_shm_obj_name] = 'FREE'
         except Queue.empty:
-            pass
+            logger.debug("queue empty exception during freeing/recycling used used_shm_obj from free_queue")
         except:
             logger.debug("exception during freeing/recycling used used_shm_obj from free_queue")
 
