@@ -23,8 +23,8 @@ sudo docker run hello-world
 sudo docker -v
 move_docker_dir
 
-echo "====== please check whether docker is ready ======"
-read varname
+# echo "====== please check whether docker is ready ======"
+# read varname
 
 sudo apt-get purge golang*
 mkdir -p download
