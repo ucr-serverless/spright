@@ -1,6 +1,47 @@
 # SPRIGHT
 
-## Description
+SPRIGHT is a lightweight, high-performance serverless framework that exploits shared memory processing to improve the scalability of the dataplane of serverless function chains by avoiding unnecessary networking overheads.
+
+For more information, please refer to:
+- SIGCOMM 2022: [SPRIGHT: Extracting the Server from Serverless Computing! High-performance eBPF-based Event-driven, Shared-memory Processing](https://dl.acm.org/doi/abs/10.1145/3544216.3544259)
+
+## Installation guideline (on Cloudlab) ##
+
+This guideline is mainly for deploying SPRIGHT on [NSF Cloudlab](https://www.cloudlab.us/). We focus on a single-node deployment to demonstrate the shared memory processing supported by SPRIGHT. Currently SPRIGHT offers several deployment options: Process-on-bare-metal (POBM mode), Kubernetes pod (K8S mode), and Knative functions (Kn mode).
+
+Follow steps below to set up SPRIGHT:
+- [Creating a 2-node cluster on Cloudlab](docs/01-create-cluster-on-cloudlab.md)
+- [Upgrading kernel & Installing SPRIGHT dependencies](docs/02-upgrade-kernel-install-deps.md)
+- [Setting up Kubernetes & Knative](docs/03-setup-k8s-kn.md)
+- [Setting up SPRIGHT](docs/04-setup-spright.md)
+
+<!-- ## Documentation ##
+Please refer to the [SPRIGHT documentation]() for details on installing, running and deploying SPRIGHT. -->
+
+## SIGCOMM artifact evaluation ##
+To reproduce the experiment in [our paper](https://dl.acm.org/doi/abs/10.1145/3544216.3544259), please refer to [artifact documentation](docs/ARTIFACTS.md).
+
+## Publication ##
+~~~
+@inproceedings{spright-sigcomm22,
+author = {Qi, Shixiong and Monis, Leslie and Zeng, Ziteng and Wang, Ian-chin and Ramakrishnan, K. K.},
+title = {SPRIGHT: Extracting the Server from Serverless Computing! High-Performance EBPF-Based Event-Driven, Shared-Memory Processing},
+year = {2022},
+isbn = {9781450394208},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3544216.3544259},
+doi = {10.1145/3544216.3544259},
+booktitle = {Proceedings of the ACM SIGCOMM 2022 Conference},
+pages = {780–794},
+numpages = {15},
+keywords = {event-driven, eBPF, function chain, serverless},
+location = {Amsterdam, Netherlands},
+series = {SIGCOMM '22}
+}
+~~~
+
+<!-- ## Description
 
 This artifact runs on c220g5 nodes on NSF Cloudlab. 
 
@@ -540,4 +581,4 @@ cp sk_msg_kern.o ../obj/
 
 # Debugging purpose: output bpf_printk()
 sudo cat  /sys/kernel/debug/tracing/trace_pipe
-```
+``` -->
