@@ -6,6 +6,7 @@ src/*.d
 # idea files
 .DS_Store
 .idea
+nodes_name.txt
 
 # VS code files
 .vscode
