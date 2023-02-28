@@ -1,3 +1,19 @@
+# Binaries for programs and plugins
 bin
 src/*.o
 src/*.d
+
+# idea files
+.DS_Store
+.idea
+
+# VS code files
+.vscode
+
+# python
+*.pyc
+__pycache__
+
+# helm dependencies
+charts
+requirements.lock
