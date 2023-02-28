@@ -1,0 +1,178 @@
+# This yaml is used to deploy a SPRIGHT function chain with two dummy functions.
+# Functions are deployed as Kubernetes pods
+apiVersion: v1
+kind: Pod
+metadata:
+  name: spright-fn-pod-1
+spec:
+  shareProcessNamespace: true
+  volumes:
+    - name: dev-hugepages
+      hostPath:
+        path: /dev/hugepages
+        type: DirectoryOrCreate
+    - name: run-dpdk
+      hostPath:
+        path: /var/run/dpdk
+        type: DirectoryOrCreate
+    - name: x86-gnu
+      hostPath:
+        path: /lib/x86_64-linux-gnu
+        type: DirectoryOrCreate
+    - name: local-gnu
+      hostPath:
+        path: /usr/local/lib/x86_64-linux-gnu
+        type: DirectoryOrCreate
+    - name: lib-gnu
+      hostPath:
+        path: /usr/lib/x86_64-linux-gnu
+        type: DirectoryOrCreate
+    - name: libbpf
+      hostPath:
+        path: /usr/lib64/
+        type: DirectoryOrCreate
+    - name: spright
+      hostPath:
+        path: /mydata/spright
+        type: DirectoryOrCreate
+  containers:
+    - name: spright-fn
+      image: ubuntu:20.04
+      volumeMounts:
+        - name: dev-hugepages
+          mountPath: /dev/hugepages
+        - name: run-dpdk
+          mountPath: /var/run/dpdk
+        - name: x86-gnu
+          mountPath: /lib/x86_64-linux-gnu
+        - name: local-gnu
+          mountPath: /usr/local/lib/x86_64-linux-gnu
+        - name: spright
+          mountPath: /home/spright
+        - name: lib-gnu
+          mountPath: /usr/lib/x86_64-linux-gnu
+        - name: libbpf
+          mountPath: /usr/lib64/
+      securityContext:
+        privileged: true
+      command: ["/bin/bash", "-c", "--"]
+      # Load deps from host
+      args: ["echo \"/usr/lib64/\" | tee -a /etc/ld.so.conf && ldconfig && while true; do sleep 30; done;"]
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: spright-fn-pod-2
+spec:
+  shareProcessNamespace: true
+  volumes:
+    - name: dev-hugepages
+      hostPath:
+        path: /dev/hugepages
+        type: DirectoryOrCreate
+    - name: run-dpdk
+      hostPath:
+        path: /var/run/dpdk
+        type: DirectoryOrCreate
+    - name: x86-gnu
+      hostPath:
+        path: /lib/x86_64-linux-gnu
+        type: DirectoryOrCreate
+    - name: local-gnu
+      hostPath:
+        path: /usr/local/lib/x86_64-linux-gnu
+        type: DirectoryOrCreate
+    - name: lib-gnu
+      hostPath:
+        path: /usr/lib/x86_64-linux-gnu
+        type: DirectoryOrCreate
+    - name: libbpf
+      hostPath:
+        path: /usr/lib64/
+        type: DirectoryOrCreate
+    - name: spright
+      hostPath:
+        path: /mydata/spright
+        type: DirectoryOrCreate
+  containers:
+    - name: spright-fn
+      image: ubuntu:20.04
+      volumeMounts:
+        - name: dev-hugepages
+          mountPath: /dev/hugepages
+        - name: run-dpdk
+          mountPath: /var/run/dpdk
+        - name: x86-gnu
+          mountPath: /lib/x86_64-linux-gnu
+        - name: local-gnu
+          mountPath: /usr/local/lib/x86_64-linux-gnu
+        - name: spright
+          mountPath: /home/spright
+        - name: lib-gnu
+          mountPath: /usr/lib/x86_64-linux-gnu
+        - name: libbpf
+          mountPath: /usr/lib64/
+      securityContext:
+        privileged: true
+      command: ["/bin/bash", "-c", "--"]
+      # Load deps from host
+      args: ["echo \"/usr/lib64/\" | tee -a /etc/ld.so.conf && ldconfig && while true; do sleep 30; done;"]
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: spright-gw-pod
+spec:
+  shareProcessNamespace: true
+  volumes:
+    - name: dev-hugepages
+      hostPath:
+        path: /dev/hugepages
+        type: DirectoryOrCreate
+    - name: run-dpdk
+      hostPath:
+        path: /var/run/dpdk
+        type: DirectoryOrCreate
+    - name: x86-gnu
+      hostPath:
+        path: /lib/x86_64-linux-gnu
+        type: DirectoryOrCreate
+    - name: local-gnu
+      hostPath:
+        path: /usr/local/lib/x86_64-linux-gnu
+        type: DirectoryOrCreate
+    - name: lib-gnu
+      hostPath:
+        path: /usr/lib/x86_64-linux-gnu
+        type: DirectoryOrCreate
+    - name: libbpf
+      hostPath:
+        path: /usr/lib64/
+        type: DirectoryOrCreate
+    - name: spright
+      hostPath:
+        path: /mydata/spright
+        type: DirectoryOrCreate
+  containers:
+    - name: spright-fn
+      image: ubuntu:20.04
+      volumeMounts:
+        - name: dev-hugepages
+          mountPath: /dev/hugepages
+        - name: run-dpdk
+          mountPath: /var/run/dpdk
+        - name: x86-gnu
+          mountPath: /lib/x86_64-linux-gnu
+        - name: local-gnu
+          mountPath: /usr/local/lib/x86_64-linux-gnu
+        - name: spright
+          mountPath: /home/spright
+        - name: lib-gnu
+          mountPath: /usr/lib/x86_64-linux-gnu
+        - name: libbpf
+          mountPath: /usr/lib64/
+      securityContext:
+        privileged: true
+      command: ["/bin/bash", "-c", "--"]
+      # Load deps from host
+      args: ["echo \"/usr/lib64/\" | tee -a /etc/ld.so.conf && ldconfig && while true; do sleep 30; done;"]

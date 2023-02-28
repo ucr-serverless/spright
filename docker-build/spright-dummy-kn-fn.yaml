@@ -1,0 +1,61 @@
+# This yaml is used to deploy a SPRIGHT function chain with two dummy functions.
+# The functions are deployed as Knative functions
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: spright-fn
+  namespace: default
+spec:
+  template:
+    metadata:
+      annotations:
+        # Fixing the scale to 1
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "1"
+    spec:
+      volumes:
+        - name: dev-hugepages
+          hostPath:
+            path: /dev/hugepages
+            type: DirectoryOrCreate
+        - name: run-dpdk
+          hostPath:
+            path: /var/run/dpdk
+            type: DirectoryOrCreate
+        - name: x86-gnu
+          hostPath:
+            path: /lib/x86_64-linux-gnu
+            type: DirectoryOrCreate
+        - name: local-gnu
+          hostPath:
+            path: /usr/local/lib/x86_64-linux-gnu
+            type: DirectoryOrCreate
+        - name: lib-gnu
+          hostPath:
+            path: /usr/lib/x86_64-linux-gnu
+            type: DirectoryOrCreate
+        - name: spright
+          hostPath:
+            path: /mydata/spright
+            type: DirectoryOrCreate
+      containers:
+        - image: ubuntu:20.04
+          volumeMounts:
+            - name: dev-hugepages
+              mountPath: /dev/hugepages
+            - name: run-dpdk
+              mountPath: /var/run/dpdk
+            - name: x86-gnu
+              mountPath: /lib/x86_64-linux-gnu
+            - name: local-gnu
+              mountPath: /usr/local/lib/x86_64-linux-gnu
+            - name: lib-gnu
+              mountPath: /usr/lib/x86_64-linux-gnu
+            - name: spright
+              mountPath: /home/spright
+          securityContext:
+            privileged: true
+          command: ["/bin/bash", "-c", "--"]
+          args: ["while true; do sleep 30; done;"]
+    #       command: ["cd", "${PWD}", "&&", "ldconfig"]
+    #       cd ${PWD} && ldconfig && ./nf --proc-type=secondary; exit
