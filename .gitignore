@@ -2,6 +2,10 @@
 bin
 src/*.o
 src/*.d
+src/online_boutique_fns/*.o
+src/online_boutique_fns/*.d
+src/libsidecar/*.o
+src/libsidecar/*.d
 
 # idea files
 .DS_Store

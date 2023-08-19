@@ -18,6 +18,7 @@
 #include "spright.h"
 
 #include "io.h"
+#include "lib_sidecar.h"
 
 #define RING_NAME_FORMAT "SPRIGHT_RING_%hhu"
 
@@ -157,12 +158,16 @@ int io_rx(void **obj)
 {
 	while (rte_ring_dequeue(ring[node_id], obj) != 0);
 
+	sidecar_rx((struct http_transaction *) *obj);
+
 	return 0;
 }
 
 int io_tx(void *obj, uint8_t next_node)
 {
 	while (rte_ring_enqueue(ring[next_node], obj) != 0);
+
+	sidecar_tx((struct http_transaction *) obj);
 
 	return 0;
 }
