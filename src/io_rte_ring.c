@@ -26,6 +26,12 @@
 
 #define RING_LENGTH_MAX (1U << 16)
 
+// Data Structure to Hold the Call Sequence
+fn_ptr rx_call_sequence[MAX_FUNCTIONS];
+int num_rx_fns = 0;
+fn_ptr tx_call_sequence[MAX_FUNCTIONS];
+int num_tx_fns = 0;
+
 static struct rte_ring **ring = NULL;
 
 static int init_primary(void)
@@ -117,6 +123,8 @@ int io_init(void)
 		goto error_1;
 	}
 
+	sidecar_init(rx_call_sequence, &num_rx_fns, tx_call_sequence, &num_tx_fns);
+
 	return 0;
 
 error_1:
@@ -158,7 +166,7 @@ int io_rx(void **obj)
 {
 	while (rte_ring_dequeue(ring[node_id], obj) != 0);
 
-	sidecar_rx((struct http_transaction *) *obj);
+	sidecar_rx(rx_call_sequence, num_rx_fns, (struct http_transaction *) *obj);
 
 	return 0;
 }
@@ -167,7 +175,7 @@ int io_tx(void *obj, uint8_t next_node)
 {
 	while (rte_ring_enqueue(ring[next_node], obj) != 0);
 
-	sidecar_tx((struct http_transaction *) obj);
+	sidecar_tx(tx_call_sequence, num_tx_fns, (struct http_transaction *) obj);
 
 	return 0;
 }

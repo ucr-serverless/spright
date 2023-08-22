@@ -5,11 +5,42 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <sys/time.h>
 
 #include "http.h"
 
+struct stats {
+    int64_t requestCountM;
+    uint64_t responseTimeInMsecM;
+    int64_t appRequestCountM;
+    uint64_t appResponseTimeInMsecM;
+    int64_t queueDepthM;
+};
+
+struct stats metrics;
+
+uint64_t get_timestamp();
+
+// Define a function pointer type that matches the 
+// signature of the functions you want to call in the sequence.
+// This assumes that the functions you want to call take no arguments 
+// and return void. You can modify this definition to match your specific requirements.
+typedef void (*fn_ptr)(struct http_transaction *txn);
+
+// Max functions allowed in a sequence
+#define MAX_FUNCTIONS 10
+
+// Add Functions to the Call Sequence
+void add_fn_to_sequence(fn_ptr call_sequence[], int *num_fns, fn_ptr func);
+
+// Execute the Call Sequence
+void execute_call_sequence(fn_ptr call_sequence[], int num_fns, struct http_transaction *txn);
+
+// Initialize the RX/TX call sequence and add sidecar functions
+void sidecar_init(fn_ptr rx_call_sequence[], int *num_rx_fns, fn_ptr tx_call_sequence[], int *num_tx_fns);
+
 // TRIGGER OF SIDECAR INGRESS
-void sidecar_rx(struct http_transaction *txn);
+void sidecar_rx(fn_ptr call_sequence[], int num_fns, struct http_transaction *txn);
 
 // INGRESS SIDECAR MODULES
 void requestLogHandler(struct http_transaction *txn);
@@ -30,7 +61,7 @@ void ForwardedShimHandler(struct http_transaction *txn);
 void ProxyHandler(struct http_transaction *txn);
 
 // TRIGGER OF SIDECAR ERESS
-void sidecar_tx(struct http_transaction *txn);
+void sidecar_tx(fn_ptr call_sequence[], int num_fns, struct http_transaction *txn);
 
 // EGRESS SIDECAR MODULES
 // Record egress metrics, e.g, number of requests that are routed to user containers,
