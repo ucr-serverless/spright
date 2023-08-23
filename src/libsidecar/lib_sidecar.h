@@ -9,11 +9,19 @@
 
 #include "http.h"
 
+// Exponentially Weighted Moving Average (EWMA) structure for response time
+typedef struct {
+    double alpha;       // Weighting factor (0 < alpha < 1)
+    uint64_t ema;       // Exponentially Weighted Moving Average
+    uint64_t ingress_ts;      // Use to cache the start timestamp
+    int initialized;    // Flag to track if the EMA has been initialized
+} EwmaUint64;
+
 struct stats {
     int64_t requestCountM;
-    uint64_t responseTimeInMsecM;
+    EwmaUint64 responseTimeInMsecM;
     int64_t appRequestCountM;
-    uint64_t appResponseTimeInMsecM;
+    EwmaUint64 appResponseTimeInMsecM;
     int64_t queueDepthM;
 };
 

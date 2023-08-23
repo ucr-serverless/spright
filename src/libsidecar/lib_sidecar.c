@@ -5,6 +5,28 @@
 
 #include "lib_sidecar.h"
 
+// Initialize the EWMA structure
+void ewma_init(EwmaUint64 *ewma, double alpha, uint64_t initial_value) {
+    ewma->alpha = alpha;
+    ewma->ema = initial_value;
+    ewma->initialized = 0;
+}
+
+// Update the EWMA with a new value
+void ewma_update(EwmaUint64 *ewma, uint64_t new_value) {
+    if (!ewma->initialized) {
+        ewma->ema = new_value;
+        ewma->initialized = 1;
+    } else {
+        ewma->ema = (uint64_t)((1.0 - ewma->alpha) * ewma->ema + ewma->alpha * new_value);
+    }
+}
+
+// Get the current EWMA value
+uint64_t ewma_get(const EwmaUint64 *ewma) {
+    return ewma->ema;
+}
+
 uint64_t get_timestamp() {
     struct timeval tv;
     gettimeofday(&tv, NULL);
@@ -42,11 +64,15 @@ void sidecar_init(fn_ptr rx_call_sequence[], int *num_rx_fns, fn_ptr tx_call_seq
     add_fn_to_sequence(tx_call_sequence, num_tx_fns, requestAppMetricsHandler);
     add_fn_to_sequence(tx_call_sequence, num_tx_fns, ConcurrencyStateHandler);
 
+    double alpha = 0.2;  // Weighting factor (adjust as needed)
+
     // Initialize metrics record
     metrics.requestCountM = 0;
-    metrics.responseTimeInMsecM = 0;
+    // metrics.responseTimeInMsecM.initialized = 0;
+    ewma_init(&metrics.responseTimeInMsecM, alpha, 0);
     metrics.appRequestCountM = 0;
-    metrics.appResponseTimeInMsecM = 0;
+    // metrics.appResponseTimeInMsecM.initialized = 0;
+    ewma_init(&metrics.appResponseTimeInMsecM, alpha, 0);
     metrics.queueDepthM = 0;
 
 }
@@ -62,14 +88,14 @@ void sidecar_tx(fn_ptr call_sequence[], int num_fns, struct http_transaction *tx
     execute_call_sequence(call_sequence, num_fns, txn);
 
     printf("METRICS REPORT || requestCountM: %ld, responseTimeInMsecM: %lu, appRequestCountM: %ld, appResponseTimeInMsecM: %lu, queueDepthM: %ld\n", \
-    metrics.requestCountM, metrics.responseTimeInMsecM, metrics.appRequestCountM, metrics.appResponseTimeInMsecM, metrics.queueDepthM);
+    metrics.requestCountM, metrics.responseTimeInMsecM.ema, metrics.appRequestCountM, metrics.appResponseTimeInMsecM.ema, metrics.queueDepthM);
 
 }
 
 void requestLogHandler(struct http_transaction *txn) {
     printf("[INGRESS] | [%s] \n", __func__);
 
-    metrics.responseTimeInMsecM = get_timestamp();
+    metrics.responseTimeInMsecM.ingress_ts = get_timestamp();
 }
 
 void HTTPSpanMiddleware(struct http_transaction *txn) {
@@ -93,14 +119,15 @@ void ForwardedShimHandler(struct http_transaction *txn) {
 void ProxyHandler(struct http_transaction *txn) {
     printf("[INGRESS] | [%s] \n", __func__);
 
-    metrics.appResponseTimeInMsecM = get_timestamp();
+    metrics.appResponseTimeInMsecM.ingress_ts = get_timestamp();
 }
 
 void requestAppMetricsHandler(struct http_transaction *txn) {
     printf("[EGRESS]  | [%s] \n", __func__);
 
     uint64_t app_egress_timestamp = get_timestamp();
-    metrics.appResponseTimeInMsecM = app_egress_timestamp - metrics.appResponseTimeInMsecM;
+    uint64_t appResponseTimeInMsecM = app_egress_timestamp - metrics.appResponseTimeInMsecM.ingress_ts;
+    ewma_update(&metrics.appResponseTimeInMsecM, appResponseTimeInMsecM);
     metrics.appRequestCountM++;
 }
 
@@ -108,5 +135,6 @@ void ConcurrencyStateHandler(struct http_transaction *txn) {
     printf("[EGRESS]  | [%s] \n", __func__);
 
     uint64_t fn_egress_timestamp = get_timestamp();
-    metrics.responseTimeInMsecM = fn_egress_timestamp - metrics.responseTimeInMsecM;
+    uint64_t responseTimeInMsecM = fn_egress_timestamp - metrics.responseTimeInMsecM.ingress_ts;
+    ewma_update(&metrics.responseTimeInMsecM, responseTimeInMsecM);
 }
