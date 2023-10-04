@@ -10,6 +10,8 @@ import unary_pb2_grpc as pb2_grpc
 import unary_pb2 as pb2
 from concurrent import futures
 import threading
+from queue import Queue
+from threading import Thread
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
@@ -18,7 +20,9 @@ logger = logging.getLogger(__name__)
 
 # Expose gw as a global obj to be referred by http handler
 global gw
-global gw_lock
+global write_queue
+global free_queue
+global shm_obj_queue
 
 class SPRIGHTGateway(object):
     def __init__(self, route, sockmap_server_ip, sockmap_server_port, rpc_server_ip, rpc_server_port, smm_server_ip, smm_server_port):
@@ -196,16 +200,25 @@ class UnaryService(pb2_grpc.UnaryServicer):
         thread_name =  threading.currentThread().getName()
         logger.debug("Current thread:{}".format(thread_name))
 
-        # Write request into a shared memory object
-        with gw_lock:
-            shm_obj_name = gw.write_to_free_block(content_length = 3, binary_data = b'xyz')
+        # shm_obj_name = gw.write_to_free_block(content_length = 3, binary_data = b'xyz')
+        # add payload to write q here instead of write_to_free_block call
+        write_queue.put((3, b'xyz'))
+
+        
+        # get shm_obj_name from the shm thread's queue
+        logger.debug("GET handler of {}::shm_obj_queue:{}".format(thread_name,list(shm_obj_queue.queue)))
+        logger.debug("write_queue:{}".format(list(write_queue.queue)))
+
+        shm_obj_name = shm_obj_queue.get()
+
+        logger.debug("GET handler::shm_obj_name:{}".format(shm_obj_name))
 
         # Handover request to SPRIGHT gateway core
-        gw.core(shm_obj_name)
+        gw.core(shm_obj_name) 
 
         # Recycle the used shm_obj
-        with gw_lock:
-            gw.shm_free_dict[shm_obj_name] = 'FREE'
+        free_queue.put(shm_obj_name)
+        # gw.shm_free_dict[shm_obj_name] = 'FREE'
 
         logger.debug("SPRIGHT Gateway prepares a response")
         message = request.message
@@ -214,6 +227,28 @@ class UnaryService(pb2_grpc.UnaryServicer):
 
         return pb2.MessageResponse(**result)
 
+def shm_consumer(write_q, free_q, shm_obj_q):
+    while True:
+        try:
+            # write to free block based on data from write_queue
+            logger.debug("shm_consumer::write_queue:{}".format(list(write_q.queue)))
+            data = write_q.get()
+            shm_obj_name = gw.write_to_free_block(content_length = data[0], binary_data = data[1])
+            shm_obj_q.put(shm_obj_name)
+        except Queue.empty:
+            logger.debug("queue empty exception during write_to_free_block from write_queue")
+        except:
+            logger.debug("exception during write_to_free_block from write_queue")
+
+        try:
+            # free up & recyclce used block from free_queue
+            logger.debug("shm_consumer::free_queue:{}".format(list(free_q.queue)))
+            used_shm_obj_name = free_q.get()
+            gw.shm_free_dict[used_shm_obj_name] = 'FREE'
+        except Queue.empty:
+            logger.debug("queue empty exception during freeing/recycling used used_shm_obj from free_queue")
+        except:
+            logger.debug("exception during freeing/recycling used used_shm_obj from free_queue")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = 'A test SPRIGHT Gateway')
@@ -241,7 +276,15 @@ if __name__ == "__main__":
                             spright_cp_config['smm_server_ip'], \
                             spright_cp_config['smm_server_port'])
 
-        gw_lock = threading.Lock()
+        write_queue = Queue()
+        free_queue = Queue()
+        shm_obj_queue = Queue()
+
+        shm_thread = Thread(target = shm_consumer, args =(write_queue, free_queue, shm_obj_queue))
+        shm_thread.daemon = True
+        shm_thread.start()
+
+        logger.info("shm_thread is running...")
 
         # # Starting the HTTP frontend
         # server = HTTPServer(('', 8080), httpHandler)
@@ -249,6 +292,8 @@ if __name__ == "__main__":
         # logger.info("HTTP server is running...")
         
         # Starting the gRPC frontend
+        logger.info("gRPC server is starting...")
+
         server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
         pb2_grpc.add_UnaryServicer_to_server(UnaryService(), server)
         server.add_insecure_port('[::]:50051')
