@@ -158,7 +158,15 @@ class httpHandler(BaseHTTPRequestHandler):
         logger.debug("SPRIGHT Gateway prepares a response")
         self.send_response(200)
         self.send_header("Content-type", "text/html")
+
+        # TODO: Add piggybacked metrics
+        self.send_header("ExecutionTime",   "10.00")
+        self.send_header("ArrivalRate",     "20.00")
+        self.send_header("Capacity",        "30.00")
+        self.send_header("ConfidenceRatio", "40.00")
         self.end_headers()
+
+        # Write payload to response
         self.wfile.write(bytes("<html><head><title>https://pythonbasics.org</title></head>", "utf-8"))
         self.wfile.write(bytes("<p>Request: %s</p>" % self.path, "utf-8"))
         self.wfile.write(bytes("<body>", "utf-8"))
