@@ -227,7 +227,6 @@ class UnaryService(pb2_grpc.UnaryServicer):
 
         return pb2.MessageResponse(**result)
 
-
 def shm_consumer(write_q, free_q, shm_obj_q):
     while True:
         try:
@@ -250,8 +249,6 @@ def shm_consumer(write_q, free_q, shm_obj_q):
             logger.debug("queue empty exception during freeing/recycling used used_shm_obj from free_queue")
         except:
             logger.debug("exception during freeing/recycling used used_shm_obj from free_queue")
-
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = 'A test SPRIGHT Gateway')
@@ -296,13 +293,14 @@ if __name__ == "__main__":
         
         # Starting the gRPC frontend
         logger.info("gRPC server is starting...")
+
         server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
         pb2_grpc.add_UnaryServicer_to_server(UnaryService(), server)
         server.add_insecure_port('[::]:50051')
         server.start()
         server.wait_for_termination()
 
-
+        logger.info("gRPC server is running...")
 
 
     # Print bpf trace logs
