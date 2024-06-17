@@ -25,7 +25,7 @@
 
 #define MEMZONE_NAME "SPRIGHT_MEMZONE"
 
-int node_id;
+int fn_id;
 
 struct {
 	struct rte_mempool *mempool;
@@ -50,7 +50,7 @@ struct {
 		char name[64];
 
 		uint8_t length;
-		uint8_t node[UINT8_MAX + 1];
+		uint8_t hop[UINT8_MAX + 1];
 	} route[UINT8_MAX + 1];
 } *cfg;
 

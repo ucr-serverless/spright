@@ -142,7 +142,7 @@ static int conn_read(int sockfd)
 
 	txn->hop_count = 0;
 
-	ret = io_tx(txn, cfg->route[txn->route_id].node[0]);
+	ret = io_tx(txn, cfg->route[txn->route_id].hop[0]);
 	if (unlikely(ret == -1)) {
 		fprintf(stderr, "io_tx() error\n");
 		goto error_1;
@@ -172,7 +172,7 @@ static int conn_write(int *sockfd)
 
 	if (txn->hop_count < cfg->route[txn->route_id].length) {
 		ret = io_tx(txn,
-		            cfg->route[txn->route_id].node[txn->hop_count]);
+		            cfg->route[txn->route_id].hop[txn->hop_count]);
 		if (unlikely(ret == -1)) {
 			fprintf(stderr, "io_tx() error\n");
 			goto error_1;
@@ -414,7 +414,7 @@ static int gateway(void)
 	struct server_vars sv;
 	int ret;
 
-	node_id = 0;
+	fn_id = 0;
 
 	memzone = rte_memzone_lookup(MEMZONE_NAME);
 	if (unlikely(memzone == NULL)) {

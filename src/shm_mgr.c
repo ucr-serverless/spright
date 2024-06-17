@@ -65,9 +65,9 @@ static void cfg_print(void)
 		printf("\tName: %s\n", cfg->route[i].name);
 		printf("\tLength = %hhu\n", cfg->route[i].length);
 		if (cfg->route[i].length > 0) {
-			printf("\tNodes = [");
+			printf("\tHops = [");
 			for (j = 0; j < cfg->route[i].length; j++) {
-				printf("%hhu ", cfg->route[i].node[j]);
+				printf("%hhu ", cfg->route[i].hop[j]);
 			}
 			printf("\b]\n");
 		}
@@ -257,7 +257,7 @@ static int cfg_init(char *cfg_file)
 
 		strcpy(cfg->route[id].name, name);
 
-		subsubsetting = config_setting_lookup(subsetting, "nodes");
+		subsubsetting = config_setting_lookup(subsetting, "hops");
 		if (unlikely(subsubsetting == NULL)) {
 			/* TODO: Error message */
 			goto error_1;
@@ -274,7 +274,7 @@ static int cfg_init(char *cfg_file)
 
 		for (j = 0; j < m; j++) {
 			value = config_setting_get_int_elem(subsubsetting, j);
-			cfg->route[id].node[j] = value;
+			cfg->route[id].hop[j] = value;
 		}
 	}
 
@@ -303,7 +303,7 @@ static int shm_mgr(char *cfg_file)
 	const struct rte_memzone *memzone = NULL;
 	int ret;
 
-	node_id = -1;
+	fn_id = -1;
 
 	memzone = rte_memzone_reserve(MEMZONE_NAME, sizeof(*cfg),
 	                              rte_socket_id(), 0);

@@ -168,7 +168,7 @@ error_0:
 
 int io_rx(void **obj)
 {
-	while (rte_ring_dequeue(ring[node_id], obj) != 0);
+	while (rte_ring_dequeue(ring[fn_id], obj) != 0);
 
 	return 0;
 }

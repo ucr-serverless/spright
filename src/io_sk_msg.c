@@ -51,7 +51,7 @@
 #define PORT_RPC 8082
 
 struct metadata {
-	int node_id;
+	int fn_id;
 	void *obj;
 };
 
@@ -240,7 +240,7 @@ static int rpc_client(void)
 
 	buffer[0] = getpid();
 	buffer[1] = sockfd_sk_msg;
-	buffer[2] = node_id;
+	buffer[2] = fn_id;
 
 	bytes_sent = send(sockfd, buffer, 3 * sizeof(int), 0);
 	if (unlikely(bytes_sent == -1)) {
@@ -318,7 +318,7 @@ static int init_gateway(void)
 		return -1;
 	}
 
-	ret = bpf_map_update_elem(fd_sk_msg_map, &node_id, &sockfd_sk_msg, 0);
+	ret = bpf_map_update_elem(fd_sk_msg_map, &fn_id, &sockfd_sk_msg, 0);
 	if (unlikely(ret < 0)) {
 		fprintf(stderr, "bpf_map_update_elem() error: %s\n",
 		        strerror(-ret));
@@ -374,11 +374,11 @@ int io_init(void)
 {
 	int ret;
 
-	if (node_id == -1) {
+	if (fn_id == -1) {
 		return 0;
 	}
 
-	if (node_id == 0) {
+	if (fn_id == 0) {
 		ret = init_gateway();
 		if (unlikely(ret == -1)) {
 			fprintf(stderr, "init_gateway() error\n");
@@ -399,11 +399,11 @@ int io_exit(void)
 {
 	int ret;
 
-	if (node_id == -1) {
+	if (fn_id == -1) {
 		return 0;
 	}
 
-	if (node_id == 0) {
+	if (fn_id == 0) {
 		ret = exit_gateway();
 		if (unlikely(ret == -1)) {
 			fprintf(stderr, "exit_gateway() error\n");
@@ -441,7 +441,7 @@ int io_tx(void *obj, uint8_t next_node)
 	ssize_t bytes_sent;
 	struct metadata m;
 
-	m.node_id = next_node;
+	m.fn_id = next_node;
 	m.obj = obj;
 
 	bytes_sent = send(sockfd_sk_msg, &m, sizeof(struct metadata), 0);

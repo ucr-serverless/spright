@@ -263,7 +263,7 @@ static void *nf_rx(void *arg)
 	uint8_t i;
 	int ret;
 
-	for (i = 0; ; i = (i + 1) % cfg->nf[node_id - 1].n_threads) {
+	for (i = 0; ; i = (i + 1) % cfg->nf[fn_id - 1].n_threads) {
 		ret = io_rx((void **)&txn);
 		if (unlikely(ret == -1)) {
 			fprintf(stderr, "io_rx() error\n");
@@ -298,7 +298,7 @@ static void *nf_tx(void *arg)
 		return NULL;
 	}
 
-	for (i = 0; i < cfg->nf[node_id - 1].n_threads; i++) {
+	for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
 		ret = fcntl(pipefd_tx[i][0], F_SETFL, O_NONBLOCK);
 		if (unlikely(ret == -1)) {
 			fprintf(stderr, "fcntl() error: %s\n", strerror(errno));
@@ -318,7 +318,7 @@ static void *nf_tx(void *arg)
 	}
 
 	while (1) {
-		n_fds = epoll_wait(epfd, event, cfg->nf[node_id - 1].n_threads,
+		n_fds = epoll_wait(epfd, event, cfg->nf[fn_id - 1].n_threads,
 		                   -1);
 		if (unlikely(n_fds == -1)) {
 			fprintf(stderr, "epoll_wait() error: %s\n",
@@ -356,7 +356,7 @@ static int nf(uint8_t nf_id)
 	uint8_t i;
 	int ret;
 
-	node_id = nf_id;
+	fn_id = nf_id;
 
 	memzone = rte_memzone_lookup(MEMZONE_NAME);
 	if (unlikely(memzone == NULL)) {
@@ -372,7 +372,7 @@ static int nf(uint8_t nf_id)
 		return -1;
 	}
 
-	for (i = 0; i < cfg->nf[node_id - 1].n_threads; i++) {
+	for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
 		ret = pipe(pipefd_rx[i]);
 		if (unlikely(ret == -1)) {
 			fprintf(stderr, "pipe() error: %s\n", strerror(errno));
@@ -398,7 +398,7 @@ static int nf(uint8_t nf_id)
 		return -1;
 	}
 
-	for (i = 0; i < cfg->nf[node_id - 1].n_threads; i++) {
+	for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
 		ret = pthread_create(&thread_worker[i], NULL, &nf_worker,
 		                     (void *)(uint64_t)i);
 		if (unlikely(ret != 0)) {
@@ -408,7 +408,7 @@ static int nf(uint8_t nf_id)
 		}
 	}
 
-	for (i = 0; i < cfg->nf[node_id - 1].n_threads; i++) {
+	for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
 		ret = pthread_join(thread_worker[i], NULL);
 		if (unlikely(ret != 0)) {
 			fprintf(stderr, "pthread_join() error: %s\n",
@@ -429,7 +429,7 @@ static int nf(uint8_t nf_id)
 		return -1;
 	}
 
-	for (i = 0; i < cfg->nf[node_id - 1].n_threads; i++) {
+	for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
 		ret = close(pipefd_rx[i][0]);
 		if (unlikely(ret == -1)) {
 			fprintf(stderr, "close() error: %s\n", strerror(errno));

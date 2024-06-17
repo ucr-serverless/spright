@@ -44,7 +44,7 @@
 #define PORT_RPC 8082
 
 // struct metadata {
-// 	int node_id;
+// 	int fn_id;
 // 	void *obj;
 // };
 
