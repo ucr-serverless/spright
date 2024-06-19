@@ -29,22 +29,22 @@
 
 /* This is the data record stored in the map */
 struct datarec {
-	__u64 rx_packets;
+    __u64 rx_packets;
 };
 
 struct bpf_map_def SEC("maps") skmsg_stats_map = {
-	.type        = BPF_MAP_TYPE_PERCPU_ARRAY,
-	.key_size    = sizeof(int),
-	.value_size  = sizeof(struct datarec),
-	.max_entries = MAX_FUNC,
+    .type        = BPF_MAP_TYPE_PERCPU_ARRAY,
+    .key_size    = sizeof(int),
+    .value_size  = sizeof(struct datarec),
+    .max_entries = MAX_FUNC,
 };
 
 struct bpf_map_def SEC("maps") sock_map = {
-        .type = BPF_MAP_TYPE_SOCKMAP,
-        .key_size = sizeof(int),
-        .value_size = sizeof(int),
-        .max_entries = MAX_SOCK_MAP_MAP_ENTRIES,
-        .map_flags = 0
+    .type = BPF_MAP_TYPE_SOCKMAP,
+    .key_size = sizeof(int),
+    .value_size = sizeof(int),
+    .max_entries = MAX_SOCK_MAP_MAP_ENTRIES,
+    .map_flags = 0
 };
 
 SEC("sk_msg_tx")
@@ -52,26 +52,36 @@ int bpf_skmsg_tx(struct sk_msg_md *msg)
 {
     char* data = msg->data;
     char* data_end = msg->data_end;
-    // bpf_printk("[sk_msg_tx] get a packet of length %d", msg->size);
+    bpf_printk("[sk_msg_tx] get a skmsg of length %d", msg->size);
 
-    if(data + 4 > data_end) {
+    if (data + 4 > data_end) {
         return SK_DROP;
     }
-    int next_fn_id = *((int*)data);
-    // bpf_printk("[sk_msg] redirect to socket at array position %d", key);
 
-	struct datarec *rec = bpf_map_lookup_elem(&skmsg_stats_map, &next_fn_id);
-	if (!rec)
-		return SK_DROP;
+    int next_fn_id = *((int*)data);
+    bpf_printk("[sk_msg_tx] redirect to socket of Fn#%d", next_fn_id);
+
+    struct datarec *rec = bpf_map_lookup_elem(&skmsg_stats_map, &next_fn_id);
+    if (!rec) {
+        bpf_printk("Fn#%d has no entry in skmsg_stats_map", next_fn_id);
+        return SK_DROP;
+    }
 
     rec->rx_packets++;
 
     int ret = 0;
     ret = bpf_msg_redirect_map(msg, &sock_map, next_fn_id, BPF_F_INGRESS);
 
-    bpf_printk("try redirect to fn#%d\\n", next_fn_id);
-    if (ret != SK_PASS)
-        bpf_printk("redirect to fn#%d failed\\n", next_fn_id);
+    bpf_printk("TRY REDIRECT TO Fn#%d", next_fn_id);
+    if (ret != SK_PASS) {
+        bpf_printk("Fn#%d is not locally available, redirect to Gateway", next_fn_id);
+
+        next_fn_id = 0;
+        ret = bpf_msg_redirect_map(msg, &sock_map, next_fn_id, BPF_F_INGRESS);
+
+        if (ret != SK_PASS)
+            bpf_printk("TRY REDIRECT TO Gateway failed");
+    }
 
     return ret;
 }

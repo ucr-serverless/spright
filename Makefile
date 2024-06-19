@@ -29,9 +29,19 @@ LDLIBS = $(shell pkg-config --libs-only-l libconfig libdpdk)
 CFLAGS += -Isrc/include -Isrc/cstl/inc -MMD -MP -O3 -Wall -Werror
 LDLIBS += -lbpf -lm -pthread -luuid
 
+CLANG = clang
+CLANGFLAGS = -g -O2
+BPF_FLAGS = -target bpf
+
 .PHONY: all shm_mgr gateway nf clean
 
-all: bin shm_mgr gateway nf sockmap_manager adservice currencyservice emailservice paymentservice shippingservice productcatalogservice cartservice recommendationservice frontendservice checkoutservice
+all: bin shm_mgr gateway nf sockmap_manager adservice currencyservice \
+		emailservice paymentservice shippingservice productcatalogservice \
+		cartservice recommendationservice frontendservice checkoutservice \
+		ebpf/sk_msg_kern.o
+
+ebpf/sk_msg_kern.o: ebpf/sk_msg_kern.c
+	@ $(CLANG) $(CLANGFLAGS) $(BPF_FLAGS) -c -o $@ $<
 
 shm_mgr: bin/shm_mgr_rte_ring bin/shm_mgr_sk_msg
 
