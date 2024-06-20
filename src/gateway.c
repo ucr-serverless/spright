@@ -71,6 +71,8 @@ static int get_client_info(int client_socket) {
 	struct sockaddr_in addr;
     socklen_t addr_len = sizeof(addr);
 	int client_port;
+
+	printf("[%s()] run getpeername.\n", __func__);
     
     // Get the address of the peer (client) connected to the socket
     if (getpeername(client_socket, (struct sockaddr*)&addr, &addr_len) == -1) {
@@ -167,6 +169,8 @@ static int rpc_client_send(int peer_node_idx, struct http_transaction *txn) {
 	int sockfd = peer_node_sockfds[peer_node_idx];
 
 	bytes_sent = send(sockfd, txn, sizeof(*txn), 0);
+
+	printf("peer_node_idx: %d \t bytes_sent: %ld \t sizeof(*txn): %ld\n", peer_node_idx, bytes_sent, sizeof(*txn));
 	if (unlikely(bytes_sent == -1)) {
 		fprintf(stderr, "send() error: %s\n", strerror(errno));
 		return -1;
@@ -184,6 +188,8 @@ static int rpc_client_send(int peer_node_idx, struct http_transaction *txn) {
 // 		fprintf(stderr, "close() error: %s\n", strerror(errno));
 // 		return -1;
 // 	}
+
+// peer_node_sockfds[peer_node_idx] = 0;
 
 // 	return 0;
 // }
@@ -322,6 +328,8 @@ static int conn_write(int *sockfd)
 	ssize_t bytes_sent;
 	int ret;
 
+	printf("[%s()] Waiting for the next write.\n", __func__);
+
 	ret = io_rx((void **)&txn);
 	if (unlikely(ret == -1)) {
 		fprintf(stderr, "io_rx() error\n");
@@ -333,7 +341,7 @@ static int conn_write(int *sockfd)
 		uint8_t *peer_node_idx = get_node(cfg->route[txn->route_id].hop[txn->hop_count]);
 		printf("Destination function is %u on node %u (%s:%u).\n",
 				cfg->route[txn->route_id].hop[txn->hop_count], *peer_node_idx,
-				cfg->nodes[*peer_node_idx].ip_address, cfg->nodes[*peer_node_idx].port);
+				cfg->nodes[*peer_node_idx].ip_address, SERVER_PORT);
 
 		// if (rpc_client(cfg->nodes[*peer_node_idx].ip_address,
 		// 			   SERVER_PORT,
@@ -343,6 +351,9 @@ static int conn_write(int *sockfd)
 		// }
 
 		if (peer_node_sockfds[*peer_node_idx] == 0) {
+			printf("RPC client connects with node %u (%s:%u).\n",
+				*peer_node_idx, cfg->nodes[*peer_node_idx].ip_address,
+				SERVER_PORT);
 			peer_node_sockfds[*peer_node_idx] = rpc_client_setup(
 					   cfg->nodes[*peer_node_idx].ip_address,
 					   SERVER_PORT,
@@ -352,7 +363,12 @@ static int conn_write(int *sockfd)
 			fprintf(stderr, "Invalid socket error.\n");
 		}
 
+		printf("RPC client send message to node %u (%s:%u).\n",
+				*peer_node_idx, cfg->nodes[*peer_node_idx].ip_address,
+				SERVER_PORT);
 		ret = rpc_client_send(*peer_node_idx, txn);
+
+		printf("rpc_client_send is done.\n");
 
 		rte_mempool_put(cfg->mempool, txn);
 
@@ -402,13 +418,17 @@ static int event_process(struct epoll_event *event, struct server_vars *sv)
 {
 	int ret;
 
+	printf("\t[%s()] Processing an new event.\n", __func__);
+
 	if (event->data.fd == sv->sockfd) {
+		printf("\t[%s()] New Connection Accept.\n", __func__);
 		ret = conn_accept(sv);
 		if (unlikely(ret == -1)) {
 			fprintf(stderr, "conn_accept() error\n");
 			return -1;
 		}
 	} else if (event->events & EPOLLIN) {
+		printf("\t[%s()] Reading New Data.\n", __func__);
 		ret = conn_read(event->data.fd);
 		if (unlikely(ret == -1)) {
 			fprintf(stderr, "conn_read() error\n");
@@ -430,6 +450,7 @@ static int event_process(struct epoll_event *event, struct server_vars *sv)
 		/* TODO: Handle (EPOLLERR | EPOLLHUP) */
 		fprintf(stderr, "(EPOLLERR | EPOLLHUP)");
 
+		printf("[%s()] Error - Close the connection.\n", __func__);
 		ret = conn_close(sv, event->data.fd);
 		if (unlikely(ret == -1)) {
 			fprintf(stderr, "conn_close() error\n");
@@ -558,6 +579,8 @@ static int server_process_rx(void *arg)
 			return -1;
 		}
 
+		printf("%d NEW EVENTS READY =======\n", n_fds);
+
 		for (i = 0; i < n_fds; i++) {
 			ret = event_process(&event[i], sv);
 			if (unlikely(ret == -1)) {
@@ -587,7 +610,7 @@ static int server_process_tx(void *arg)
 			continue;
 		}
 
-		printf("Closing the connection after TX.\n");
+		printf("Closing the connection after TX.\n\n");
 		ret = conn_close(sv, sockfd);
 		if (unlikely(ret == -1)) {
 			fprintf(stderr, "conn_close() error\n");
