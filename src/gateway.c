@@ -35,8 +35,11 @@
 #include "http.h"
 #include "io.h"
 #include "spright.h"
+#include "utility.h"
+#include "timer.h"
 
-#define PORT 8080
+#define SERVER_PORT 8080
+#define PEER_GW_PORT 8083
 
 #define BACKLOG (1U << 16)
 
@@ -53,6 +56,99 @@ struct server_vars {
 	int sockfd;
 	int epfd;
 };
+
+static int get_client_info(int client_socket) {
+
+#ifdef ENABLE_TIMER
+	struct timespec t_start;
+    struct timespec t_end;
+
+	get_monotonic_time(&t_start);
+#endif
+
+	struct sockaddr_in addr;
+    socklen_t addr_len = sizeof(addr);
+	int client_port;
+    
+    // Get the address of the peer (client) connected to the socket
+    if (getpeername(client_socket, (struct sockaddr*)&addr, &addr_len) == -1) {
+        perror("getpeername");
+        close(client_socket);
+        return -1;
+    }
+    
+    // Convert IP address to human-readable form
+    char ip_str[INET_ADDRSTRLEN];
+    if (inet_ntop(AF_INET, &addr.sin_addr, ip_str, sizeof(ip_str)) == NULL) {
+        perror("inet_ntop");
+        close(client_socket);
+        return -1;
+    }
+
+	client_port = ntohs(addr.sin_port);
+    
+    // Print client's IP address and port number
+    printf("Client address: %s:%d\n", ip_str, client_port);
+
+#ifdef ENABLE_TIMER
+	get_monotonic_time(&t_end);
+	printf("[%s] execution latency: %ld.\n", __func__, get_elapsed_time_nano(&t_start, &t_end));
+#endif
+
+	return client_port;
+}
+
+static int rpc_client(char *server_ip, uint16_t server_port,
+					  char *client_ip, uint16_t client_port,
+					  struct http_transaction *txn) {
+	struct sockaddr_in server_addr, client_addr;
+	ssize_t bytes_sent;
+	int sockfd;
+	int ret;
+
+	sockfd = socket(AF_INET, SOCK_STREAM, 0);
+	if (unlikely(sockfd == -1)) {
+		fprintf(stderr, "socket() error: %s\n", strerror(errno));
+		return -1;
+	}
+
+    client_addr.sin_family = AF_INET;
+    client_addr.sin_port = htons(client_port);
+    client_addr.sin_addr.s_addr = inet_addr(client_ip);
+
+    // Bind the client socket to the specified IP address and port number
+    ret = bind(sockfd, (struct sockaddr *)&client_addr, sizeof(client_addr));
+    if (ret == -1) {
+        fprintf(stderr, "bind() error: %s\n", strerror(errno));
+        close(sockfd);
+        return -1;
+    }
+
+	server_addr.sin_family = AF_INET;
+	server_addr.sin_port = htons(server_port);
+	server_addr.sin_addr.s_addr = inet_addr(server_ip);
+
+	ret = connect(sockfd, (struct sockaddr *)&server_addr,
+	              sizeof(struct sockaddr_in));
+	if (unlikely(ret == -1)) {
+		fprintf(stderr, "connect() error: %s\n", strerror(errno));
+		return -1;
+	}
+
+	bytes_sent = send(sockfd, txn, sizeof(*txn), 0);
+	if (unlikely(bytes_sent == -1)) {
+		fprintf(stderr, "send() error: %s\n", strerror(errno));
+		return -1;
+	}
+
+	ret = close(sockfd);
+	if (unlikely(ret == -1)) {
+		fprintf(stderr, "close() error: %s\n", strerror(errno));
+		return -1;
+	}
+
+	return 0;
+}
 
 static int conn_accept(struct server_vars *sv)
 {
@@ -120,11 +216,37 @@ static int conn_read(int sockfd)
 		goto error_0;
 	}
 
+	int client_port = get_client_info(sockfd);
+
 	/* TODO: Handle incomplete reads */
-	txn->length_request = read(sockfd, txn->request, HTTP_MSG_LENGTH_MAX);
-	if (unlikely(txn->length_request == -1)) {
-		fprintf(stderr, "read() error: %s\n", strerror(errno));
-		goto error_1;
+	if (client_port == PEER_GW_PORT) {
+		printf("Receiving from SPRIGHT GW.\n");
+		int n = read(sockfd, txn, sizeof(*txn));
+		if (unlikely(n == -1)) {
+			fprintf(stderr, "read() error: %s\n", strerror(errno));
+			goto error_1;
+		}
+
+		// Send txn to local function
+		printf("\tRoute id: %u, Hop Count %u, Next Hop: %u, Next Fn: %u\n", 
+					txn->route_id, txn->hop_count,
+					cfg->route[txn->route_id].hop[txn->hop_count],
+					txn->next_fn);
+		ret = io_tx(txn, cfg->route[txn->route_id].hop[txn->hop_count]);
+		if (unlikely(ret == -1)) {
+			fprintf(stderr, "io_tx() error\n");
+			goto error_1;
+		}
+
+		return 0;
+
+	} else {
+		printf("Receiving from External User.\n");
+		txn->length_request = read(sockfd, txn->request, HTTP_MSG_LENGTH_MAX);
+		if (unlikely(txn->length_request == -1)) {
+			fprintf(stderr, "read() error: %s\n", strerror(errno));
+			goto error_1;
+		}
 	}
 
 	txn->sockfd = sockfd;
@@ -168,8 +290,30 @@ static int conn_write(int *sockfd)
 		goto error_0;
 	}
 
+	// Inter-node Communication
+	if (cfg->route[txn->route_id].hop[txn->hop_count] != fn_id) {
+		uint8_t *peer_node_idx = get_node(cfg->route[txn->route_id].hop[txn->hop_count]);
+		printf("Destination function is %u on node %u (%s:%u).\n",
+				cfg->route[txn->route_id].hop[txn->hop_count], *peer_node_idx,
+				cfg->nodes[*peer_node_idx].ip_address, cfg->nodes[*peer_node_idx].port);
+
+		if (rpc_client(cfg->nodes[*peer_node_idx].ip_address,
+					   cfg->nodes[*peer_node_idx].port,
+					   cfg->nodes[cfg->local_node_idx].ip_address,
+					   cfg->nodes[cfg->local_node_idx].port, txn) == -1) {
+			fprintf(stderr, "rpc_client() error\n");
+		}
+
+		rte_mempool_put(cfg->mempool, txn);
+
+		return 1;
+	}
+
 	txn->hop_count++;
 
+	printf("Next hop is %u\n", cfg->route[txn->route_id].hop[txn->hop_count]);
+
+	// Intra-node Communication
 	if (txn->hop_count < cfg->route[txn->route_id].length) {
 		ret = io_tx(txn,
 		            cfg->route[txn->route_id].hop[txn->hop_count]);
@@ -181,6 +325,7 @@ static int conn_write(int *sockfd)
 		return 1;
 	}
 
+	// Respond External Client
 	*sockfd = txn->sockfd;
 
 	txn->length_response = strlen(HTTP_RESPONSE);
@@ -254,13 +399,14 @@ static int server_init(struct server_vars *sv)
 	int optval;
 	int ret;
 
-	/* TODO: Move to gateway.c */
+	printf("Initializing intra-node I/O... \n");
 	ret = io_init();
 	if (unlikely(ret == -1)) {
 		fprintf(stderr, "io_init() error\n");
 		return -1;
 	}
 
+	printf("Initializing server socket... \n");
 	sv->sockfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
 	if (unlikely(sv->sockfd == -1)) {
 		fprintf(stderr, "socket() error: %s\n", strerror(errno));
@@ -276,7 +422,7 @@ static int server_init(struct server_vars *sv)
 	}
 
 	server_addr.sin_family = AF_INET;
-	server_addr.sin_port = htons(PORT);
+	server_addr.sin_port = htons(SERVER_PORT);
 	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	ret = bind(sv->sockfd, (struct sockaddr *)&server_addr,
@@ -292,6 +438,7 @@ static int server_init(struct server_vars *sv)
 		return -1;
 	}
 
+	printf("Initializing epoll... \n");
 	sv->epfd = epoll_create1(0);
 	if (unlikely(sv->epfd == -1)) {
 		fprintf(stderr, "epoll_create1() error: %s\n", strerror(errno));
@@ -390,6 +537,7 @@ static int server_process_tx(void *arg)
 			continue;
 		}
 
+		printf("Closing the connection after TX.\n");
 		ret = conn_close(sv, sockfd);
 		if (unlikely(ret == -1)) {
 			fprintf(stderr, "conn_close() error\n");

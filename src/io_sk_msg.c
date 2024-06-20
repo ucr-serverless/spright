@@ -57,6 +57,10 @@ struct metadata {
 
 static int sockfd_sk_msg = -1;
 
+pthread_mutex_t dummy_server_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t dummy_server_cond = PTHREAD_COND_INITIALIZER;
+int dummy_server_ready = 0;
+
 /* TODO: Cleanup on errors */
 static void *dummy_server(void* arg)
 {
@@ -104,6 +108,13 @@ static void *dummy_server(void* arg)
 			fprintf(stderr, "accept() error: %s\n",
 			        strerror(errno));
 			pthread_exit(NULL);
+		}
+
+		// Unlock the mutex to allow dummy server registration
+		if (dummy_server_ready == 0) {
+    		dummy_server_ready = 1;
+    		pthread_cond_signal(&dummy_server_cond);
+    		pthread_mutex_unlock(&dummy_server_mutex);
 		}
 	}
 
@@ -156,6 +167,8 @@ static int rpc_server(int fd_sk_msg_map)
 		return -1;
 	}
 
+	// NOTE: change to while(1), so that RPC server can keep registering
+	// socket of newly created functions to sockmap
 	for (i = 0; i < cfg->n_nfs; i++) {
 		sockfd_c = accept(sockfd_l, NULL, NULL);
 		if (unlikely(sockfd_c == -1)) {
@@ -163,6 +176,13 @@ static int rpc_server(int fd_sk_msg_map)
 			        strerror(errno));
 			return -1;
 		}
+
+		// // Unlock the mutex to allow SK_MSG registration
+		// if (i == 0) {
+    	// 	rpc_server_ready = 1;
+    	// 	pthread_cond_signal(&rpc_server_cond);
+    	// 	pthread_mutex_unlock(&rpc_server_mutex);
+		// }
 
 		bytes_received = recv(sockfd_c, buffer, 3 * sizeof(int), 0);
 		if (unlikely(bytes_received == -1)) {
@@ -210,6 +230,24 @@ static int rpc_server(int fd_sk_msg_map)
 	}
 
 	return 0;
+}
+
+struct rpc_server_args {
+    int fd_sk_msg_map;
+};
+
+/* 
+ * We run the RPC server as a separate thread, so that it can keep alive in the
+ * background and register the socket of newly created functions to the eBPF
+ * sockmap.
+ */
+void* rpc_server_thread(void* arg) {
+    struct rpc_server_args* args = (struct rpc_server_args*)arg;
+    int ret = rpc_server(args->fd_sk_msg_map);
+    if (unlikely(ret == -1)) {
+        fprintf(stderr, "rpc_server() error\n");
+    }
+    return NULL;
 }
 
 /* TODO: Cleanup on errors */
@@ -264,10 +302,14 @@ static int init_gateway(void)
 	struct sockaddr_in addr;
 	int fd_sk_msg_prog;
 	int fd_sk_msg_map;
-	pthread_t thread;
+	pthread_t dummy_svr_thread;
+	pthread_t rpc_svr_thread;
 	int ret;
 
-	ret = pthread_create(&thread, NULL, &dummy_server, NULL);
+	// Block client registration until dummy server is ready to accept
+	pthread_mutex_lock(&dummy_server_mutex);
+
+	ret = pthread_create(&dummy_svr_thread, NULL, &dummy_server, NULL);
 	if (unlikely(ret != 0)) {
 		fprintf(stderr, "pthread_create() error: %s\n", strerror(ret));
 		return -1;
@@ -295,11 +337,25 @@ static int init_gateway(void)
 		return -1;
 	}
 
-	ret = rpc_server(fd_sk_msg_map);
-	if (unlikely(ret == -1)) {
-		fprintf(stderr, "rpc_server() error\n");
+    struct rpc_server_args args = {
+        .fd_sk_msg_map = fd_sk_msg_map
+    };
+
+	ret = pthread_create(&rpc_svr_thread, NULL, rpc_server_thread, &args);
+	if (unlikely(ret != 0)) {
+		fprintf(stderr, "pthread_create() error: %s\n", strerror(ret));
 		return -1;
 	}
+
+    // Wait until the dummy_server is ready
+    pthread_mutex_lock(&dummy_server_mutex);
+    while (!dummy_server_ready) {
+        pthread_cond_wait(&dummy_server_cond, &dummy_server_mutex);
+    }
+    pthread_mutex_unlock(&dummy_server_mutex);
+
+	// usleep(10000);
+	// NOTE: Can let the connect retry until the server is ready to accept.
 
 	sockfd_sk_msg = socket(AF_INET, SOCK_STREAM, 0);
 	if (unlikely(sockfd_sk_msg == -1)) {
