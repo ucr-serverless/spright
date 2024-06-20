@@ -57,6 +57,8 @@ struct server_vars {
 	int epfd;
 };
 
+int peer_node_sockfds[ROUTING_TABLE_SIZE];
+
 static int get_client_info(int client_socket) {
 
 #ifdef ENABLE_TIMER
@@ -98,11 +100,10 @@ static int get_client_info(int client_socket) {
 	return client_port;
 }
 
-static int rpc_client(char *server_ip, uint16_t server_port,
-					  char *client_ip, uint16_t client_port,
-					  struct http_transaction *txn) {
+static int rpc_client_setup(char *server_ip, uint16_t server_port,
+					  char *client_ip, uint16_t client_port) {
 	struct sockaddr_in server_addr, client_addr;
-	ssize_t bytes_sent;
+	// ssize_t bytes_sent;
 	int sockfd;
 	int ret;
 	int opt = 1;
@@ -142,9 +143,28 @@ static int rpc_client(char *server_ip, uint16_t server_port,
 	ret = connect(sockfd, (struct sockaddr *)&server_addr,
 	              sizeof(struct sockaddr_in));
 	if (unlikely(ret == -1)) {
-		fprintf(stderr, "connect() error: %s\n", strerror(errno));
+		fprintf(stderr, "[%s()] connect() error: %s\n", __func__, strerror(errno));
 		return -1;
 	}
+
+	// bytes_sent = send(sockfd, txn, sizeof(*txn), 0);
+	// if (unlikely(bytes_sent == -1)) {
+	// 	fprintf(stderr, "send() error: %s\n", strerror(errno));
+	// 	return -1;
+	// }
+
+	// ret = close(sockfd);
+	// if (unlikely(ret == -1)) {
+	// 	fprintf(stderr, "close() error: %s\n", strerror(errno));
+	// 	return -1;
+	// }
+
+	return sockfd;
+}
+
+static int rpc_client_send(int peer_node_idx, struct http_transaction *txn) {
+	ssize_t bytes_sent;
+	int sockfd = peer_node_sockfds[peer_node_idx];
 
 	bytes_sent = send(sockfd, txn, sizeof(*txn), 0);
 	if (unlikely(bytes_sent == -1)) {
@@ -152,14 +172,21 @@ static int rpc_client(char *server_ip, uint16_t server_port,
 		return -1;
 	}
 
-	ret = close(sockfd);
-	if (unlikely(ret == -1)) {
-		fprintf(stderr, "close() error: %s\n", strerror(errno));
-		return -1;
-	}
-
 	return 0;
 }
+
+// static int rpc_client_close(int peer_node_idx) {
+
+// 	int sockfd = peer_node_sockfds[peer_node_idx];
+
+// 	ret = close(sockfd);
+// 	if (unlikely(ret == -1)) {
+// 		fprintf(stderr, "close() error: %s\n", strerror(errno));
+// 		return -1;
+// 	}
+
+// 	return 0;
+// }
 
 static int conn_accept(struct server_vars *sv)
 {
@@ -308,12 +335,24 @@ static int conn_write(int *sockfd)
 				cfg->route[txn->route_id].hop[txn->hop_count], *peer_node_idx,
 				cfg->nodes[*peer_node_idx].ip_address, cfg->nodes[*peer_node_idx].port);
 
-		if (rpc_client(cfg->nodes[*peer_node_idx].ip_address,
+		// if (rpc_client(cfg->nodes[*peer_node_idx].ip_address,
+		// 			   SERVER_PORT,
+		// 			   cfg->nodes[cfg->local_node_idx].ip_address,
+		// 			   cfg->nodes[cfg->local_node_idx].port, txn) == -1) {
+		// 	fprintf(stderr, "rpc_client() error\n");
+		// }
+
+		if (peer_node_sockfds[*peer_node_idx] == 0) {
+			peer_node_sockfds[*peer_node_idx] = rpc_client_setup(
+					   cfg->nodes[*peer_node_idx].ip_address,
 					   SERVER_PORT,
 					   cfg->nodes[cfg->local_node_idx].ip_address,
-					   cfg->nodes[cfg->local_node_idx].port, txn) == -1) {
-			fprintf(stderr, "rpc_client() error\n");
+					   cfg->nodes[cfg->local_node_idx].port);
+		} else if (peer_node_sockfds[*peer_node_idx] < 0) {
+			fprintf(stderr, "Invalid socket error.\n");
 		}
+
+		ret = rpc_client_send(*peer_node_idx, txn);
 
 		rte_mempool_put(cfg->mempool, txn);
 
@@ -572,6 +611,7 @@ static int gateway(void)
 	unsigned int lcore_worker[2];
 	struct server_vars sv;
 	int ret;
+	memset(peer_node_sockfds, 0, sizeof(peer_node_sockfds));
 
 	fn_id = 0;
 
