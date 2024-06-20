@@ -109,6 +109,8 @@ static void *nf_worker(void *arg)
 			return NULL;
 		}
 
+		printf("Fn#%d is processing request.\n", fn_id);
+
 		ret = autoscale_memory(cfg->nf[fn_id - 1].param.memory_mb);
 		if (unlikely(ret == -1)) {
 			fprintf(stderr, "autoscale_memory() error\n");
