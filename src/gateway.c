@@ -105,10 +105,21 @@ static int rpc_client(char *server_ip, uint16_t server_port,
 	ssize_t bytes_sent;
 	int sockfd;
 	int ret;
+	int opt = 1;
+
+	printf("Destination GW Server (%s:%u). Source GW Client (%s:%u)\n",
+				server_ip, server_port, client_ip, client_port);
 
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
 	if (unlikely(sockfd == -1)) {
 		fprintf(stderr, "socket() error: %s\n", strerror(errno));
+		return -1;
+	}
+
+	// Set SO_REUSEADDR to reuse the address
+	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+		perror("setsockopt(SO_REUSEADDR) failed");
+		close(sockfd);
 		return -1;
 	}
 
@@ -298,7 +309,7 @@ static int conn_write(int *sockfd)
 				cfg->nodes[*peer_node_idx].ip_address, cfg->nodes[*peer_node_idx].port);
 
 		if (rpc_client(cfg->nodes[*peer_node_idx].ip_address,
-					   cfg->nodes[*peer_node_idx].port,
+					   SERVER_PORT,
 					   cfg->nodes[cfg->local_node_idx].ip_address,
 					   cfg->nodes[cfg->local_node_idx].port, txn) == -1) {
 			fprintf(stderr, "rpc_client() error\n");
