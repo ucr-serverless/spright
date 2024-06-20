@@ -33,6 +33,7 @@
 #include "http.h"
 #include "io.h"
 #include "spright.h"
+#include "utility.h"
 
 #define MEMPOOL_NAME "SPRIGHT_MEMPOOL"
 
@@ -55,6 +56,7 @@ static void cfg_print(void)
 		printf("\t\tmemory_mb: %hhu\n", cfg->nf[i].param.memory_mb);
 		printf("\t\tsleep_ns: %u\n", cfg->nf[i].param.sleep_ns);
 		printf("\t\tcompute: %u\n", cfg->nf[i].param.compute);
+		printf("\tNode: %u\n", cfg->nf[i].node);
 		printf("\n");
 	}
 
@@ -73,6 +75,19 @@ static void cfg_print(void)
 		}
 		printf("\n");
 	}
+
+	printf("Number of Nodes: %hhu\n", cfg->n_nodes);
+	printf("Local Node Index: %u\n", cfg->local_node_idx);
+	printf("Nodes:\n");
+	for (i = 0; i < cfg->n_nodes; i++) {
+		printf("\tID: %hhu\n", i);
+		printf("\tHostname: %s\n", cfg->nodes[i].hostname);
+		printf("\tIP Address: %s\n", cfg->nodes[i].ip_address);
+		printf("\tPort = %u\n", cfg->nodes[i].port);
+		printf("\n");
+	}
+
+	print_rt_table();
 }
 
 static int cfg_init(char *cfg_file)
@@ -81,6 +96,8 @@ static int cfg_init(char *cfg_file)
 	config_setting_t *subsetting = NULL;
 	config_setting_t *setting = NULL;
 	const char *name = NULL;
+	const char *hostname = NULL;
+	const char *ip_address = NULL;
 	config_t config;
 	int value;
 	int ret;
@@ -89,6 +106,8 @@ static int cfg_init(char *cfg_file)
 	int m;
 	int i;
 	int j;
+	int node;
+	int port;
 
 	/* TODO: Change "flags" argument */
 	cfg->mempool = rte_mempool_create(MEMPOOL_NAME, N_MEMPOOL_ELEMENTS,
@@ -207,6 +226,15 @@ static int cfg_init(char *cfg_file)
 		}
 
 		cfg->nf[id - 1].param.compute = value;
+
+		ret = config_setting_lookup_int(subsetting, "node", &node);
+		if (unlikely(ret == CONFIG_FALSE)) {
+			printf("Set default node as 0.\n");
+			node = 0;
+		}
+
+		cfg->nf[id - 1].node = node;
+		set_node(id, node);
 	}
 
 	setting = config_lookup(&config, "routes");
@@ -278,6 +306,80 @@ static int cfg_init(char *cfg_file)
 		}
 	}
 
+	char local_hostname[HOST_NAME_MAX];
+    if (gethostname(local_hostname, sizeof(local_hostname)) == -1) {
+        perror("gethostname failed");
+        return 1;
+    }
+
+	setting = config_lookup(&config, "nodes");
+	if (unlikely(setting == NULL)) {
+		printf("Nodes configuration is missing.\n");
+		goto error_2;
+	}
+
+	ret = config_setting_is_list(setting);
+	if (unlikely(ret == CONFIG_FALSE)) {
+		printf("Nodes configuration is missing.\n");
+		goto error_2;
+	}
+
+	n = config_setting_length(setting);
+	cfg->n_nodes = n;
+
+	for (i = 0; i < n; i++) {
+		subsetting = config_setting_get_elem(setting, i);
+		if (unlikely(subsetting == NULL)) {
+			printf("Node configuration is missing.\n");
+			goto error_2;
+		}
+
+		ret = config_setting_is_group(subsetting);
+		if (unlikely(ret == CONFIG_FALSE)) {
+			printf("Node configuration is missing.\n");
+			goto error_2;
+		}
+
+		ret = config_setting_lookup_int(subsetting, "id", &id);
+		if (unlikely(ret == CONFIG_FALSE)) {
+			printf("Node ID is missing.\n");
+			goto error_2;
+		}
+
+		ret = config_setting_lookup_string(subsetting, "hostname", &hostname);
+		if (unlikely(ret == CONFIG_FALSE)) {
+			printf("Node hostname is missing.\n");
+			goto error_2;
+		}
+
+		strcpy(cfg->nodes[id].hostname, hostname);
+
+		/* Compare the hostnames */
+		if (strcmp(local_hostname, cfg->nodes[id].hostname) == 0) {
+			cfg->local_node_idx = i;
+			printf("Hostnames match: %s, node index: %u\n", local_hostname, i);
+		} else {
+			printf("Hostnames do not match. Got: %s, Expected: %s\n", local_hostname, hostname);
+		}
+
+		ret = config_setting_lookup_string(subsetting, "ip_address", &ip_address);
+		if (unlikely(ret == CONFIG_FALSE)) {
+			printf("Node ip_address is missing.\n");
+			goto error_2;
+		}
+
+		strcpy(cfg->nodes[id].ip_address, ip_address);
+
+		ret = config_setting_lookup_int(subsetting, "port", &port);
+		if (unlikely(ret == CONFIG_FALSE)) {
+			printf("Node port is missing.\n");
+			goto error_2;
+		}
+
+		cfg->nodes[id].port = port;
+	}
+
+error_2:
 	config_destroy(&config);
 
 	cfg_print();

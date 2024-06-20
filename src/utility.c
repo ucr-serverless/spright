@@ -17,6 +17,30 @@
 */
 
 #include "utility.h"
+#include "spright.h"
+
+void set_node(uint8_t fn_id, uint8_t node_idx) {
+	cfg->inter_node_rt[fn_id] = node_idx;
+}
+
+uint8_t* get_node(uint8_t fn_id) {
+    return &cfg->inter_node_rt[fn_id];
+}
+
+void delete_node(uint8_t fn_id) {
+    cfg->inter_node_rt[fn_id] = 0;
+}
+
+void print_ip_address(struct in_addr* ip) {
+    printf("%s\n", inet_ntoa(*ip));
+}
+
+void print_rt_table() {
+	printf("Inter-node Routing Table\n");
+    for (int i = 1; i <= cfg->n_nfs; i++) {
+		printf("\tFn: %d, Node: %d\n", i, cfg->inter_node_rt[i]);
+    }
+}
 
 void PrintAdResponse(struct http_transaction *in) {
 	int i;

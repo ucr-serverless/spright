@@ -24,6 +24,8 @@
 #include <rte_mempool.h>
 
 #define MEMZONE_NAME "SPRIGHT_MEMZONE"
+#define ROUTING_TABLE_SIZE 256
+#define HOSTNAME_MAX 256
 
 int fn_id;
 
@@ -43,6 +45,8 @@ struct {
 			uint32_t sleep_ns;
 			uint32_t compute;
 		} param;
+
+		uint8_t node;
 	} nf[UINT8_MAX + 1];
 
 	uint8_t n_routes;
@@ -52,6 +56,17 @@ struct {
 		uint8_t length;
 		uint8_t hop[UINT8_MAX + 1];
 	} route[UINT8_MAX + 1];
+
+	uint8_t n_nodes;
+	uint8_t local_node_idx;
+	struct {
+		char hostname[HOSTNAME_MAX];
+		char ip_address[64];
+		uint16_t port;
+		int sockfd;
+	} nodes[UINT8_MAX + 1];
+
+	uint8_t inter_node_rt[ROUTING_TABLE_SIZE];
 } *cfg;
 
 #endif /* SPRIGHT_H */
