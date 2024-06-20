@@ -51,21 +51,21 @@ bin/sockmap_manager: src/sockmap_manager.o
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
-bin/shm_mgr_rte_ring: src/io_rte_ring.o src/shm_mgr.o
+bin/shm_mgr_rte_ring: src/io_rte_ring.o src/shm_mgr.o src/utility.o
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
-bin/shm_mgr_sk_msg: src/io_sk_msg.o src/shm_mgr.o
+bin/shm_mgr_sk_msg: src/io_sk_msg.o src/shm_mgr.o src/utility.o
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
 gateway: bin/gateway_rte_ring bin/gateway_sk_msg
 
-bin/gateway_rte_ring: src/io_rte_ring.o src/gateway.o
+bin/gateway_rte_ring: src/io_rte_ring.o src/gateway.o src/utility.o src/timer.o
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
-bin/gateway_sk_msg: src/io_sk_msg.o src/gateway.o
+bin/gateway_sk_msg: src/io_sk_msg.o src/gateway.o src/utility.o src/timer.o
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
