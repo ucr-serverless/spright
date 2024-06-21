@@ -2,6 +2,8 @@
 bin
 src/*.o
 src/*.d
+src/*/*.o
+src/*/*.d
 
 # idea files
 .DS_Store

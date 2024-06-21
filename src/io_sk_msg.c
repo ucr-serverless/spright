@@ -47,8 +47,8 @@
 
 #define MAP_NAME "sock_map"
 
-#define PORT_SK_MSG 8081
-#define PORT_RPC 8082
+#define PORT_DUMMY 8081
+#define PORT_SOCKMAP 8082
 
 struct metadata {
 	int fn_id;
@@ -85,7 +85,7 @@ static void *dummy_server(void* arg)
 	}
 
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons(PORT_SK_MSG);
+	addr.sin_port = htons(PORT_DUMMY);
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	ret = bind(sockfd_l, (struct sockaddr *)&addr,
@@ -122,7 +122,7 @@ static void *dummy_server(void* arg)
 }
 
 /* TODO: Cleanup on errors */
-static int rpc_server(int fd_sk_msg_map)
+static int sockmap_server(int fd_sk_msg_map)
 {
 	struct sockaddr_in addr;
 	ssize_t bytes_received;
@@ -150,7 +150,7 @@ static int rpc_server(int fd_sk_msg_map)
 	}
 
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons(PORT_RPC);
+	addr.sin_port = htons(PORT_SOCKMAP);
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	ret = bind(sockfd_l, (struct sockaddr *)&addr,
@@ -167,7 +167,7 @@ static int rpc_server(int fd_sk_msg_map)
 		return -1;
 	}
 
-	// NOTE: change to while(1), so that RPC server can keep registering
+	// NOTE: change to while(1), so that sockmap server can keep registering
 	// socket of newly created functions to sockmap
 	for (i = 0; i < cfg->n_nfs; i++) {
 		sockfd_c = accept(sockfd_l, NULL, NULL);
@@ -176,13 +176,6 @@ static int rpc_server(int fd_sk_msg_map)
 			        strerror(errno));
 			return -1;
 		}
-
-		// // Unlock the mutex to allow SK_MSG registration
-		// if (i == 0) {
-    	// 	rpc_server_ready = 1;
-    	// 	pthread_cond_signal(&rpc_server_cond);
-    	// 	pthread_mutex_unlock(&rpc_server_mutex);
-		// }
 
 		bytes_received = recv(sockfd_c, buffer, 3 * sizeof(int), 0);
 		if (unlikely(bytes_received == -1)) {
@@ -232,26 +225,26 @@ static int rpc_server(int fd_sk_msg_map)
 	return 0;
 }
 
-struct rpc_server_args {
+struct sockmap_server_args {
     int fd_sk_msg_map;
 };
 
 /* 
- * We run the RPC server as a separate thread, so that it can keep alive in the
+ * We run the sockmap server as a separate thread, so that it can keep alive in the
  * background and register the socket of newly created functions to the eBPF
  * sockmap.
  */
-void* rpc_server_thread(void* arg) {
-    struct rpc_server_args* args = (struct rpc_server_args*)arg;
-    int ret = rpc_server(args->fd_sk_msg_map);
+void* sockmap_server_thread(void* arg) {
+    struct sockmap_server_args* args = (struct sockmap_server_args*)arg;
+    int ret = sockmap_server(args->fd_sk_msg_map);
     if (unlikely(ret == -1)) {
-        fprintf(stderr, "rpc_server() error\n");
+        fprintf(stderr, "sockmap_server() error\n");
     }
     return NULL;
 }
 
 /* TODO: Cleanup on errors */
-static int rpc_client(void)
+static int sockmap_client(void)
 {
 	struct sockaddr_in addr;
 	ssize_t bytes_sent;
@@ -266,7 +259,7 @@ static int rpc_client(void)
 	}
 
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons(PORT_RPC);
+	addr.sin_port = htons(PORT_SOCKMAP);
 	addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
 	ret = connect(sockfd, (struct sockaddr *)&addr,
@@ -303,7 +296,7 @@ static int init_gateway(void)
 	int fd_sk_msg_prog;
 	int fd_sk_msg_map;
 	pthread_t dummy_svr_thread;
-	pthread_t rpc_svr_thread;
+	pthread_t sockmap_svr_thread;
 	int ret;
 
 	// Block client registration until dummy server is ready to accept
@@ -337,11 +330,11 @@ static int init_gateway(void)
 		return -1;
 	}
 
-    struct rpc_server_args args = {
+    struct sockmap_server_args args = {
         .fd_sk_msg_map = fd_sk_msg_map
     };
 
-	ret = pthread_create(&rpc_svr_thread, NULL, rpc_server_thread, &args);
+	ret = pthread_create(&sockmap_svr_thread, NULL, sockmap_server_thread, &args);
 	if (unlikely(ret != 0)) {
 		fprintf(stderr, "pthread_create() error: %s\n", strerror(ret));
 		return -1;
@@ -364,7 +357,7 @@ static int init_gateway(void)
 	}
 
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons(PORT_SK_MSG);
+	addr.sin_port = htons(PORT_DUMMY);
 	addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
 	ret = connect(sockfd_sk_msg, (struct sockaddr *)&addr,
@@ -397,7 +390,7 @@ static int init_nf(void)
 	}
 
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons(PORT_SK_MSG);
+	addr.sin_port = htons(PORT_DUMMY);
 	addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
 	ret = connect(sockfd_sk_msg, (struct sockaddr *)&addr,
@@ -407,9 +400,9 @@ static int init_nf(void)
 		return -1;
 	}
 
-	ret = rpc_client();
+	ret = sockmap_client();
 	if (unlikely(ret == -1)) {
-		fprintf(stderr, "rpc_client() error\n");
+		fprintf(stderr, "sockmap_client() error\n");
 		return -1;
 	}
 
