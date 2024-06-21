@@ -46,6 +46,8 @@
 #endif /* SYS_pidfd_getfd */
 
 #define MAP_NAME "sock_map"
+#define MAX_RETRIES 5
+#define RETRY_DELAY_US 5000 // 5 milliseconds
 
 #define PORT_DUMMY 8081
 #define PORT_SOCKMAP 8082
@@ -56,10 +58,6 @@ struct metadata {
 };
 
 static int sockfd_sk_msg = -1;
-
-pthread_mutex_t dummy_server_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t dummy_server_cond = PTHREAD_COND_INITIALIZER;
-int dummy_server_ready = 0;
 
 /* TODO: Cleanup on errors */
 static void *dummy_server(void* arg)
@@ -103,18 +101,13 @@ static void *dummy_server(void* arg)
     }
 
     while (1) {
+        log_debug("Dummy server is ready for accepting new connection.");
+
         sockfd_c = accept(sockfd_l, NULL, NULL);
         if (unlikely(sockfd_c == -1)) {
             fprintf(stderr, "accept() error: %s\n",
                     strerror(errno));
             pthread_exit(NULL);
-        }
-
-        // Unlock the mutex to allow dummy server registration
-        if (dummy_server_ready == 0) {
-            dummy_server_ready = 1;
-            pthread_cond_signal(&dummy_server_cond);
-            pthread_mutex_unlock(&dummy_server_mutex);
         }
     }
 
@@ -299,9 +292,6 @@ static int init_gateway(void)
     pthread_t sockmap_svr_thread;
     int ret;
 
-    // Block client registration until dummy server is ready to accept
-    pthread_mutex_lock(&dummy_server_mutex);
-
     ret = pthread_create(&dummy_svr_thread, NULL, &dummy_server, NULL);
     if (unlikely(ret != 0)) {
         fprintf(stderr, "pthread_create() error: %s\n", strerror(ret));
@@ -340,16 +330,6 @@ static int init_gateway(void)
         return -1;
     }
 
-    // Wait until the dummy_server is ready
-    pthread_mutex_lock(&dummy_server_mutex);
-    while (!dummy_server_ready) {
-        pthread_cond_wait(&dummy_server_cond, &dummy_server_mutex);
-    }
-    pthread_mutex_unlock(&dummy_server_mutex);
-
-    // usleep(10000);
-    // NOTE: Can let the connect retry until the server is ready to accept.
-
     sockfd_sk_msg = socket(AF_INET, SOCK_STREAM, 0);
     if (unlikely(sockfd_sk_msg == -1)) {
         fprintf(stderr, "socket() error: %s\n", strerror(errno));
@@ -360,10 +340,26 @@ static int init_gateway(void)
     addr.sin_port = htons(PORT_DUMMY);
     addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-    ret = connect(sockfd_sk_msg, (struct sockaddr *)&addr,
-                  sizeof(struct sockaddr_in));
+    /*
+     * This approach will attempt to connect to the server multiple times,
+     * giving it some time to become ready. If the connection is not successful
+     * within the specified number of retries, the function will return an error.
+     */
+    int attempts = 0;
+    do {
+        ret = connect(sockfd_sk_msg, (struct sockaddr *)&addr,
+                    sizeof(struct sockaddr_in));
+        if (ret == 0) {
+            break;
+        } else {
+            attempts++;
+            log_warn("connect() error: %s. Retrying %d times ...", strerror(errno), attempts);
+            usleep(RETRY_DELAY_US);
+        }
+    } while (ret == -1 && attempts < MAX_RETRIES);
+
     if (unlikely(ret == -1)) {
-        fprintf(stderr, "connect() error: %s\n", strerror(errno));
+        log_error("connect() error: %s", strerror(errno));
         return -1;
     }
 
