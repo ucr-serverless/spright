@@ -84,51 +84,51 @@ bin/nf_sk_msg: src/io_sk_msg.o src/nf.o $(COMMON_OBJS)
 
 adservice: bin/nf_adservice_rte_ring bin/nf_adservice_sk_msg
 
-bin/nf_adservice_rte_ring: src/io_rte_ring.o src/adservice.o $(COMMON_OBJS)
+bin/nf_adservice_rte_ring: src/io_rte_ring.o src/online_boutique/adservice.o $(COMMON_OBJS)
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
-bin/nf_adservice_sk_msg: src/io_sk_msg.o src/adservice.o $(COMMON_OBJS)
+bin/nf_adservice_sk_msg: src/io_sk_msg.o src/online_boutique/adservice.o $(COMMON_OBJS)
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
 currencyservice: bin/nf_currencyservice_rte_ring bin/nf_currencyservice_sk_msg
 
-bin/nf_currencyservice_rte_ring: src/io_rte_ring.o src/currencyservice.o $(COMMON_OBJS)
+bin/nf_currencyservice_rte_ring: src/io_rte_ring.o src/online_boutique/currencyservice.o $(COMMON_OBJS)
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS) ./src/cstl/src/libclib.a
 
-bin/nf_currencyservice_sk_msg: src/io_sk_msg.o src/currencyservice.o $(COMMON_OBJS)
+bin/nf_currencyservice_sk_msg: src/io_sk_msg.o src/online_boutique/currencyservice.o $(COMMON_OBJS)
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS) ./src/cstl/src/libclib.a
 
 emailservice: bin/nf_emailservice_rte_ring bin/nf_emailservice_sk_msg
 
-bin/nf_emailservice_rte_ring: src/io_rte_ring.o src/emailservice.o $(COMMON_OBJS)
+bin/nf_emailservice_rte_ring: src/io_rte_ring.o src/online_boutique/emailservice.o $(COMMON_OBJS)
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
-bin/nf_emailservice_sk_msg: src/io_sk_msg.o src/emailservice.o $(COMMON_OBJS)
+bin/nf_emailservice_sk_msg: src/io_sk_msg.o src/online_boutique/emailservice.o $(COMMON_OBJS)
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
 paymentservice: bin/nf_paymentservice_rte_ring bin/nf_paymentservice_sk_msg
 
-bin/nf_paymentservice_rte_ring: src/io_rte_ring.o src/paymentservice.o $(COMMON_OBJS)
+bin/nf_paymentservice_rte_ring: src/io_rte_ring.o src/online_boutique/paymentservice.o $(COMMON_OBJS)
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
-bin/nf_paymentservice_sk_msg: src/io_sk_msg.o src/paymentservice.o $(COMMON_OBJS)
+bin/nf_paymentservice_sk_msg: src/io_sk_msg.o src/online_boutique/paymentservice.o $(COMMON_OBJS)
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
 shippingservice: bin/nf_shippingservice_rte_ring bin/nf_shippingservice_sk_msg
 
-bin/nf_shippingservice_rte_ring: src/io_rte_ring.o src/shippingservice.o $(COMMON_OBJS)
+bin/nf_shippingservice_rte_ring: src/io_rte_ring.o src/online_boutique/shippingservice.o $(COMMON_OBJS)
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
-bin/nf_shippingservice_sk_msg: src/io_sk_msg.o src/shippingservice.o $(COMMON_OBJS)
+bin/nf_shippingservice_sk_msg: src/io_sk_msg.o src/online_boutique/shippingservice.o $(COMMON_OBJS)
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
@@ -136,53 +136,53 @@ bin/nf_shippingservice_sk_msg: src/io_sk_msg.o src/shippingservice.o $(COMMON_OB
 
 productcatalogservice: bin/nf_productcatalogservice_rte_ring bin/nf_productcatalogservice_sk_msg
 
-bin/nf_productcatalogservice_rte_ring: src/io_rte_ring.o src/productcatalogservice.o $(COMMON_OBJS)
+bin/nf_productcatalogservice_rte_ring: src/io_rte_ring.o src/online_boutique/productcatalogservice.o $(COMMON_OBJS)
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS) ./src/cstl/src/libclib.a
 
-bin/nf_productcatalogservice_sk_msg: src/io_sk_msg.o src/productcatalogservice.o $(COMMON_OBJS)
+bin/nf_productcatalogservice_sk_msg: src/io_sk_msg.o src/online_boutique/productcatalogservice.o $(COMMON_OBJS)
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS) ./src/cstl/src/libclib.a
 
 cartservice: bin/nf_cartservice_rte_ring bin/nf_cartservice_sk_msg
 
-bin/nf_cartservice_rte_ring: src/io_rte_ring.o src/cartservice.o $(COMMON_OBJS)
+bin/nf_cartservice_rte_ring: src/io_rte_ring.o src/online_boutique/cartservice.o $(COMMON_OBJS)
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS) ./src/cstl/src/libclib.a
 
-bin/nf_cartservice_sk_msg: src/io_sk_msg.o src/cartservice.o $(COMMON_OBJS)
+bin/nf_cartservice_sk_msg: src/io_sk_msg.o src/online_boutique/cartservice.o $(COMMON_OBJS)
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS) ./src/cstl/src/libclib.a
 
 recommendationservice: bin/nf_recommendationservice_rte_ring bin/nf_recommendationservice_sk_msg
 
-bin/nf_recommendationservice_rte_ring: src/io_rte_ring.o src/recommendationservice.o $(COMMON_OBJS)
+bin/nf_recommendationservice_rte_ring: src/io_rte_ring.o src/online_boutique/recommendationservice.o $(COMMON_OBJS)
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
-bin/nf_recommendationservice_sk_msg: src/io_sk_msg.o src/recommendationservice.o $(COMMON_OBJS)
+bin/nf_recommendationservice_sk_msg: src/io_sk_msg.o src/online_boutique/recommendationservice.o $(COMMON_OBJS)
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 -include $(patsubst %.o, %.d, $(wildcard src/*.o))
 
 frontendservice: bin/nf_frontendservice_rte_ring bin/nf_frontendservice_sk_msg
 
-bin/nf_frontendservice_rte_ring: src/io_rte_ring.o src/frontendservice.o $(COMMON_OBJS) src/shm_rpc.o
+bin/nf_frontendservice_rte_ring: src/io_rte_ring.o src/online_boutique/frontendservice.o $(COMMON_OBJS) src/shm_rpc.o
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
-bin/nf_frontendservice_sk_msg: src/io_sk_msg.o src/frontendservice.o $(COMMON_OBJS) src/shm_rpc.o
+bin/nf_frontendservice_sk_msg: src/io_sk_msg.o src/online_boutique/frontendservice.o $(COMMON_OBJS) src/shm_rpc.o
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 -include $(patsubst %.o, %.d, $(wildcard src/*.o))
 
 checkoutservice: bin/nf_checkoutservice_rte_ring bin/nf_checkoutservice_sk_msg
 
-bin/nf_checkoutservice_rte_ring: src/io_rte_ring.o src/checkoutservice.o $(COMMON_OBJS)
+bin/nf_checkoutservice_rte_ring: src/io_rte_ring.o src/online_boutique/checkoutservice.o $(COMMON_OBJS)
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 
-bin/nf_checkoutservice_sk_msg: src/io_sk_msg.o src/checkoutservice.o $(COMMON_OBJS)
+bin/nf_checkoutservice_sk_msg: src/io_sk_msg.o src/online_boutique/checkoutservice.o $(COMMON_OBJS)
 	@ echo "CC $@"
 	@ $(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS)
 -include $(patsubst %.o, %.d, $(wildcard src/*.o))
