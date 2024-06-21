@@ -30,43 +30,43 @@
 int fn_id;
 
 struct {
-	struct rte_mempool *mempool;
+    struct rte_mempool *mempool;
 
-	char name[64];
+    char name[64];
 
-	uint8_t n_nfs;
-	struct {
-		char name[64];
+    uint8_t n_nfs;
+    struct {
+        char name[64];
 
-		uint8_t n_threads;
+        uint8_t n_threads;
 
-		struct {
-			uint8_t memory_mb;
-			uint32_t sleep_ns;
-			uint32_t compute;
-		} param;
+        struct {
+            uint8_t memory_mb;
+            uint32_t sleep_ns;
+            uint32_t compute;
+        } param;
 
-		uint8_t node;
-	} nf[UINT8_MAX + 1];
+        uint8_t node;
+    } nf[UINT8_MAX + 1];
 
-	uint8_t n_routes;
-	struct {
-		char name[64];
+    uint8_t n_routes;
+    struct {
+        char name[64];
 
-		uint8_t length;
-		uint8_t hop[UINT8_MAX + 1];
-	} route[UINT8_MAX + 1];
+        uint8_t length;
+        uint8_t hop[UINT8_MAX + 1];
+    } route[UINT8_MAX + 1];
 
-	uint8_t n_nodes;
-	uint8_t local_node_idx;
-	struct {
-		char hostname[HOSTNAME_MAX];
-		char ip_address[64];
-		uint16_t port;
-		int sockfd;
-	} nodes[UINT8_MAX + 1];
+    uint8_t n_nodes;
+    uint8_t local_node_idx;
+    struct {
+        char hostname[HOSTNAME_MAX];
+        char ip_address[64];
+        uint16_t port;
+        int sockfd;
+    } nodes[UINT8_MAX + 1];
 
-	uint8_t inter_node_rt[ROUTING_TABLE_SIZE];
+    uint8_t inter_node_rt[ROUTING_TABLE_SIZE];
 } *cfg;
 
 #endif /* SPRIGHT_H */

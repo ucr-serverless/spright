@@ -45,123 +45,123 @@ static int pipefd_tx[UINT8_MAX][2];
 char *product_ids[] = {"OLJCESPC7Z", "66VCHSJNUP", "1YMWWN1N4O", "L9ECAV7KIM", "2ZYFJ3GM2N", "0PUK6V6EV0", "LS4PSXUNUM", "9SIQT8TOJO", "6E92ZMYYFZ"};
 
 Product products[9] = {
-	{
-		.Id = "OLJCESPC7Z",
-		.Name = "Sunglasses",
-		.Description = "Add a modern touch to your outfits with these sleek aviator sunglasses.",
-		.Picture = "/static/img/products/sunglasses.jpg",
-		.PriceUsd = {
-			.CurrencyCode = "USD",
-			.Units = 19,
-			.Nanos = 990000000
-		},
-		.num_categories = 1,
-		.Categories = {"accessories"}
-	},
-	{
-		.Id = "66VCHSJNUP",
-		.Name = "Tank Top",
-		.Description = "Perfectly cropped cotton tank, with a scooped neckline.",
-		.Picture = "/static/img/products/tank-top.jpg",
-		.PriceUsd = {
-			.CurrencyCode = "USD",
-			.Units = 18,
-			.Nanos = 990000000
-		},
-		.num_categories = 2,
-		.Categories = {"clothing", "tops"}
-	},
-	{
-		.Id = "1YMWWN1N4O",
-		.Name = "Watch",
-		.Description = "This gold-tone stainless steel watch will work with most of your outfits.",
-		.Picture = "/static/img/products/watch.jpg",
-		.PriceUsd = {
-			.CurrencyCode = "USD",
-			.Units = 109,
-			.Nanos = 990000000
-		},
-		.num_categories = 1,
-		.Categories = {"accessories"}
-	},
-	{
-		.Id = "L9ECAV7KIM",
-		.Name = "Loafers",
-		.Description = "A neat addition to your summer wardrobe.",
-		.Picture = "/static/img/products/loafers.jpg",
-		.PriceUsd = {
-			.CurrencyCode = "USD",
-			.Units = 89,
-			.Nanos = 990000000
-		},
-		.num_categories = 1,
-		.Categories = {"footwear"}
-	},
-	{
-		.Id = "2ZYFJ3GM2N",
-		.Name = "Hairdryer",
-		.Description = "This lightweight hairdryer has 3 heat and speed settings. It's perfect for travel.",
-		.Picture = "/static/img/products/hairdryer.jpg",
-		.PriceUsd = {
-			.CurrencyCode = "USD",
-			.Units = 24,
-			.Nanos = 990000000
-		},
-		.num_categories = 2,
-		.Categories = {"hair", "beauty"}
-	},
-	{
-		.Id = "0PUK6V6EV0",
-		.Name = "Candle Holder",
-		.Description = "This small but intricate candle holder is an excellent gift.",
-		.Picture = "/static/img/products/candle-holder.jpg",
-		.PriceUsd = {
-			.CurrencyCode = "USD",
-			.Units = 18,
-			.Nanos = 990000000
-		},
-		.num_categories = 2,
-		.Categories = {"decor", "home"}
-	},
-	{
-		.Id = "LS4PSXUNUM",
-		.Name = "Salt & Pepper Shakers",
-		.Description = "Add some flavor to your kitchen.",
-		.Picture = "/static/img/products/salt-and-pepper-shakers.jpg",
-		.PriceUsd = {
-			.CurrencyCode = "USD",
-			.Units = 18,
-			.Nanos = 490000000
-		},
-		.num_categories = 1,
-		.Categories = {"kitchen"}
-	},
-	{
-		.Id = "9SIQT8TOJO",
-		.Name = "Bamboo Glass Jar",
-		.Description = "This bamboo glass jar can hold 57 oz (1.7 l) and is perfect for any kitchen.",
-		.Picture = "/static/img/products/bamboo-glass-jar.jpg",
-		.PriceUsd = {
-			.CurrencyCode = "USD",
-			.Units = 5,
-			.Nanos = 490000000
-		},
-		.num_categories = 1,
-		.Categories = {"kitchen"}
-	},
-	{
-		.Id = "6E92ZMYYFZ",
-		.Name = "Mug",
-		.Description = "A simple mug with a mustard interior.",
-		.Picture = "/static/img/products/mug.jpg",
-		.PriceUsd = {
-			.CurrencyCode = "USD",
-			.Units = 8,
-			.Nanos = 990000000
-		},
-		.num_categories = 1,
-		.Categories = {"kitchen"}
-	}
+    {
+        .Id = "OLJCESPC7Z",
+        .Name = "Sunglasses",
+        .Description = "Add a modern touch to your outfits with these sleek aviator sunglasses.",
+        .Picture = "/static/img/products/sunglasses.jpg",
+        .PriceUsd = {
+            .CurrencyCode = "USD",
+            .Units = 19,
+            .Nanos = 990000000
+        },
+        .num_categories = 1,
+        .Categories = {"accessories"}
+    },
+    {
+        .Id = "66VCHSJNUP",
+        .Name = "Tank Top",
+        .Description = "Perfectly cropped cotton tank, with a scooped neckline.",
+        .Picture = "/static/img/products/tank-top.jpg",
+        .PriceUsd = {
+            .CurrencyCode = "USD",
+            .Units = 18,
+            .Nanos = 990000000
+        },
+        .num_categories = 2,
+        .Categories = {"clothing", "tops"}
+    },
+    {
+        .Id = "1YMWWN1N4O",
+        .Name = "Watch",
+        .Description = "This gold-tone stainless steel watch will work with most of your outfits.",
+        .Picture = "/static/img/products/watch.jpg",
+        .PriceUsd = {
+            .CurrencyCode = "USD",
+            .Units = 109,
+            .Nanos = 990000000
+        },
+        .num_categories = 1,
+        .Categories = {"accessories"}
+    },
+    {
+        .Id = "L9ECAV7KIM",
+        .Name = "Loafers",
+        .Description = "A neat addition to your summer wardrobe.",
+        .Picture = "/static/img/products/loafers.jpg",
+        .PriceUsd = {
+            .CurrencyCode = "USD",
+            .Units = 89,
+            .Nanos = 990000000
+        },
+        .num_categories = 1,
+        .Categories = {"footwear"}
+    },
+    {
+        .Id = "2ZYFJ3GM2N",
+        .Name = "Hairdryer",
+        .Description = "This lightweight hairdryer has 3 heat and speed settings. It's perfect for travel.",
+        .Picture = "/static/img/products/hairdryer.jpg",
+        .PriceUsd = {
+            .CurrencyCode = "USD",
+            .Units = 24,
+            .Nanos = 990000000
+        },
+        .num_categories = 2,
+        .Categories = {"hair", "beauty"}
+    },
+    {
+        .Id = "0PUK6V6EV0",
+        .Name = "Candle Holder",
+        .Description = "This small but intricate candle holder is an excellent gift.",
+        .Picture = "/static/img/products/candle-holder.jpg",
+        .PriceUsd = {
+            .CurrencyCode = "USD",
+            .Units = 18,
+            .Nanos = 990000000
+        },
+        .num_categories = 2,
+        .Categories = {"decor", "home"}
+    },
+    {
+        .Id = "LS4PSXUNUM",
+        .Name = "Salt & Pepper Shakers",
+        .Description = "Add some flavor to your kitchen.",
+        .Picture = "/static/img/products/salt-and-pepper-shakers.jpg",
+        .PriceUsd = {
+            .CurrencyCode = "USD",
+            .Units = 18,
+            .Nanos = 490000000
+        },
+        .num_categories = 1,
+        .Categories = {"kitchen"}
+    },
+    {
+        .Id = "9SIQT8TOJO",
+        .Name = "Bamboo Glass Jar",
+        .Description = "This bamboo glass jar can hold 57 oz (1.7 l) and is perfect for any kitchen.",
+        .Picture = "/static/img/products/bamboo-glass-jar.jpg",
+        .PriceUsd = {
+            .CurrencyCode = "USD",
+            .Units = 5,
+            .Nanos = 490000000
+        },
+        .num_categories = 1,
+        .Categories = {"kitchen"}
+    },
+    {
+        .Id = "6E92ZMYYFZ",
+        .Name = "Mug",
+        .Description = "A simple mug with a mustard interior.",
+        .Picture = "/static/img/products/mug.jpg",
+        .PriceUsd = {
+            .CurrencyCode = "USD",
+            .Units = 8,
+            .Nanos = 990000000
+        },
+        .num_categories = 1,
+        .Categories = {"kitchen"}
+    }
 };
 
 static int compare_e(void* left, void* right ) {
@@ -177,380 +177,380 @@ static void parseCatalog(struct clib_map* map) {
         char *key = clib_strdup(product_ids[i]);
         int key_length = (int)strlen(key) + 1;
         Product value = products[i];
-		printf("Inserting [%s -> %s]\n", key, value.Name);
+        printf("Inserting [%s -> %s]\n", key, value.Name);
         insert_c_map(map, key, key_length, &value, sizeof(Product)); 
         free(key);
     }
 }
 
 static void ListProducts(struct http_transaction *txn) {
-	ListProductsResponse* out = &txn->list_products_response;
+    ListProductsResponse* out = &txn->list_products_response;
 
-	int size = sizeof(out->Products)/sizeof(out->Products[0]);
+    int size = sizeof(out->Products)/sizeof(out->Products[0]);
     int i = 0;
-	out->num_products = 0;
+    out->num_products = 0;
     for (i = 0; i < size; i++) {
-		out->Products[i] = products[i];
-		out->num_products++;
-	}
-	return;
+        out->Products[i] = products[i];
+        out->num_products++;
+    }
+    return;
 }
 
 static void MockGetProductRequest(struct http_transaction *txn) {
-	GetProductRequest *req = &txn->get_product_request;
-	strcpy(req->Id, "2ZYFJ3GM2N");
+    GetProductRequest *req = &txn->get_product_request;
+    strcpy(req->Id, "2ZYFJ3GM2N");
 }
 
 static void GetProduct(struct http_transaction *txn) {
-	GetProductRequest *req = &txn->get_product_request;
+    GetProductRequest *req = &txn->get_product_request;
 
-	Product* found = &txn->get_product_response;
-	int num_products = 0;
-	
-	int size = sizeof(product_ids)/sizeof(product_ids[0]);
+    Product* found = &txn->get_product_response;
+    int num_products = 0;
+    
+    int size = sizeof(product_ids)/sizeof(product_ids[0]);
     int i = 0;
     for (i = 0; i < size; i++ ) {
-		if (strcmp(req->Id, product_ids[i]) == 0) {
-			printf("Get Product: %s\n", product_ids[i]);
-			num_products++;
-			*found = products[i];
-			break;
-		}
-	}
+        if (strcmp(req->Id, product_ids[i]) == 0) {
+            printf("Get Product: %s\n", product_ids[i]);
+            num_products++;
+            *found = products[i];
+            break;
+        }
+    }
 
-	if (num_products == 0) {
-		printf("no product with ID %s\n", req->Id);
-	}
-	return;
+    if (num_products == 0) {
+        printf("no product with ID %s\n", req->Id);
+    }
+    return;
 }
 
 static void MockSearchProductsRequest(struct http_transaction *txn) {
-	SearchProductsRequest* req = &txn->search_products_request;
-	strcpy(req->Query, "outfits");
+    SearchProductsRequest* req = &txn->search_products_request;
+    strcpy(req->Query, "outfits");
 }
 
 static void SearchProducts(struct http_transaction *txn) {
-	SearchProductsRequest* req = &txn->search_products_request;
-	SearchProductsResponse* out = &txn->search_products_response;
-	out->num_products = 0;
+    SearchProductsRequest* req = &txn->search_products_request;
+    SearchProductsResponse* out = &txn->search_products_response;
+    out->num_products = 0;
 
-	// Intepret query as a substring match in name or description.
-	int size = sizeof(product_ids)/sizeof(product_ids[0]);
+    // Intepret query as a substring match in name or description.
+    int size = sizeof(product_ids)/sizeof(product_ids[0]);
     int i = 0;
     for (i = 0; i < size; i++ ) {
-		if (strstr(products[i].Name, req->Query) != NULL || strstr(products[i].Description, req->Query) != NULL ) {
-			out->Results[out->num_products] = products[i];
-			out->num_products++;
-		}
-	}
-	return;
+        if (strstr(products[i].Name, req->Query) != NULL || strstr(products[i].Description, req->Query) != NULL ) {
+            out->Results[out->num_products] = products[i];
+            out->num_products++;
+        }
+    }
+    return;
 }
 
 static void *nf_worker(void *arg)
 {
-	struct http_transaction *txn = NULL;
-	ssize_t bytes_written;
-	ssize_t bytes_read;
-	uint8_t index;
+    struct http_transaction *txn = NULL;
+    ssize_t bytes_written;
+    ssize_t bytes_read;
+    uint8_t index;
 
-	/* TODO: Careful with this pointer as it may point to a stack */
-	index = (uint64_t)arg;
+    /* TODO: Careful with this pointer as it may point to a stack */
+    index = (uint64_t)arg;
 
-	while (1) {
-		bytes_read = read(pipefd_rx[index][0], &txn,
-		                  sizeof(struct http_transaction *));
-		if (unlikely(bytes_read == -1)) {
-			fprintf(stderr, "read() error: %s\n", strerror(errno));
-			return NULL;
-		}
+    while (1) {
+        bytes_read = read(pipefd_rx[index][0], &txn,
+                          sizeof(struct http_transaction *));
+        if (unlikely(bytes_read == -1)) {
+            fprintf(stderr, "read() error: %s\n", strerror(errno));
+            return NULL;
+        }
 
-		if (strcmp(txn->rpc_handler, "ListProducts") == 0) {
-			ListProducts(txn);
-		} else if (strcmp(txn->rpc_handler, "SearchProducts") == 0) {
-			SearchProducts(txn);
-		} else if (strcmp(txn->rpc_handler, "GetProduct") == 0) {
-			GetProduct(txn);
-		} else {
-			printf("%s() is not supported\n", txn->rpc_handler);
-			printf("\t\t#### Run Mock Test ####\n");
-			ListProducts(txn);
-			PrintListProductsResponse(txn);
-			MockGetProductRequest(txn);
-			GetProduct(txn);
-			PrintGetProductResponse(txn);
-			MockSearchProductsRequest(txn);
-			SearchProducts(txn);
-			PrintSearchProductsResponse(txn);
-		}
+        if (strcmp(txn->rpc_handler, "ListProducts") == 0) {
+            ListProducts(txn);
+        } else if (strcmp(txn->rpc_handler, "SearchProducts") == 0) {
+            SearchProducts(txn);
+        } else if (strcmp(txn->rpc_handler, "GetProduct") == 0) {
+            GetProduct(txn);
+        } else {
+            printf("%s() is not supported\n", txn->rpc_handler);
+            printf("\t\t#### Run Mock Test ####\n");
+            ListProducts(txn);
+            PrintListProductsResponse(txn);
+            MockGetProductRequest(txn);
+            GetProduct(txn);
+            PrintGetProductResponse(txn);
+            MockSearchProductsRequest(txn);
+            SearchProducts(txn);
+            PrintSearchProductsResponse(txn);
+        }
 
-		txn->next_fn = txn->caller_fn;
-		txn->caller_fn = PRODUCTCATA_SVC;
+        txn->next_fn = txn->caller_fn;
+        txn->caller_fn = PRODUCTCATA_SVC;
 
-		bytes_written = write(pipefd_tx[index][1], &txn,
-		                      sizeof(struct http_transaction *));
-		if (unlikely(bytes_written == -1)) {
-			fprintf(stderr, "write() error: %s\n", strerror(errno));
-			return NULL;
-		}
-	}
+        bytes_written = write(pipefd_tx[index][1], &txn,
+                              sizeof(struct http_transaction *));
+        if (unlikely(bytes_written == -1)) {
+            fprintf(stderr, "write() error: %s\n", strerror(errno));
+            return NULL;
+        }
+    }
 
-	return NULL;
+    return NULL;
 }
 
 static void *nf_rx(void *arg)
 {
-	struct http_transaction *txn = NULL;
-	ssize_t bytes_written;
-	uint8_t i;
-	int ret;
+    struct http_transaction *txn = NULL;
+    ssize_t bytes_written;
+    uint8_t i;
+    int ret;
 
-	for (i = 0; ; i = (i + 1) % cfg->nf[fn_id - 1].n_threads) {
-		ret = io_rx((void **)&txn);
-		if (unlikely(ret == -1)) {
-			fprintf(stderr, "io_rx() error\n");
-			return NULL;
-		}
+    for (i = 0; ; i = (i + 1) % cfg->nf[fn_id - 1].n_threads) {
+        ret = io_rx((void **)&txn);
+        if (unlikely(ret == -1)) {
+            fprintf(stderr, "io_rx() error\n");
+            return NULL;
+        }
 
-		bytes_written = write(pipefd_rx[i][1], &txn,
-		                      sizeof(struct http_transaction *));
-		if (unlikely(bytes_written == -1)) {
-			fprintf(stderr, "write() error: %s\n", strerror(errno));
-			return NULL;
-		}
-	}
+        bytes_written = write(pipefd_rx[i][1], &txn,
+                              sizeof(struct http_transaction *));
+        if (unlikely(bytes_written == -1)) {
+            fprintf(stderr, "write() error: %s\n", strerror(errno));
+            return NULL;
+        }
+    }
 
-	return NULL;
+    return NULL;
 }
 
 static void *nf_tx(void *arg)
 {
-	struct epoll_event event[UINT8_MAX]; /* TODO: Use Macro */
-	struct http_transaction *txn = NULL;
-	ssize_t bytes_read;
-	uint8_t i;
-	int n_fds;
-	int epfd;
-	int ret;
+    struct epoll_event event[UINT8_MAX]; /* TODO: Use Macro */
+    struct http_transaction *txn = NULL;
+    ssize_t bytes_read;
+    uint8_t i;
+    int n_fds;
+    int epfd;
+    int ret;
 
-	epfd = epoll_create1(0);
-	if (unlikely(epfd == -1)) {
-		fprintf(stderr, "epoll_create1() error: %s\n", strerror(errno));
-		return NULL;
-	}
+    epfd = epoll_create1(0);
+    if (unlikely(epfd == -1)) {
+        fprintf(stderr, "epoll_create1() error: %s\n", strerror(errno));
+        return NULL;
+    }
 
-	for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
-		ret = fcntl(pipefd_tx[i][0], F_SETFL, O_NONBLOCK);
-		if (unlikely(ret == -1)) {
-			fprintf(stderr, "fcntl() error: %s\n", strerror(errno));
-			return NULL;
-		}
+    for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
+        ret = fcntl(pipefd_tx[i][0], F_SETFL, O_NONBLOCK);
+        if (unlikely(ret == -1)) {
+            fprintf(stderr, "fcntl() error: %s\n", strerror(errno));
+            return NULL;
+        }
 
-		event[0].events = EPOLLIN;
-		event[0].data.fd = pipefd_tx[i][0];
+        event[0].events = EPOLLIN;
+        event[0].data.fd = pipefd_tx[i][0];
 
-		ret = epoll_ctl(epfd, EPOLL_CTL_ADD, pipefd_tx[i][0],
-		                &event[0]);
-		if (unlikely(ret == -1)) {
-			fprintf(stderr, "epoll_ctl() error: %s\n",
-			        strerror(errno));
-			return NULL;
-		}
-	}
+        ret = epoll_ctl(epfd, EPOLL_CTL_ADD, pipefd_tx[i][0],
+                        &event[0]);
+        if (unlikely(ret == -1)) {
+            fprintf(stderr, "epoll_ctl() error: %s\n",
+                    strerror(errno));
+            return NULL;
+        }
+    }
 
-	while (1) {
-		n_fds = epoll_wait(epfd, event, cfg->nf[fn_id - 1].n_threads,
-		                   -1);
-		if (unlikely(n_fds == -1)) {
-			fprintf(stderr, "epoll_wait() error: %s\n",
-			        strerror(errno));
-			return NULL;
-		}
+    while (1) {
+        n_fds = epoll_wait(epfd, event, cfg->nf[fn_id - 1].n_threads,
+                           -1);
+        if (unlikely(n_fds == -1)) {
+            fprintf(stderr, "epoll_wait() error: %s\n",
+                    strerror(errno));
+            return NULL;
+        }
 
-		for (i = 0; i < n_fds; i++) {
-			bytes_read = read(event[i].data.fd, &txn,
-			                  sizeof(struct http_transaction *));
-			if (unlikely(bytes_read == -1)) {
-				fprintf(stderr, "read() error: %s\n",
-				        strerror(errno));
-				return NULL;
-			}
+        for (i = 0; i < n_fds; i++) {
+            bytes_read = read(event[i].data.fd, &txn,
+                              sizeof(struct http_transaction *));
+            if (unlikely(bytes_read == -1)) {
+                fprintf(stderr, "read() error: %s\n",
+                        strerror(errno));
+                return NULL;
+            }
 
-			// printf("receive msg\n");
-			ret = io_tx(txn, txn->next_fn);
-			if (unlikely(ret == -1)) {
-				fprintf(stderr, "io_tx() error\n");
-				return NULL;
-			}
-		}
-	}
+            // printf("receive msg\n");
+            ret = io_tx(txn, txn->next_fn);
+            if (unlikely(ret == -1)) {
+                fprintf(stderr, "io_tx() error\n");
+                return NULL;
+            }
+        }
+    }
 
-	return NULL;
+    return NULL;
 }
 
 /* TODO: Cleanup on errors */
 static int nf(uint8_t nf_id)
 {
-	const struct rte_memzone *memzone = NULL;
-	pthread_t thread_worker[UINT8_MAX];
-	pthread_t thread_rx;
-	pthread_t thread_tx;
-	uint8_t i;
-	int ret;
+    const struct rte_memzone *memzone = NULL;
+    pthread_t thread_worker[UINT8_MAX];
+    pthread_t thread_rx;
+    pthread_t thread_tx;
+    uint8_t i;
+    int ret;
 
-	fn_id = nf_id;
+    fn_id = nf_id;
 
-	memzone = rte_memzone_lookup(MEMZONE_NAME);
-	if (unlikely(memzone == NULL)) {
-		fprintf(stderr, "rte_memzone_lookup() error\n");
-		return -1;
-	}
+    memzone = rte_memzone_lookup(MEMZONE_NAME);
+    if (unlikely(memzone == NULL)) {
+        fprintf(stderr, "rte_memzone_lookup() error\n");
+        return -1;
+    }
 
-	cfg = memzone->addr;
+    cfg = memzone->addr;
 
-	ret = io_init();
-	if (unlikely(ret == -1)) {
-		fprintf(stderr, "io_init() error\n");
-		return -1;
-	}
+    ret = io_init();
+    if (unlikely(ret == -1)) {
+        fprintf(stderr, "io_init() error\n");
+        return -1;
+    }
 
-	for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
-		ret = pipe(pipefd_rx[i]);
-		if (unlikely(ret == -1)) {
-			fprintf(stderr, "pipe() error: %s\n", strerror(errno));
-			return -1;
-		}
+    for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
+        ret = pipe(pipefd_rx[i]);
+        if (unlikely(ret == -1)) {
+            fprintf(stderr, "pipe() error: %s\n", strerror(errno));
+            return -1;
+        }
 
-		ret = pipe(pipefd_tx[i]);
-		if (unlikely(ret == -1)) {
-			fprintf(stderr, "pipe() error: %s\n", strerror(errno));
-			return -1;
-		}
-	}
+        ret = pipe(pipefd_tx[i]);
+        if (unlikely(ret == -1)) {
+            fprintf(stderr, "pipe() error: %s\n", strerror(errno));
+            return -1;
+        }
+    }
 
-	ret = pthread_create(&thread_rx, NULL, &nf_rx, NULL);
-	if (unlikely(ret != 0)) {
-		fprintf(stderr, "pthread_create() error: %s\n", strerror(ret));
-		return -1;
-	}
+    ret = pthread_create(&thread_rx, NULL, &nf_rx, NULL);
+    if (unlikely(ret != 0)) {
+        fprintf(stderr, "pthread_create() error: %s\n", strerror(ret));
+        return -1;
+    }
 
-	ret = pthread_create(&thread_tx, NULL, &nf_tx, NULL);
-	if (unlikely(ret != 0)) {
-		fprintf(stderr, "pthread_create() error: %s\n", strerror(ret));
-		return -1;
-	}
+    ret = pthread_create(&thread_tx, NULL, &nf_tx, NULL);
+    if (unlikely(ret != 0)) {
+        fprintf(stderr, "pthread_create() error: %s\n", strerror(ret));
+        return -1;
+    }
 
-	for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
-		ret = pthread_create(&thread_worker[i], NULL, &nf_worker,
-		                     (void *)(uint64_t)i);
-		if (unlikely(ret != 0)) {
-			fprintf(stderr, "pthread_create() error: %s\n",
-			        strerror(ret));
-			return -1;
-		}
-	}
+    for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
+        ret = pthread_create(&thread_worker[i], NULL, &nf_worker,
+                             (void *)(uint64_t)i);
+        if (unlikely(ret != 0)) {
+            fprintf(stderr, "pthread_create() error: %s\n",
+                    strerror(ret));
+            return -1;
+        }
+    }
 
-	for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
-		ret = pthread_join(thread_worker[i], NULL);
-		if (unlikely(ret != 0)) {
-			fprintf(stderr, "pthread_join() error: %s\n",
-			        strerror(ret));
-			return -1;
-		}
-	}
+    for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
+        ret = pthread_join(thread_worker[i], NULL);
+        if (unlikely(ret != 0)) {
+            fprintf(stderr, "pthread_join() error: %s\n",
+                    strerror(ret));
+            return -1;
+        }
+    }
 
-	ret = pthread_join(thread_rx, NULL);
-	if (unlikely(ret != 0)) {
-		fprintf(stderr, "pthread_join() error: %s\n", strerror(ret));
-		return -1;
-	}
+    ret = pthread_join(thread_rx, NULL);
+    if (unlikely(ret != 0)) {
+        fprintf(stderr, "pthread_join() error: %s\n", strerror(ret));
+        return -1;
+    }
 
-	ret = pthread_join(thread_tx, NULL);
-	if (unlikely(ret != 0)) {
-		fprintf(stderr, "pthread_join() error: %s\n", strerror(ret));
-		return -1;
-	}
+    ret = pthread_join(thread_tx, NULL);
+    if (unlikely(ret != 0)) {
+        fprintf(stderr, "pthread_join() error: %s\n", strerror(ret));
+        return -1;
+    }
 
-	for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
-		ret = close(pipefd_rx[i][0]);
-		if (unlikely(ret == -1)) {
-			fprintf(stderr, "close() error: %s\n", strerror(errno));
-			return -1;
-		}
+    for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
+        ret = close(pipefd_rx[i][0]);
+        if (unlikely(ret == -1)) {
+            fprintf(stderr, "close() error: %s\n", strerror(errno));
+            return -1;
+        }
 
-		ret = close(pipefd_rx[i][1]);
-		if (unlikely(ret == -1)) {
-			fprintf(stderr, "close() error: %s\n", strerror(errno));
-			return -1;
-		}
+        ret = close(pipefd_rx[i][1]);
+        if (unlikely(ret == -1)) {
+            fprintf(stderr, "close() error: %s\n", strerror(errno));
+            return -1;
+        }
 
-		ret = close(pipefd_tx[i][0]);
-		if (unlikely(ret == -1)) {
-			fprintf(stderr, "close() error: %s\n", strerror(errno));
-			return -1;
-		}
+        ret = close(pipefd_tx[i][0]);
+        if (unlikely(ret == -1)) {
+            fprintf(stderr, "close() error: %s\n", strerror(errno));
+            return -1;
+        }
 
-		ret = close(pipefd_tx[i][1]);
-		if (unlikely(ret == -1)) {
-			fprintf(stderr, "close() error: %s\n", strerror(errno));
-			return -1;
-		}
-	}
+        ret = close(pipefd_tx[i][1]);
+        if (unlikely(ret == -1)) {
+            fprintf(stderr, "close() error: %s\n", strerror(errno));
+            return -1;
+        }
+    }
 
-	ret = io_exit();
-	if (unlikely(ret == -1)) {
-		fprintf(stderr, "io_exit() error\n");
-		return -1;
-	}
+    ret = io_exit();
+    if (unlikely(ret == -1)) {
+        fprintf(stderr, "io_exit() error\n");
+        return -1;
+    }
 
-	return 0;
+    return 0;
 }
 
 int main(int argc, char **argv)
 {
-	uint8_t nf_id;
-	int ret;
+    uint8_t nf_id;
+    int ret;
 
-	ret = rte_eal_init(argc, argv);
-	if (unlikely(ret == -1)) {
-		fprintf(stderr, "rte_eal_init() error: %s\n",
-		        rte_strerror(rte_errno));
-		goto error_0;
-	}
+    ret = rte_eal_init(argc, argv);
+    if (unlikely(ret == -1)) {
+        fprintf(stderr, "rte_eal_init() error: %s\n",
+                rte_strerror(rte_errno));
+        goto error_0;
+    }
 
-	argc -= ret;
-	argv += ret;
+    argc -= ret;
+    argv += ret;
 
-	if (unlikely(argc == 1)) {
-		fprintf(stderr, "Network Function ID not provided\n");
-		goto error_1;
-	}
+    if (unlikely(argc == 1)) {
+        fprintf(stderr, "Network Function ID not provided\n");
+        goto error_1;
+    }
 
-	errno = 0;
-	nf_id = strtol(argv[1], NULL, 10);
-	if (unlikely(errno != 0 || nf_id < 1)) {
-		fprintf(stderr, "Invalid value for Network Function ID\n");
-		goto error_1;
-	}
+    errno = 0;
+    nf_id = strtol(argv[1], NULL, 10);
+    if (unlikely(errno != 0 || nf_id < 1)) {
+        fprintf(stderr, "Invalid value for Network Function ID\n");
+        goto error_1;
+    }
 
-	productcatalog_map = new_c_map(compare_e, NULL, NULL);
-	parseCatalog(productcatalog_map);
-	ret = nf(nf_id);
-	if (unlikely(ret == -1)) {
-		fprintf(stderr, "nf() error\n");
-		goto error_1;
-	}
+    productcatalog_map = new_c_map(compare_e, NULL, NULL);
+    parseCatalog(productcatalog_map);
+    ret = nf(nf_id);
+    if (unlikely(ret == -1)) {
+        fprintf(stderr, "nf() error\n");
+        goto error_1;
+    }
 
-	ret = rte_eal_cleanup();
-	if (unlikely(ret < 0)) {
-		fprintf(stderr, "rte_eal_cleanup() error: %s\n",
-		        rte_strerror(-ret));
-		goto error_0;
-	}
+    ret = rte_eal_cleanup();
+    if (unlikely(ret < 0)) {
+        fprintf(stderr, "rte_eal_cleanup() error: %s\n",
+                rte_strerror(-ret));
+        goto error_0;
+    }
 
-	return 0;
+    return 0;
 
 error_1:
-	rte_eal_cleanup();
+    rte_eal_cleanup();
 error_0:
-	return 1;
+    return 1;
 }
