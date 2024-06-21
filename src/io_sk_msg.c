@@ -206,7 +206,7 @@ static int sockmap_server(int fd_sk_msg_map)
             return -1;
         }
 
-        log_info("%s: NF_ID %d -> SOCKFD %d\n", MAP_NAME, buffer[2],
+        log_info("%s: NF_ID %d -> SOCKFD %d", MAP_NAME, buffer[2],
                sockfd_sk_msg_nf);
 
         ret = close(sockfd_c);

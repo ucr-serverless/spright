@@ -12,6 +12,8 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <time.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define LOG_VERSION "0.1.0"
 
@@ -44,6 +46,7 @@ void log_set_level(int level);
 void log_set_quiet(bool enable);
 int log_add_callback(log_LogFn fn, void *udata, int level);
 int log_add_fp(FILE *fp, int level);
+void log_set_level_from_env(void);
 
 void log_log(int level, const char *file, int line, const char *caller, const char *fmt, ...);
 

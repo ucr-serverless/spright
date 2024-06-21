@@ -36,6 +36,7 @@
 #include "http.h"
 #include "io.h"
 #include "spright.h"
+#include "log.h"
 
 static int pipefd_rx[UINT8_MAX][2];
 static int pipefd_tx[UINT8_MAX][2];
@@ -109,7 +110,7 @@ static void *nf_worker(void *arg)
             return NULL;
         }
 
-        printf("Fn#%d is processing request.\n", fn_id);
+        log_debug("Fn#%d is processing request.", fn_id);
 
         ret = autoscale_memory(cfg->nf[fn_id - 1].param.memory_mb);
         if (unlikely(ret == -1)) {

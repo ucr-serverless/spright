@@ -677,7 +677,6 @@ static int server_exit(struct server_vars *sv)
         return -1;
     }
 
-    /* TODO: Move to gateway.c */
     ret = io_exit();
     if (unlikely(ret == -1)) {
         fprintf(stderr, "io_exit() error\n");
@@ -834,7 +833,7 @@ error_0:
 
 int main(int argc, char **argv)
 {
-    log_set_level(LOG_TRACE);
+    log_set_level_from_env();
 
     int ret;
 

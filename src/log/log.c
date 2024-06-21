@@ -167,3 +167,31 @@ void log_log(int level, const char *file, int line, const char *caller, const ch
 
   unlock();
 }
+
+void log_set_level_from_env() {
+    const char *env_var = "LOG_LEVEL";
+    const char *log_level = getenv(env_var);
+
+    if (log_level != NULL) {
+        if (strcmp(log_level, "TRACE") == 0) {
+            log_set_level(LOG_TRACE);
+        } else if (strcmp(log_level, "DEBUG") == 0) {
+            log_set_level(LOG_DEBUG);
+        } else if (strcmp(log_level, "INFO") == 0) {
+            log_set_level(LOG_INFO);
+        } else if (strcmp(log_level, "WARN") == 0) {
+            log_set_level(LOG_WARN);
+        } else if (strcmp(log_level, "ERROR") == 0) {
+            log_set_level(LOG_ERROR);
+        } else if (strcmp(log_level, "FATAL") == 0) {
+            log_set_level(LOG_FATAL);
+        } else {
+            fprintf(stderr, "Unknown log level: %s\n", log_level);
+            // Optionally set a default log level
+            log_set_level(LOG_INFO);
+        }
+    } else {
+        // If the environment variable is not set, use a default log level
+        log_set_level(LOG_INFO);
+    }
+}
