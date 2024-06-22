@@ -173,9 +173,9 @@ int io_rx(void **obj)
     return 0;
 }
 
-int io_tx(void *obj, uint8_t next_node)
+int io_tx(void *obj, uint8_t next_fn)
 {
-    while (rte_ring_enqueue(ring[next_node], obj) != 0);
+    while (rte_ring_enqueue(ring[next_fn], obj) != 0);
 
     return 0;
 }

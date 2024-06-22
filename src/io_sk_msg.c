@@ -481,12 +481,12 @@ int io_rx(void **obj)
     return 0;
 }
 
-int io_tx(void *obj, uint8_t next_node)
+int io_tx(void *obj, uint8_t next_fn)
 {
     ssize_t bytes_sent;
     struct metadata m;
 
-    m.fn_id = next_node;
+    m.fn_id = next_fn;
     m.obj = obj;
 
     bytes_sent = send(sockfd_sk_msg, &m, sizeof(struct metadata), 0);

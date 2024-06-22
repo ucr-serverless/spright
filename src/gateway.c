@@ -205,6 +205,11 @@ static int rpc_server(void) {
         return -1;
     }
 
+    if (cfg->n_nodes == 1) {
+        log_warn("No PEER NODE CONFIGURED. Terminating the RPC server...");
+        goto error_2;
+    }
+
     for (i = 0; i < cfg->n_nodes - 1; i++) {
         sockfd_c = accept(sockfd_l, NULL, NULL);
         if (unlikely(sockfd_c == -1)) {
@@ -247,21 +252,20 @@ static int rpc_server(void) {
                     txn->route_id, txn->hop_count,
                     cfg->route[txn->route_id].hop[txn->hop_count],
                     txn->next_fn);
-        ret = io_tx(txn, cfg->route[txn->route_id].hop[txn->hop_count]);
+        ret = io_tx(txn, txn->next_fn);
         if (unlikely(ret == -1)) {
             log_error("io_tx() error");
             goto error_1;
         }
     }
 
+error_2:
     ret = close(sockfd_l);
     if (unlikely(ret == -1)) {
         log_error("close() error: %s", strerror(errno));
         return -1;
     }
-
     return 0;
-
 error_1:
     rte_mempool_put(cfg->mempool, txn);
     close(sockfd_c);
@@ -465,9 +469,9 @@ static int conn_write(int *sockfd)
 
     // Inter-node Communication
     if (cfg->route[txn->route_id].hop[txn->hop_count] != fn_id) {
-        uint8_t *peer_node_idx = get_node(cfg->route[txn->route_id].hop[txn->hop_count]);
+        uint8_t *peer_node_idx = get_node(txn->next_fn);
         log_debug("Destination function is %u on node %u (%s:%u).",
-                cfg->route[txn->route_id].hop[txn->hop_count], *peer_node_idx,
+                txn->next_fn, *peer_node_idx,
                 cfg->nodes[*peer_node_idx].ip_address, INTERNAL_SERVER_PORT);
 
         if (peer_node_sockfds[*peer_node_idx] == 0) {
@@ -481,9 +485,12 @@ static int conn_write(int *sockfd)
             log_error("Invalid socket error.");
         }
 
-        log_debug("RPC client send message to node %u (%s:%u).",
-                *peer_node_idx, cfg->nodes[*peer_node_idx].ip_address,
-                INTERNAL_SERVER_PORT);
+        log_debug("Route id: %u, Hop Count %u, Next Hop: %u, Next Fn: %u, \
+            Caller Fn: %s (#%u), RPC Handler: %s()",
+            txn->route_id, txn->hop_count,
+            cfg->route[txn->route_id].hop[txn->hop_count],
+            txn->next_fn, txn->caller_nf, txn->caller_fn, txn->rpc_handler);
+
         ret = rpc_client_send(*peer_node_idx, txn);
 
         log_debug("rpc_client_send is done.");

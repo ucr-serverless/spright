@@ -169,6 +169,12 @@ static void *nf_tx(void *arg)
                 return NULL;
             }
 
+            log_debug("Route id: %u, Hop Count %u, Next Hop: %u, Next Fn: %u, \
+                Caller Fn: %s (#%u), RPC Handler: %s()", 
+                txn->route_id, txn->hop_count,
+                cfg->route[txn->route_id].hop[txn->hop_count],
+                txn->next_fn, txn->caller_nf, txn->caller_fn, txn->rpc_handler);
+
             ret = io_tx(txn, txn->next_fn);
             if (unlikely(ret == -1)) {
                 log_error("io_tx() error");

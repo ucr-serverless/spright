@@ -124,6 +124,19 @@ void PrintConversionResult(struct http_transaction *in) {
     log_info("Value: %ld.%d", in->currency_conversion_result.Units, in->currency_conversion_result.Nanos);
 }
 
+void printMoney(Money *money) {
+    printf("Money:\n");
+    printf("  Currency Code: %s\n", money->CurrencyCode);
+    printf("  Units: %ld\n", money->Units);
+    printf("  Nanos: %d\n", money->Nanos);
+}
+
+void printCurrencyConversionRequest(CurrencyConversionRequest *request) {
+    printf("Currency Conversion Request:\n");
+    printMoney(&request->From);
+    printf("  To Currency Code: %s\n", request->ToCode);
+}
+
 void MockCurrencyConversionRequest(struct http_transaction *in) {
     strcpy(in->currency_conversion_req.ToCode, "USD");
     strcpy(in->currency_conversion_req.From.CurrencyCode, "EUR");
@@ -265,13 +278,18 @@ void parsePlaceOrderRequest(struct http_transaction *txn) {
 }
 
 char* httpQueryParser(char* req) {
-    char tmp[600]; strcpy(tmp, req);
+    char tmp[600];
+    strcpy(tmp, req);
 
     char *start_of_path = strtok(tmp, " ");
     start_of_path = strtok(NULL, " ");
-       // log_info("%s", start_of_path); //printing the token
     char *start_of_query = strchr(start_of_path, '?') + 1;
-    // log_info("%s", start_of_query); //product_id=66VCHSJNUP&quantity=1
+
+    // Remove trailing slash if present
+    size_t len = strlen(start_of_query);
+    if (start_of_query[len - 1] == '/') {
+        start_of_query[len - 1] = '\0';
+    }
 
     return start_of_query;
 }

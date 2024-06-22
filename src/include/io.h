@@ -27,6 +27,6 @@ int io_exit(void);
 
 int io_rx(void **obj);
 
-int io_tx(void *obj, uint8_t next_node);
+int io_tx(void *obj, uint8_t next_fn);
 
 #endif /* IO_H */

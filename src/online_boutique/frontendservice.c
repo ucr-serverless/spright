@@ -77,7 +77,7 @@ static void homeHandler(struct http_transaction *txn) {
         returnResponse(txn);
 
     } else {
-        log_info("homeHandler doesn't know what to do for HOP %u.", txn->hop_count);
+        log_warn("homeHandler doesn't know what to do for HOP %u.", txn->hop_count);
         returnResponse(txn);
 
     }
@@ -102,7 +102,7 @@ static void productHandler(struct http_transaction *txn) {
     } else if (txn->hop_count == 5) {
         returnResponse(txn);
     } else {
-        log_info("productHandler doesn't know what to do for HOP %u.", txn->hop_count);
+        log_warn("productHandler doesn't know what to do for HOP %u.", txn->hop_count);
         returnResponse(txn);
 
     }
@@ -285,7 +285,6 @@ static void *nf_tx(void *arg)
     struct epoll_event event[UINT8_MAX]; /* TODO: Use Macro */
     struct http_transaction *txn = NULL;
     ssize_t bytes_read;
-    // uint8_t next_node;
     uint8_t i;
     int n_fds;
     int epfd;
@@ -333,6 +332,12 @@ static void *nf_tx(void *arg)
                         strerror(errno));
                 return NULL;
             }
+
+            log_debug("Route id: %u, Hop Count %u, Next Hop: %u, Next Fn: %u, \
+                Caller Fn: %s (#%u), RPC Handler: %s()", 
+                txn->route_id, txn->hop_count,
+                cfg->route[txn->route_id].hop[txn->hop_count],
+                txn->next_fn, txn->caller_nf, txn->caller_fn, txn->rpc_handler);
 
             ret = io_tx(txn, txn->next_fn);
             if (unlikely(ret == -1)) {

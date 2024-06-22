@@ -45,7 +45,7 @@ static int pipefd_tx[UINT8_MAX][2];
 char *currencies[] = {"EUR", "USD", "JPY", "CAD"};
 double conversion_rate[] = {1.0, 1.1305, 126.40, 1.5128};
 
-static int compare_e(void* left, void* right ) {
+static int compare_e(void* left, void* right) {
     return strcmp((const char *)left, (const char *)right);
 }
 
@@ -75,20 +75,10 @@ static void GetSupportedCurrencies(struct http_transaction *in){
         strcpy(in->get_supported_currencies_response.CurrencyCodes[i], currencies[i]);
     }
 
-    // log_info("[GetSupportedCurrencies] completed request");
     return;
 }
 
-// static void PrintSupportedCurrencies (struct http_transaction *in) {
-// 	log_info("Supported Currencies: ");
-// 	int i = 0;
-// 	for (i = 0; i < in->get_supported_currencies_response.num_currencies; i++) {
-// 		log_info("%s\t", in->get_supported_currencies_response.CurrencyCodes[i]);
-// 	}
-// 	printf("\n");
-// }
-
-/**
+/*
  * Helper function that handles decimal/fractional carrying
  */
 static void Carry(Money* amount) {
@@ -103,6 +93,9 @@ static void Convert(struct http_transaction *txn) {
     log_info("[Convert] received request");
     CurrencyConversionRequest* in = &txn->currency_conversion_req;
     Money* euros = &txn->currency_conversion_result;
+
+    // printMoney(euros);
+    // printCurrencyConversionRequest(in);
 
     // Convert: from_currency --> EUR
     void* data;
@@ -251,15 +244,11 @@ static void *nf_tx(void *arg)
                 return NULL;
             }
 
-            // txn->hop_count++;
-
-            // if (likely(txn->hop_count <
-            //            cfg->route[txn->route_id].length)) {
-            // 	next_node =
-            // 	cfg->route[txn->route_id].node[txn->hop_count];
-            // } else {
-            // 	next_node = 0;
-            // }
+            log_debug("Route id: %u, Hop Count %u, Next Hop: %u, Next Fn: %u, \
+                Caller Fn: %s (#%u), RPC Handler: %s()", 
+                txn->route_id, txn->hop_count,
+                cfg->route[txn->route_id].hop[txn->hop_count],
+                txn->next_fn, txn->caller_nf, txn->caller_fn, txn->rpc_handler);
 
             ret = io_tx(txn, txn->next_fn);
             if (unlikely(ret == -1)) {
@@ -419,6 +408,7 @@ int main(int argc, char **argv)
 
     currency_data_map = new_c_map(compare_e, NULL, NULL);
     getCurrencyData(currency_data_map);
+
     ret = nf(nf_id);
     if (unlikely(ret == -1)) {
         log_error("nf() error");

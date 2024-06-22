@@ -134,7 +134,6 @@ static void GetAds(struct http_transaction *in) {
     PrintContextKeys(ad_request);
     in->ad_response.num_ads = 0;
 
-    // []*pb.Ad allAds;
     if (ad_request->num_context_keys > 0) {
         log_info("Constructing Ads using received context.");
         int i;
@@ -297,6 +296,12 @@ static void *nf_tx(void *arg)
                         strerror(errno));
                 return NULL;
             }
+
+            log_debug("Route id: %u, Hop Count %u, Next Hop: %u, Next Fn: %u, \
+                Caller Fn: %s (#%u), RPC Handler: %s()", 
+                txn->route_id, txn->hop_count,
+                cfg->route[txn->route_id].hop[txn->hop_count],
+                txn->next_fn, txn->caller_nf, txn->caller_fn, txn->rpc_handler);
 
             ret = io_tx(txn, txn->next_fn);
             if (unlikely(ret == -1)) {

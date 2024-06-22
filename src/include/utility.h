@@ -40,6 +40,8 @@ void PrintSearchProductsResponse(struct http_transaction *txn);
 
 void PrintSupportedCurrencies (struct http_transaction *in);
 void PrintConversionResult(struct http_transaction *in);
+void printMoney(Money *money);
+void printCurrencyConversionRequest(CurrencyConversionRequest *request);
 void MockCurrencyConversionRequest(struct http_transaction *in);
 
 void PrintGetCartResponse(struct http_transaction *txn);

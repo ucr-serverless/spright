@@ -113,11 +113,9 @@ void getProduct(struct http_transaction *txn) {
     char *req = txn->request;
 
     if (strstr(req, "/1/cart?") != NULL && strstr(req, "POST")) {
-        // log_info("Query : %s", query);
         char *start_of_product_id = strtok(query, "&");
         strcpy(txn->get_product_request.Id, strchr(start_of_product_id, '=') + 1);
         log_info("Product ID: %s", txn->get_product_request.Id);
-        // product_id=66VCHSJNUP&quantity=1
         // returnResponse(txn); return;
     } else if (strstr(req, "/1/product") != NULL) {
         strcpy(txn->get_product_request.Id, query);

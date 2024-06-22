@@ -295,7 +295,6 @@ static void *nf_tx(void *arg)
     struct epoll_event event[UINT8_MAX]; /* TODO: Use Macro */
     struct http_transaction *txn = NULL;
     ssize_t bytes_read;
-    // uint8_t next_node;
     uint8_t i;
     int n_fds;
     int epfd;
@@ -344,15 +343,11 @@ static void *nf_tx(void *arg)
                 return NULL;
             }
 
-            // txn->hop_count++;
-
-            // if (likely(txn->hop_count <
-            //            cfg->route[txn->route_id].length)) {
-            // 	next_node =
-            // 	cfg->route[txn->route_id].node[txn->hop_count];
-            // } else {
-            // 	next_node = 0;
-            // }
+            log_debug("Route id: %u, Hop Count %u, Next Hop: %u, Next Fn: %u, \
+                Caller Fn: %s (#%u), RPC Handler: %s()", 
+                txn->route_id, txn->hop_count,
+                cfg->route[txn->route_id].hop[txn->hop_count],
+                txn->next_fn, txn->caller_nf, txn->caller_fn, txn->rpc_handler);
 
             ret = io_tx(txn, txn->next_fn);
             if (unlikely(ret == -1)) {
