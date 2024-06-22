@@ -166,7 +166,7 @@ ssize_t read_full(int fd, void *buf, size_t count) {
     return bytes_read;
 }
 
-static int inter_node_server(void) {
+static int rpc_server(void) {
     struct sockaddr_in addr;
     int sockfd_l;
     int sockfd_c = 0;
@@ -271,10 +271,10 @@ error_0:
     return -1;
 }
 
-void* inter_node_server_thread(void* arg) {
-    int ret = inter_node_server();
+void* rpc_server_thread(void* arg) {
+    int ret = rpc_server();
     if (unlikely(ret == -1)) {
-        fprintf(stderr, "inter_node_server() error\n");
+        fprintf(stderr, "rpc_server() error\n");
     }
     return NULL;
 }
@@ -588,7 +588,7 @@ static int server_init(struct server_vars *sv)
     struct epoll_event event;
     int optval;
     int ret;
-    pthread_t inter_node_svr_thread;
+    pthread_t rpc_svr_thread;
 
     log_info("Initializing intra-node I/O...");
     ret = io_init();
@@ -597,7 +597,7 @@ static int server_init(struct server_vars *sv)
         return -1;
     }
 
-    ret = pthread_create(&inter_node_svr_thread, NULL, &inter_node_server_thread, NULL);
+    ret = pthread_create(&rpc_svr_thread, NULL, &rpc_server_thread, NULL);
     if (unlikely(ret != 0)) {
         fprintf(stderr, "pthread_create() error: %s\n", strerror(ret));
         return -1;
