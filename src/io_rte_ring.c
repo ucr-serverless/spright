@@ -53,7 +53,7 @@ static int init_primary(void)
         ring[i] = rte_ring_create(ring_name, RING_LENGTH_MAX,
                                   rte_socket_id(), 0);
         if (unlikely(ring[i] == NULL)) {
-            fprintf(stderr, "rte_ring_create() error: %s\n",
+            log_error("rte_ring_create() error: %s",
                     rte_strerror(rte_errno));
             goto error_0;
         }
@@ -78,7 +78,7 @@ static int init_secondary(void)
 
         ring[i] = rte_ring_lookup(ring_name);
         if (unlikely(ring[i] == NULL)) {
-            fprintf(stderr, "rte_ring_lookup() error: %s\n",
+            log_error("rte_ring_lookup() error: %s",
                     rte_strerror(rte_errno));
             return -1;
         }
@@ -109,20 +109,20 @@ int io_init(void)
 
     ring = malloc((cfg->n_nfs + 1) * sizeof(struct rte_ring *));
     if (unlikely(ring == NULL)) {
-        fprintf(stderr, "malloc() error: %s\n", strerror(errno));
+        log_error("malloc() error: %s", strerror(errno));
         goto error_0;
     }
 
     if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
         ret = init_primary();
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "init_primary() error\n");
+            log_error("init_primary() error");
             goto error_1;
         }
     } else if (rte_eal_process_type() == RTE_PROC_SECONDARY) {
         ret = init_secondary();
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "init_secondary() error\n");
+            log_error("init_secondary() error");
             goto error_1;
         }
     } else {
@@ -144,13 +144,13 @@ int io_exit(void)
     if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
         ret = exit_primary();
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "exit_primary() error\n");
+            log_error("exit_primary() error");
             goto error_0;
         }
     } else if (rte_eal_process_type() == RTE_PROC_SECONDARY) {
         ret = exit_secondary();
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "exit_secondary() error\n");
+            log_error("exit_secondary() error");
             goto error_0;
         }
     } else {

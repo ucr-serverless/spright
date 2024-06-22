@@ -102,14 +102,14 @@ static void chargeCard(struct http_transaction *txn) {
 }
 
 static void calculateTotalPrice(struct http_transaction *txn) {
-    printf("[%s()] Calculating total price...\n", __func__);
+    log_info("Calculating total price...");
     int i = 0;
     for (i = 0; i < txn->orderItemViewCntr; i++) {
         MultiplySlow(&txn->order_item_view[i].Cost, txn->order_item_view[i].Item.Quantity);
         Sum(&txn->total_price, &txn->order_item_view[i].Cost);
     }
-    printf("[%s()]\t\t>>>>>> priceItem(s) Subtotal: %ld.%d\n", __func__, txn->total_price.Units, txn->total_price.Nanos);
-    printf("[%s()]\t\t>>>>>> Shipping & Handling: %ld.%d\n", __func__, txn->get_quote_response.CostUsd.Units, txn->get_quote_response.CostUsd.Nanos);
+    log_info("\t\t>>>>>> priceItem(s) Subtotal: %ld.%d", txn->total_price.Units, txn->total_price.Nanos);
+    log_info("\t\t>>>>>> Shipping & Handling: %ld.%d", txn->get_quote_response.CostUsd.Units, txn->get_quote_response.CostUsd.Nanos);
     Sum(&txn->total_price, &txn->get_quote_response.CostUsd);
     
     return;
@@ -128,19 +128,19 @@ static void returnResponseToFrontend(struct http_transaction *txn) {
 // Convert currency for a ShippingQuote
 static void convertCurrencyOfShippingQuote(struct http_transaction *txn) {
     if (strcmp(defaultCurrency, "USD") == 0) {
-        printf("[%s()] Default Currency is USD. Skip convertCurrencyOfShippingQuote\n", __func__);
+        log_info("Default Currency is USD. Skip convertCurrencyOfShippingQuote");
         txn->get_quote_response.conversion_flag = true;
         txn->checkoutsvc_hop_cnt++;
         prepareOrderItemsAndShippingQuoteFromCart(txn);
     } else {
         if (txn->get_quote_response.conversion_flag == true) {
             txn->get_quote_response.CostUsd = txn->currency_conversion_result;
-            printf("[%s()] Write back convertCurrencyOfShippingQuote\n", __func__);
+            log_info("Write back convertCurrencyOfShippingQuote");
             txn->checkoutsvc_hop_cnt++;
             prepareOrderItemsAndShippingQuoteFromCart(txn);
 
         } else {
-            printf("[%s()] Default Currency is %s. Do convertCurrencyOfShippingQuote\n", __func__, defaultCurrency);
+            log_info("Default Currency is %s. Do convertCurrencyOfShippingQuote", defaultCurrency);
             strcpy(txn->currency_conversion_req.ToCode, defaultCurrency);
             strcpy(txn->currency_conversion_req.From.CurrencyCode, txn->get_quote_response.CostUsd.CurrencyCode);
             txn->currency_conversion_req.From.Units = txn->get_quote_response.CostUsd.Units;
@@ -177,7 +177,7 @@ static void quoteShipping(struct http_transaction *txn) {
 // Convert currency for products in the cart
 static void convertCurrencyOfCart(struct http_transaction *txn) {
     if (strcmp(defaultCurrency, "USD") == 0) {
-        printf("Default Currency is USD. Skip convertCurrencyOfCart\n");
+        log_info("Default Currency is USD. Skip convertCurrencyOfCart");
         txn->checkoutsvc_hop_cnt++;
         prepareOrderItemsAndShippingQuoteFromCart(txn); return;
     } else {
@@ -186,7 +186,7 @@ static void convertCurrencyOfCart(struct http_transaction *txn) {
         }
 
         if (txn->orderItemCurConvertCntr < txn->orderItemViewCntr) {
-            printf("Default Currency is %s. Do convertCurrencyOfCart\n", defaultCurrency);
+            log_info("Default Currency is %s. Do convertCurrencyOfCart", defaultCurrency);
             strcpy(txn->currency_conversion_req.ToCode, defaultCurrency);
             txn->currency_conversion_req.From = txn->order_item_view[txn->orderItemCurConvertCntr].Cost;
 
@@ -204,9 +204,9 @@ static void convertCurrencyOfCart(struct http_transaction *txn) {
 }
 
 static void getOrderItemInfo(struct http_transaction *txn) {
-    printf("[%s()] %d items in the cart.\n", __func__, txn->get_cart_response.num_items);
+    log_info("%d items in the cart.", txn->get_cart_response.num_items);
     if (txn->get_cart_response.num_items <= 0) {
-        printf("[%s()] None items in the cart.\n", __func__);
+        log_info("None items in the cart.");
         txn->total_price.Units = 0;
         txn->total_price.Nanos = 0;
         returnResponseToFrontend(txn); return;
@@ -219,7 +219,7 @@ static void getOrderItemInfo(struct http_transaction *txn) {
 
     if (txn->orderItemViewCntr < txn->get_cart_response.num_items) {
         strcpy(txn->get_product_request.Id, txn->get_cart_response.Items[txn->orderItemViewCntr].ProductId);
-        // printf("Product ID: %s\n", txn->get_product_request.Id);
+        // log_info("Product ID: %s", txn->get_product_request.Id);
 
         strcpy(txn->rpc_handler, "GetProduct");
         txn->caller_fn = CHECKOUT_SVC;
@@ -249,13 +249,13 @@ static void prepOrderItems(struct http_transaction *txn) {
     } else if (txn->checkoutsvc_hop_cnt == 2) {
         convertCurrencyOfCart(txn);
     } else {
-        printf("[%s()] prepOrderItems doesn't know what to do for HOP %u.\n", __func__, txn->checkoutsvc_hop_cnt);
+        log_info("prepOrderItems doesn't know what to do for HOP %u.", txn->checkoutsvc_hop_cnt);
         returnResponseToFrontend(txn);
     }
 }
 
 void prepareOrderItemsAndShippingQuoteFromCart(struct http_transaction *txn) {
-    printf("[%s()] Call prepareOrderItemsAndShippingQuoteFromCart ### Hop: %u\n", __func__, txn->checkoutsvc_hop_cnt);
+    log_info("Call prepareOrderItemsAndShippingQuoteFromCart ### Hop: %u", txn->checkoutsvc_hop_cnt);
 
     if (txn->checkoutsvc_hop_cnt == 0) {
         getCart(txn);
@@ -287,7 +287,7 @@ void prepareOrderItemsAndShippingQuoteFromCart(struct http_transaction *txn) {
         returnResponseToFrontendWithOrderResult(txn);
 
     } else {
-        printf("[%s()] prepareOrderItemsAndShippingQuoteFromCart doesn't know what to do for HOP %u.\n", __func__, txn->checkoutsvc_hop_cnt);
+        log_info("prepareOrderItemsAndShippingQuoteFromCart doesn't know what to do for HOP %u.", txn->checkoutsvc_hop_cnt);
         returnResponseToFrontend(txn);
     }
 }
@@ -310,15 +310,15 @@ static void *nf_worker(void *arg)
         bytes_read = read(pipefd_rx[index][0], &txn,
                           sizeof(struct http_transaction *));
         if (unlikely(bytes_read == -1)) {
-            fprintf(stderr, "read() error: %s\n", strerror(errno));
+            log_error("read() error: %s", strerror(errno));
             return NULL;
         }
 
         // if (strcmp(txn->rpc_handler, "PlaceOrder") == 0) {
         PlaceOrder(txn);
         // } else {
-        // 	printf("%s() is not supported\n", txn->rpc_handler);
-        // 	printf("\t\t#### Run Mock Test ####\n");
+        // 	log_info("%s() is not supported", txn->rpc_handler);
+        // 	log_info("\t\t#### Run Mock Test ####");
         // 	// MockEmailRequest(txn);
         // 	// SendOrderConfirmation(txn);
         // }
@@ -326,7 +326,7 @@ static void *nf_worker(void *arg)
         bytes_written = write(pipefd_tx[index][1], &txn,
                               sizeof(struct http_transaction *));
         if (unlikely(bytes_written == -1)) {
-            fprintf(stderr, "write() error: %s\n", strerror(errno));
+            log_error("write() error: %s", strerror(errno));
             return NULL;
         }
     }
@@ -344,14 +344,14 @@ static void *nf_rx(void *arg)
     for (i = 0; ; i = (i + 1) % cfg->nf[fn_id - 1].n_threads) {
         ret = io_rx((void **)&txn);
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "io_rx() error\n");
+            log_error("io_rx() error");
             return NULL;
         }
 
         bytes_written = write(pipefd_rx[i][1], &txn,
                               sizeof(struct http_transaction *));
         if (unlikely(bytes_written == -1)) {
-            fprintf(stderr, "write() error: %s\n", strerror(errno));
+            log_error("write() error: %s", strerror(errno));
             return NULL;
         }
     }
@@ -371,14 +371,14 @@ static void *nf_tx(void *arg)
 
     epfd = epoll_create1(0);
     if (unlikely(epfd == -1)) {
-        fprintf(stderr, "epoll_create1() error: %s\n", strerror(errno));
+        log_error("epoll_create1() error: %s", strerror(errno));
         return NULL;
     }
 
     for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
         ret = fcntl(pipefd_tx[i][0], F_SETFL, O_NONBLOCK);
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "fcntl() error: %s\n", strerror(errno));
+            log_error("fcntl() error: %s", strerror(errno));
             return NULL;
         }
 
@@ -388,7 +388,7 @@ static void *nf_tx(void *arg)
         ret = epoll_ctl(epfd, EPOLL_CTL_ADD, pipefd_tx[i][0],
                         &event[0]);
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "epoll_ctl() error: %s\n",
+            log_error("epoll_ctl() error: %s",
                     strerror(errno));
             return NULL;
         }
@@ -398,7 +398,7 @@ static void *nf_tx(void *arg)
         n_fds = epoll_wait(epfd, event, cfg->nf[fn_id - 1].n_threads,
                            -1);
         if (unlikely(n_fds == -1)) {
-            fprintf(stderr, "epoll_wait() error: %s\n",
+            log_error("epoll_wait() error: %s",
                     strerror(errno));
             return NULL;
         }
@@ -407,14 +407,14 @@ static void *nf_tx(void *arg)
             bytes_read = read(event[i].data.fd, &txn,
                               sizeof(struct http_transaction *));
             if (unlikely(bytes_read == -1)) {
-                fprintf(stderr, "read() error: %s\n",
+                log_error("read() error: %s",
                         strerror(errno));
                 return NULL;
             }
 
             ret = io_tx(txn, txn->next_fn);
             if (unlikely(ret == -1)) {
-                fprintf(stderr, "io_tx() error\n");
+                log_error("io_tx() error");
                 return NULL;
             }
         }
@@ -437,7 +437,7 @@ static int nf(uint8_t nf_id)
 
     memzone = rte_memzone_lookup(MEMZONE_NAME);
     if (unlikely(memzone == NULL)) {
-        fprintf(stderr, "rte_memzone_lookup() error\n");
+        log_error("rte_memzone_lookup() error");
         return -1;
     }
 
@@ -445,33 +445,33 @@ static int nf(uint8_t nf_id)
 
     ret = io_init();
     if (unlikely(ret == -1)) {
-        fprintf(stderr, "io_init() error\n");
+        log_error("io_init() error");
         return -1;
     }
 
     for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
         ret = pipe(pipefd_rx[i]);
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "pipe() error: %s\n", strerror(errno));
+            log_error("pipe() error: %s", strerror(errno));
             return -1;
         }
 
         ret = pipe(pipefd_tx[i]);
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "pipe() error: %s\n", strerror(errno));
+            log_error("pipe() error: %s", strerror(errno));
             return -1;
         }
     }
 
     ret = pthread_create(&thread_rx, NULL, &nf_rx, NULL);
     if (unlikely(ret != 0)) {
-        fprintf(stderr, "pthread_create() error: %s\n", strerror(ret));
+        log_error("pthread_create() error: %s", strerror(ret));
         return -1;
     }
 
     ret = pthread_create(&thread_tx, NULL, &nf_tx, NULL);
     if (unlikely(ret != 0)) {
-        fprintf(stderr, "pthread_create() error: %s\n", strerror(ret));
+        log_error("pthread_create() error: %s", strerror(ret));
         return -1;
     }
 
@@ -479,7 +479,7 @@ static int nf(uint8_t nf_id)
         ret = pthread_create(&thread_worker[i], NULL, &nf_worker,
                              (void *)(uint64_t)i);
         if (unlikely(ret != 0)) {
-            fprintf(stderr, "pthread_create() error: %s\n",
+            log_error("pthread_create() error: %s",
                     strerror(ret));
             return -1;
         }
@@ -488,7 +488,7 @@ static int nf(uint8_t nf_id)
     for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
         ret = pthread_join(thread_worker[i], NULL);
         if (unlikely(ret != 0)) {
-            fprintf(stderr, "pthread_join() error: %s\n",
+            log_error("pthread_join() error: %s",
                     strerror(ret));
             return -1;
         }
@@ -496,45 +496,45 @@ static int nf(uint8_t nf_id)
 
     ret = pthread_join(thread_rx, NULL);
     if (unlikely(ret != 0)) {
-        fprintf(stderr, "pthread_join() error: %s\n", strerror(ret));
+        log_error("pthread_join() error: %s", strerror(ret));
         return -1;
     }
 
     ret = pthread_join(thread_tx, NULL);
     if (unlikely(ret != 0)) {
-        fprintf(stderr, "pthread_join() error: %s\n", strerror(ret));
+        log_error("pthread_join() error: %s", strerror(ret));
         return -1;
     }
 
     for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
         ret = close(pipefd_rx[i][0]);
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "close() error: %s\n", strerror(errno));
+            log_error("close() error: %s", strerror(errno));
             return -1;
         }
 
         ret = close(pipefd_rx[i][1]);
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "close() error: %s\n", strerror(errno));
+            log_error("close() error: %s", strerror(errno));
             return -1;
         }
 
         ret = close(pipefd_tx[i][0]);
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "close() error: %s\n", strerror(errno));
+            log_error("close() error: %s", strerror(errno));
             return -1;
         }
 
         ret = close(pipefd_tx[i][1]);
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "close() error: %s\n", strerror(errno));
+            log_error("close() error: %s", strerror(errno));
             return -1;
         }
     }
 
     ret = io_exit();
     if (unlikely(ret == -1)) {
-        fprintf(stderr, "io_exit() error\n");
+        log_error("io_exit() error");
         return -1;
     }
 
@@ -548,7 +548,7 @@ int main(int argc, char **argv)
 
     ret = rte_eal_init(argc, argv);
     if (unlikely(ret == -1)) {
-        fprintf(stderr, "rte_eal_init() error: %s\n",
+        log_error("rte_eal_init() error: %s",
                 rte_strerror(rte_errno));
         goto error_0;
     }
@@ -557,26 +557,26 @@ int main(int argc, char **argv)
     argv += ret;
 
     if (unlikely(argc == 1)) {
-        fprintf(stderr, "Network Function ID not provided\n");
+        log_error("Network Function ID not provided");
         goto error_1;
     }
 
     errno = 0;
     nf_id = strtol(argv[1], NULL, 10);
     if (unlikely(errno != 0 || nf_id < 1)) {
-        fprintf(stderr, "Invalid value for Network Function ID\n");
+        log_error("Invalid value for Network Function ID");
         goto error_1;
     }
 
     ret = nf(nf_id);
     if (unlikely(ret == -1)) {
-        fprintf(stderr, "nf() error\n");
+        log_error("nf() error");
         goto error_1;
     }
 
     ret = rte_eal_cleanup();
     if (unlikely(ret < 0)) {
-        fprintf(stderr, "rte_eal_cleanup() error: %s\n",
+        log_error("rte_eal_cleanup() error: %s",
                 rte_strerror(-ret));
         goto error_0;
     }

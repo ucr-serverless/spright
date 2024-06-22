@@ -116,7 +116,7 @@ static int cfg_init(char *cfg_file)
                                       NULL, NULL, NULL, NULL,
                                       rte_socket_id(), 0);
     if (unlikely(cfg->mempool == NULL)) {
-        fprintf(stderr, "rte_mempool_create() error: %s\n",
+        log_error("rte_mempool_create() error: %s",
                 rte_strerror(rte_errno));
         goto error_0;
     }
@@ -125,7 +125,7 @@ static int cfg_init(char *cfg_file)
 
     ret = config_read_file(&config, cfg_file);
     if (unlikely(ret == CONFIG_FALSE)) {
-        fprintf(stderr, "config_read_file() error: line %d: %s\n",
+        log_error("config_read_file() error: line %d: %s",
                 config_error_line(&config), config_error_text(&config));
         goto error_1;
     }
@@ -230,7 +230,7 @@ static int cfg_init(char *cfg_file)
 
         ret = config_setting_lookup_int(subsetting, "node", &node);
         if (unlikely(ret == CONFIG_FALSE)) {
-            printf("Set default node as 0.\n");
+            log_info("Set default node as 0.");
             node = 0;
         }
 
@@ -309,20 +309,20 @@ static int cfg_init(char *cfg_file)
 
     char local_hostname[HOST_NAME_MAX];
     if (gethostname(local_hostname, sizeof(local_hostname)) == -1) {
-        perror("gethostname failed");
-        return 1;
+        log_error("gethostname() failed");
+        goto error_1;
     }
     int is_hostname_matched = -1;
 
     setting = config_lookup(&config, "nodes");
     if (unlikely(setting == NULL)) {
-        printf("Nodes configuration is missing.\n");
+        log_warn("Nodes configuration is missing.");
         goto error_2;
     }
 
     ret = config_setting_is_list(setting);
     if (unlikely(ret == CONFIG_FALSE)) {
-        printf("Nodes configuration is missing.\n");
+        log_warn("Nodes configuration is missing.");
         goto error_2;
     }
 
@@ -332,25 +332,25 @@ static int cfg_init(char *cfg_file)
     for (i = 0; i < n; i++) {
         subsetting = config_setting_get_elem(setting, i);
         if (unlikely(subsetting == NULL)) {
-            printf("Node configuration is missing.\n");
+            log_warn("Node configuration is missing.");
             goto error_2;
         }
 
         ret = config_setting_is_group(subsetting);
         if (unlikely(ret == CONFIG_FALSE)) {
-            printf("Node configuration is missing.\n");
+            log_warn("Node configuration is missing.");
             goto error_2;
         }
 
         ret = config_setting_lookup_int(subsetting, "id", &id);
         if (unlikely(ret == CONFIG_FALSE)) {
-            printf("Node ID is missing.\n");
+            log_warn("Node ID is missing.");
             goto error_2;
         }
 
         ret = config_setting_lookup_string(subsetting, "hostname", &hostname);
         if (unlikely(ret == CONFIG_FALSE)) {
-            printf("Node hostname is missing.\n");
+            log_warn("Node hostname is missing.");
             goto error_2;
         }
 
@@ -360,14 +360,14 @@ static int cfg_init(char *cfg_file)
         if (strcmp(local_hostname, cfg->nodes[id].hostname) == 0) {
             cfg->local_node_idx = i;
             is_hostname_matched = 1;
-            printf("Hostnames match: %s, node index: %u\n", local_hostname, i);
+            log_info("Hostnames match: %s, node index: %u", local_hostname, i);
         } else {
-            printf("Hostnames do not match. Got: %s, Expected: %s\n", local_hostname, hostname);
+            log_debug("Hostnames do not match. Got: %s, Expected: %s", local_hostname, hostname);
         }
 
         ret = config_setting_lookup_string(subsetting, "ip_address", &ip_address);
         if (unlikely(ret == CONFIG_FALSE)) {
-            printf("Node ip_address is missing.\n");
+            log_warn("Node ip_address is missing.");
             goto error_2;
         }
 
@@ -375,7 +375,7 @@ static int cfg_init(char *cfg_file)
 
         ret = config_setting_lookup_int(subsetting, "port", &port);
         if (unlikely(ret == CONFIG_FALSE)) {
-            printf("Node port is missing.\n");
+            log_warn("Node port is missing.");
             goto error_2;
         }
 
@@ -383,7 +383,7 @@ static int cfg_init(char *cfg_file)
     }
 
     if (is_hostname_matched == -1) {
-        log_fatal("No matched hostname in %s", cfg_file);
+        log_error("No matched hostname in %s", cfg_file);
         goto error_1;
     }
 
@@ -417,7 +417,7 @@ static int shm_mgr(char *cfg_file)
     memzone = rte_memzone_reserve(MEMZONE_NAME, sizeof(*cfg),
                                   rte_socket_id(), 0);
     if (unlikely(memzone == NULL)) {
-        fprintf(stderr, "rte_memzone_reserve() error: %s\n",
+        log_error("rte_memzone_reserve() error: %s",
                 rte_strerror(rte_errno));
         goto error_0;
     }
@@ -428,13 +428,13 @@ static int shm_mgr(char *cfg_file)
 
     ret = cfg_init(cfg_file);
     if (unlikely(ret == -1)) {
-        fprintf(stderr, "cfg_init() error\n");
+        log_error("cfg_init() error");
         goto error_1;
     }
 
     ret = io_init();
     if (unlikely(ret == -1)) {
-        fprintf(stderr, "io_init() error\n");
+        log_error("io_init() error");
         goto error_2;
     }
 
@@ -445,19 +445,19 @@ static int shm_mgr(char *cfg_file)
 
     ret = io_exit();
     if (unlikely(ret == -1)) {
-        fprintf(stderr, "io_exit() error\n");
+        log_error("io_exit() error");
         goto error_2;
     }
 
     ret = cfg_exit();
     if (unlikely(ret == -1)) {
-        fprintf(stderr, "cfg_exit() error\n");
+        log_error("cfg_exit() error");
         goto error_1;
     }
 
     ret = rte_memzone_free(memzone);
     if (unlikely(ret < 0)) {
-        fprintf(stderr, "rte_memzone_free() error: %s\n",
+        log_error("rte_memzone_free() error: %s",
                 rte_strerror(-ret));
         goto error_0;
     }
@@ -478,7 +478,7 @@ int main(int argc, char **argv)
 
     ret = rte_eal_init(argc, argv);
     if (unlikely(ret == -1)) {
-        fprintf(stderr, "rte_eal_init() error: %s\n",
+        log_error("rte_eal_init() error: %s",
                 rte_strerror(rte_errno));
         goto error_0;
     }
@@ -487,19 +487,19 @@ int main(int argc, char **argv)
     argv += ret;
 
     if (unlikely(argc == 1)) {
-        fprintf(stderr, "Configuration file not provided\n");
+        log_error("Configuration file not provided");
         goto error_1;
     }
 
     ret = shm_mgr(argv[1]);
     if (unlikely(ret == -1)) {
-        fprintf(stderr, "shm_mgr() error\n");
+        log_error("shm_mgr() error");
         goto error_1;
     }
 
     ret = rte_eal_cleanup();
     if (unlikely(ret < 0)) {
-        fprintf(stderr, "rte_eal_cleanup() error: %s\n",
+        log_error("rte_eal_cleanup() error: %s",
                 rte_strerror(-ret));
         goto error_0;
     }

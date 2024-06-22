@@ -64,7 +64,7 @@ static Ad getAdsByCategory(char contextKey[]) {
         Ad ad = {"/product/6E92ZMYYFZ", "Mug for sale. Buy two, get third one for free"};
         return ad;
     } else {
-        printf("No Ad found.\n");
+        log_info("No Ad found.");
         Ad ad = {"", ""};
         return ad;
     }
@@ -95,13 +95,13 @@ static Ad getRandomAds() {
             Ad ad = {"/product/6E92ZMYYFZ", "Mug for sale. Buy two, get third one for free"};
             return ad;
         } else {
-            printf("No Ad found.\n");
+            log_info("No Ad found.");
             Ad ad = {"", ""};
             return ad;
         }
     }
 
-    printf("No Ad found.\n");
+    log_info("No Ad found.");
     Ad ad = {"", ""};
     return ad;
 }
@@ -113,22 +113,22 @@ static AdRequest* GetContextKeys(struct http_transaction *in) {
 static void PrintContextKeys(AdRequest* ad_request) {
     int i;
     for(i = 0; i < ad_request->num_context_keys; i++) {
-        printf("context_word[%d]=%s\t\t", i + 1, ad_request->ContextKeys[i]);
+        log_info("context_word[%d]=%s\t\t", i + 1, ad_request->ContextKeys[i]);
     }
     printf("\n");
 }
 
 static void PrintAdResponse(struct http_transaction *in) {
     int i;
-    printf("Ads in AdResponse:\n");
+    log_info("Ads in AdResponse:");
     for(i = 0; i < in->ad_response.num_ads; i++) {
-        printf("Ad[%d] RedirectUrl: %s\tText: %s\n", i + 1, in->ad_response.Ads[i].RedirectUrl, in->ad_response.Ads[i].Text);
+        log_info("Ad[%d] RedirectUrl: %s\tText: %s", i + 1, in->ad_response.Ads[i].RedirectUrl, in->ad_response.Ads[i].Text);
     }
     printf("\n");
 }
 
 static void GetAds(struct http_transaction *in) {
-    printf("[GetAds] received ad request\n");
+    log_info("[GetAds] received ad request");
 
     AdRequest* ad_request = GetContextKeys(in);
     PrintContextKeys(ad_request);
@@ -136,10 +136,10 @@ static void GetAds(struct http_transaction *in) {
 
     // []*pb.Ad allAds;
     if (ad_request->num_context_keys > 0) {
-        printf("Constructing Ads using received context.\n");
+        log_info("Constructing Ads using received context.");
         int i;
         for(i = 0; i < ad_request->num_context_keys; i++) {
-            printf("context_word[%d]=%s\n", i + 1, ad_request->ContextKeys[i]);
+            log_info("context_word[%d]=%s", i + 1, ad_request->ContextKeys[i]);
             Ad ad = getAdsByCategory(ad_request->ContextKeys[i]);
 
             strcpy(in->ad_response.Ads[i].RedirectUrl, ad.RedirectUrl);
@@ -147,7 +147,7 @@ static void GetAds(struct http_transaction *in) {
             in->ad_response.num_ads++;
         }
     } else {
-        printf("No Context provided. Constructing random Ads.\n");
+        log_info("No Context provided. Constructing random Ads.");
         Ad ad = getRandomAds();
         
         strcpy(in->ad_response.Ads[0].RedirectUrl, ad.RedirectUrl);
@@ -156,7 +156,7 @@ static void GetAds(struct http_transaction *in) {
     }
 
     if (in->ad_response.num_ads == 0) {
-        printf("No Ads found based on context. Constructing random Ads.\n");
+        log_info("No Ads found based on context. Constructing random Ads.");
         Ad ad = getRandomAds();
 
         strcpy(in->ad_response.Ads[0].RedirectUrl, ad.RedirectUrl);
@@ -164,7 +164,7 @@ static void GetAds(struct http_transaction *in) {
         in->ad_response.num_ads++;
     }
 
-    printf("[GetAds] completed request\n");
+    log_info("[GetAds] completed request");
 }
 
 static void MockAdRequest(struct http_transaction *in) {
@@ -184,7 +184,6 @@ static void *nf_worker(void *arg)
     ssize_t bytes_written;
     ssize_t bytes_read;
     uint8_t index;
-    // int ret;
 
     /* TODO: Careful with this pointer as it may point to a stack */
     index = (uint64_t)arg;
@@ -193,15 +192,15 @@ static void *nf_worker(void *arg)
         bytes_read = read(pipefd_rx[index][0], &txn,
                           sizeof(struct http_transaction *));
         if (unlikely(bytes_read == -1)) {
-            fprintf(stderr, "read() error: %s\n", strerror(errno));
+            log_error("read() error: %s", strerror(errno));
             return NULL;
         }
 
         if (strcmp(txn->rpc_handler, "GetAds") == 0) {
             GetAds(txn);
         } else {
-            printf("%s() is not supported\n", txn->rpc_handler);
-            printf("\t\t#### Run Mock Test ####\n");
+            log_warn("%s() is not supported", txn->rpc_handler);
+            log_info("\t\t#### Run Mock Test ####");
             MockAdRequest(txn);
             GetAds(txn);
             PrintAdResponse(txn);
@@ -213,7 +212,7 @@ static void *nf_worker(void *arg)
         bytes_written = write(pipefd_tx[index][1], &txn,
                               sizeof(struct http_transaction *));
         if (unlikely(bytes_written == -1)) {
-            fprintf(stderr, "write() error: %s\n", strerror(errno));
+            log_error("write() error: %s", strerror(errno));
             return NULL;
         }
     }
@@ -231,14 +230,14 @@ static void *nf_rx(void *arg)
     for (i = 0; ; i = (i + 1) % cfg->nf[fn_id - 1].n_threads) {
         ret = io_rx((void **)&txn);
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "io_rx() error\n");
+            log_error("io_rx() error");
             return NULL;
         }
 
         bytes_written = write(pipefd_rx[i][1], &txn,
                               sizeof(struct http_transaction *));
         if (unlikely(bytes_written == -1)) {
-            fprintf(stderr, "write() error: %s\n", strerror(errno));
+            log_error("write() error: %s", strerror(errno));
             return NULL;
         }
     }
@@ -258,14 +257,14 @@ static void *nf_tx(void *arg)
 
     epfd = epoll_create1(0);
     if (unlikely(epfd == -1)) {
-        fprintf(stderr, "epoll_create1() error: %s\n", strerror(errno));
+        log_error("epoll_create1() error: %s", strerror(errno));
         return NULL;
     }
 
     for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
         ret = fcntl(pipefd_tx[i][0], F_SETFL, O_NONBLOCK);
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "fcntl() error: %s\n", strerror(errno));
+            log_error("fcntl() error: %s", strerror(errno));
             return NULL;
         }
 
@@ -275,7 +274,7 @@ static void *nf_tx(void *arg)
         ret = epoll_ctl(epfd, EPOLL_CTL_ADD, pipefd_tx[i][0],
                         &event[0]);
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "epoll_ctl() error: %s\n",
+            log_error("epoll_ctl() error: %s",
                     strerror(errno));
             return NULL;
         }
@@ -285,7 +284,7 @@ static void *nf_tx(void *arg)
         n_fds = epoll_wait(epfd, event, cfg->nf[fn_id - 1].n_threads,
                            -1);
         if (unlikely(n_fds == -1)) {
-            fprintf(stderr, "epoll_wait() error: %s\n",
+            log_error("epoll_wait() error: %s",
                     strerror(errno));
             return NULL;
         }
@@ -294,14 +293,14 @@ static void *nf_tx(void *arg)
             bytes_read = read(event[i].data.fd, &txn,
                               sizeof(struct http_transaction *));
             if (unlikely(bytes_read == -1)) {
-                fprintf(stderr, "read() error: %s\n",
+                log_error("read() error: %s",
                         strerror(errno));
                 return NULL;
             }
 
             ret = io_tx(txn, txn->next_fn);
             if (unlikely(ret == -1)) {
-                fprintf(stderr, "io_tx() error\n");
+                log_error("io_tx() error");
                 return NULL;
             }
         }
@@ -324,7 +323,7 @@ static int nf(uint8_t nf_id)
 
     memzone = rte_memzone_lookup(MEMZONE_NAME);
     if (unlikely(memzone == NULL)) {
-        fprintf(stderr, "rte_memzone_lookup() error\n");
+        log_error("rte_memzone_lookup() error");
         return -1;
     }
 
@@ -332,33 +331,33 @@ static int nf(uint8_t nf_id)
 
     ret = io_init();
     if (unlikely(ret == -1)) {
-        fprintf(stderr, "io_init() error\n");
+        log_error("io_init() error");
         return -1;
     }
 
     for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
         ret = pipe(pipefd_rx[i]);
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "pipe() error: %s\n", strerror(errno));
+            log_error("pipe() error: %s", strerror(errno));
             return -1;
         }
 
         ret = pipe(pipefd_tx[i]);
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "pipe() error: %s\n", strerror(errno));
+            log_error("pipe() error: %s", strerror(errno));
             return -1;
         }
     }
 
     ret = pthread_create(&thread_rx, NULL, &nf_rx, NULL);
     if (unlikely(ret != 0)) {
-        fprintf(stderr, "pthread_create() error: %s\n", strerror(ret));
+        log_error("pthread_create() error: %s", strerror(ret));
         return -1;
     }
 
     ret = pthread_create(&thread_tx, NULL, &nf_tx, NULL);
     if (unlikely(ret != 0)) {
-        fprintf(stderr, "pthread_create() error: %s\n", strerror(ret));
+        log_error("pthread_create() error: %s", strerror(ret));
         return -1;
     }
 
@@ -366,7 +365,7 @@ static int nf(uint8_t nf_id)
         ret = pthread_create(&thread_worker[i], NULL, &nf_worker,
                              (void *)(uint64_t)i);
         if (unlikely(ret != 0)) {
-            fprintf(stderr, "pthread_create() error: %s\n",
+            log_error("pthread_create() error: %s",
                     strerror(ret));
             return -1;
         }
@@ -375,7 +374,7 @@ static int nf(uint8_t nf_id)
     for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
         ret = pthread_join(thread_worker[i], NULL);
         if (unlikely(ret != 0)) {
-            fprintf(stderr, "pthread_join() error: %s\n",
+            log_error("pthread_join() error: %s",
                     strerror(ret));
             return -1;
         }
@@ -383,45 +382,45 @@ static int nf(uint8_t nf_id)
 
     ret = pthread_join(thread_rx, NULL);
     if (unlikely(ret != 0)) {
-        fprintf(stderr, "pthread_join() error: %s\n", strerror(ret));
+        log_error("pthread_join() error: %s", strerror(ret));
         return -1;
     }
 
     ret = pthread_join(thread_tx, NULL);
     if (unlikely(ret != 0)) {
-        fprintf(stderr, "pthread_join() error: %s\n", strerror(ret));
+        log_error("pthread_join() error: %s", strerror(ret));
         return -1;
     }
 
     for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
         ret = close(pipefd_rx[i][0]);
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "close() error: %s\n", strerror(errno));
+            log_error("close() error: %s", strerror(errno));
             return -1;
         }
 
         ret = close(pipefd_rx[i][1]);
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "close() error: %s\n", strerror(errno));
+            log_error("close() error: %s", strerror(errno));
             return -1;
         }
 
         ret = close(pipefd_tx[i][0]);
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "close() error: %s\n", strerror(errno));
+            log_error("close() error: %s", strerror(errno));
             return -1;
         }
 
         ret = close(pipefd_tx[i][1]);
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "close() error: %s\n", strerror(errno));
+            log_error("close() error: %s", strerror(errno));
             return -1;
         }
     }
 
     ret = io_exit();
     if (unlikely(ret == -1)) {
-        fprintf(stderr, "io_exit() error\n");
+        log_error("io_exit() error");
         return -1;
     }
 
@@ -435,7 +434,7 @@ int main(int argc, char **argv)
 
     ret = rte_eal_init(argc, argv);
     if (unlikely(ret == -1)) {
-        fprintf(stderr, "rte_eal_init() error: %s\n",
+        log_error("rte_eal_init() error: %s",
                 rte_strerror(rte_errno));
         goto error_0;
     }
@@ -444,26 +443,26 @@ int main(int argc, char **argv)
     argv += ret;
 
     if (unlikely(argc == 1)) {
-        fprintf(stderr, "Network Function ID not provided\n");
+        log_error("Network Function ID not provided");
         goto error_1;
     }
 
     errno = 0;
     nf_id = strtol(argv[1], NULL, 10);
     if (unlikely(errno != 0 || nf_id < 1)) {
-        fprintf(stderr, "Invalid value for Network Function ID\n");
+        log_error("Invalid value for Network Function ID");
         goto error_1;
     }
 
     ret = nf(nf_id);
     if (unlikely(ret == -1)) {
-        fprintf(stderr, "nf() error\n");
+        log_error("nf() error");
         goto error_1;
     }
 
     ret = rte_eal_cleanup();
     if (unlikely(ret < 0)) {
-        fprintf(stderr, "rte_eal_cleanup() error: %s\n",
+        log_error("rte_eal_cleanup() error: %s",
                 rte_strerror(-ret));
         goto error_0;
     }

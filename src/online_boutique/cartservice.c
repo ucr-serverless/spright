@@ -48,18 +48,18 @@ static int compare_e(void* left, void* right ) {
 struct clib_map* LocalCartStore;
 
 static void PrintUserCart(Cart *cart) {
-    printf("Cart for user %s: \n", cart->UserId);
-    printf("## %d items in the cart: ", cart->num_items);
+    log_info("Cart for user %s: ", cart->UserId);
+    log_info("## %d items in the cart: ", cart->num_items);
     int i;
     for (i = 0; i < cart->num_items; i++) {
-        printf("\t%d. ProductId: %s \tQuantity: %d\n", i + 1, cart->Items[i].ProductId, cart->Items[i].Quantity);
+        log_info("\t%d. ProductId: %s \tQuantity: %d", i + 1, cart->Items[i].ProductId, cart->Items[i].Quantity);
     }
     printf("\n");
     return;
 }
 
 static void PrintLocalCartStore() {
-    printf("\t\t #### PrintLocalCartStore ####\n");
+    log_info("\t\t #### PrintLocalCartStore ####");
 
     struct clib_iterator *myItr;
     struct clib_object *pElement;
@@ -77,7 +77,7 @@ static void PrintLocalCartStore() {
 }
 
 static void AddItemAsync(char *userId, char *productId, int32_t quantity) {
-    printf("AddItemAsync called with userId=%s, productId=%s, quantity=%d\n", userId, productId, quantity);
+    log_info("AddItemAsync called with userId=%s, productId=%s, quantity=%d", userId, productId, quantity);
 
     Cart newCart = {
         .UserId = "",
@@ -94,20 +94,20 @@ static void AddItemAsync(char *userId, char *productId, int32_t quantity) {
 
     void* cart;
     if (clib_true != find_c_map(LocalCartStore, userId, &cart)) {
-        printf("Add new carts for user %s\n", userId);
+        log_info("Add new carts for user %s", userId);
         char *key = clib_strdup(userId);
         int key_length = (int)strlen(key) + 1;
         newCart.num_items = 1;
-        printf("Inserting [%s -> %s]\n", key, newCart.UserId);
+        log_info("Inserting [%s -> %s]", key, newCart.UserId);
         insert_c_map(LocalCartStore, key, key_length, &newCart, sizeof(Cart));
         free(key);
     } else {
-        printf("Found carts for user %s\n", userId);
+        log_info("Found carts for user %s", userId);
         int cnt = 0;
         int i;
         for (i = 0; i < ((Cart*)cart)->num_items; i++) {
             if (strcmp(((Cart*)cart)->Items[i].ProductId, productId) == 0) { // If the item exists, we update its quantity
-                printf("Update carts for user %s - the item exists, we update its quantity\n", userId);
+                log_info("Update carts for user %s - the item exists, we update its quantity", userId);
                 ((Cart*)cart)->Items[i].Quantity++;
             } else {
                 cnt++;
@@ -115,7 +115,7 @@ static void AddItemAsync(char *userId, char *productId, int32_t quantity) {
         }
 
         if (cnt == ((Cart*)cart)->num_items) { // The item doesn't exist, we update it into DB
-            printf("Update carts for user %s - The item doesn't exist, we update it into DB\n", userId);
+            log_info("Update carts for user %s - The item doesn't exist, we update it into DB", userId);
             ((Cart*)cart)->num_items++;
             strcpy(((Cart*)cart)->Items[((Cart*)cart)->num_items].ProductId, productId);
             ((Cart*)cart)->Items[((Cart*)cart)->num_items].Quantity = quantity;
@@ -133,7 +133,7 @@ static void MockAddItemRequest(struct http_transaction *txn) {
 }
 
 static void AddItem(struct http_transaction *txn) {
-    printf("[AddItem] received request\n");
+    log_info("[AddItem] received request");
 
     AddItemRequest *in = &txn->add_item_request;
     AddItemAsync(in->UserId, in->Item.ProductId, in->Item.Quantity);
@@ -143,11 +143,11 @@ static void AddItem(struct http_transaction *txn) {
 static void GetCartAsync(struct http_transaction *txn) {
     GetCartRequest *in = &txn->get_cart_request;
     Cart *out = &txn->get_cart_response;
-    printf("[GetCart] GetCartAsync called with userId=%s\n", in->UserId);
+    log_info("[GetCart] GetCartAsync called with userId=%s", in->UserId);
 
     void *cart;
     if (clib_true != find_c_map(LocalCartStore, in->UserId, &cart)) {
-        printf("No carts for user %s\n", in->UserId);
+        log_info("No carts for user %s", in->UserId);
         out->num_items = 0;
         return;
     } else {
@@ -168,12 +168,12 @@ static void MockGetCartRequest(struct http_transaction *txn) {
 }
 
 static void PrintGetCartResponse(struct http_transaction *txn) {
-    printf("\t\t#### PrintGetCartResponse ####\n");
+    log_info("\t\t#### PrintGetCartResponse ####");
     Cart *out = &txn->get_cart_response;
-    printf("Cart for user %s: \n", out->UserId);
+    log_info("Cart for user %s: ", out->UserId);
     int i;
     for (i = 0; i < out->num_items; i++) {
-        printf("\t%d. ProductId: %s \tQuantity: %d\n", i + 1, out->Items[i].ProductId, out->Items[i].Quantity);
+        log_info("\t%d. ProductId: %s \tQuantity: %d", i + 1, out->Items[i].ProductId, out->Items[i].Quantity);
     }
     printf("\n");
     return;
@@ -181,17 +181,17 @@ static void PrintGetCartResponse(struct http_transaction *txn) {
 
 static void EmptyCartAsync(struct http_transaction *txn) {
     EmptyCartRequest *in = &txn->empty_cart_request;
-    printf("EmptyCartAsync called with userId=%s\n", in->UserId);
+    log_info("EmptyCartAsync called with userId=%s", in->UserId);
 
     void *cart;
     if (clib_true != find_c_map(LocalCartStore, in->UserId, &cart)) {
-        printf("No carts for user %s\n", in->UserId);
+        log_info("No carts for user %s", in->UserId);
         // out->num_items = -1;
         return;
     } else {
         int i;
         for (i = 0; i < ((Cart*)cart)->num_items; i++) {
-            printf("Clean up item %d\n", i + 1);
+            log_info("Clean up item %d", i + 1);
             strcpy((*((Cart**)(&cart)))->Items[i].ProductId, "");
             ((*((Cart**)(&cart))))->Items[i].Quantity = 0;
         }
@@ -201,7 +201,7 @@ static void EmptyCartAsync(struct http_transaction *txn) {
 }
 
 static void EmptyCart(struct http_transaction *txn) {
-    printf("[EmptyCart] received request\n");
+    log_info("[EmptyCart] received request");
     EmptyCartAsync(txn);
     return;
 }
@@ -225,7 +225,7 @@ static void *nf_worker(void *arg)
         bytes_read = read(pipefd_rx[index][0], &txn,
                           sizeof(struct http_transaction *));
         if (unlikely(bytes_read == -1)) {
-            fprintf(stderr, "read() error: %s\n", strerror(errno));
+            log_error("read() error: %s", strerror(errno));
             return NULL;
         }
 
@@ -236,8 +236,8 @@ static void *nf_worker(void *arg)
         } else if (strcmp(txn->rpc_handler, "EmptyCart") == 0) {
             EmptyCart(txn);
         } else {
-            printf("%s() is not supported\n", txn->rpc_handler);
-            printf("\t\t#### Run Mock Test ####\n");
+            log_info("%s() is not supported", txn->rpc_handler);
+            log_info("\t\t#### Run Mock Test ####");
             MockAddItemRequest(txn);
             AddItem(txn);
             PrintLocalCartStore();
@@ -257,7 +257,7 @@ static void *nf_worker(void *arg)
         bytes_written = write(pipefd_tx[index][1], &txn,
                               sizeof(struct http_transaction *));
         if (unlikely(bytes_written == -1)) {
-            fprintf(stderr, "write() error: %s\n", strerror(errno));
+            log_error("write() error: %s", strerror(errno));
             return NULL;
         }
     }
@@ -275,14 +275,14 @@ static void *nf_rx(void *arg)
     for (i = 0; ; i = (i + 1) % cfg->nf[fn_id - 1].n_threads) {
         ret = io_rx((void **)&txn);
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "io_rx() error\n");
+            log_error("io_rx() error");
             return NULL;
         }
 
         bytes_written = write(pipefd_rx[i][1], &txn,
                               sizeof(struct http_transaction *));
         if (unlikely(bytes_written == -1)) {
-            fprintf(stderr, "write() error: %s\n", strerror(errno));
+            log_error("write() error: %s", strerror(errno));
             return NULL;
         }
     }
@@ -303,14 +303,14 @@ static void *nf_tx(void *arg)
 
     epfd = epoll_create1(0);
     if (unlikely(epfd == -1)) {
-        fprintf(stderr, "epoll_create1() error: %s\n", strerror(errno));
+        log_error("epoll_create1() error: %s", strerror(errno));
         return NULL;
     }
 
     for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
         ret = fcntl(pipefd_tx[i][0], F_SETFL, O_NONBLOCK);
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "fcntl() error: %s\n", strerror(errno));
+            log_error("fcntl() error: %s", strerror(errno));
             return NULL;
         }
 
@@ -320,7 +320,7 @@ static void *nf_tx(void *arg)
         ret = epoll_ctl(epfd, EPOLL_CTL_ADD, pipefd_tx[i][0],
                         &event[0]);
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "epoll_ctl() error: %s\n",
+            log_error("epoll_ctl() error: %s",
                     strerror(errno));
             return NULL;
         }
@@ -330,7 +330,7 @@ static void *nf_tx(void *arg)
         n_fds = epoll_wait(epfd, event, cfg->nf[fn_id - 1].n_threads,
                            -1);
         if (unlikely(n_fds == -1)) {
-            fprintf(stderr, "epoll_wait() error: %s\n",
+            log_error("epoll_wait() error: %s",
                     strerror(errno));
             return NULL;
         }
@@ -339,7 +339,7 @@ static void *nf_tx(void *arg)
             bytes_read = read(event[i].data.fd, &txn,
                               sizeof(struct http_transaction *));
             if (unlikely(bytes_read == -1)) {
-                fprintf(stderr, "read() error: %s\n",
+                log_error("read() error: %s",
                         strerror(errno));
                 return NULL;
             }
@@ -356,7 +356,7 @@ static void *nf_tx(void *arg)
 
             ret = io_tx(txn, txn->next_fn);
             if (unlikely(ret == -1)) {
-                fprintf(stderr, "io_tx() error\n");
+                log_error("io_tx() error");
                 return NULL;
             }
         }
@@ -379,7 +379,7 @@ static int nf(uint8_t nf_id)
 
     memzone = rte_memzone_lookup(MEMZONE_NAME);
     if (unlikely(memzone == NULL)) {
-        fprintf(stderr, "rte_memzone_lookup() error\n");
+        log_error("rte_memzone_lookup() error");
         return -1;
     }
 
@@ -387,33 +387,33 @@ static int nf(uint8_t nf_id)
 
     ret = io_init();
     if (unlikely(ret == -1)) {
-        fprintf(stderr, "io_init() error\n");
+        log_error("io_init() error");
         return -1;
     }
 
     for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
         ret = pipe(pipefd_rx[i]);
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "pipe() error: %s\n", strerror(errno));
+            log_error("pipe() error: %s", strerror(errno));
             return -1;
         }
 
         ret = pipe(pipefd_tx[i]);
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "pipe() error: %s\n", strerror(errno));
+            log_error("pipe() error: %s", strerror(errno));
             return -1;
         }
     }
 
     ret = pthread_create(&thread_rx, NULL, &nf_rx, NULL);
     if (unlikely(ret != 0)) {
-        fprintf(stderr, "pthread_create() error: %s\n", strerror(ret));
+        log_error("pthread_create() error: %s", strerror(ret));
         return -1;
     }
 
     ret = pthread_create(&thread_tx, NULL, &nf_tx, NULL);
     if (unlikely(ret != 0)) {
-        fprintf(stderr, "pthread_create() error: %s\n", strerror(ret));
+        log_error("pthread_create() error: %s", strerror(ret));
         return -1;
     }
 
@@ -421,7 +421,7 @@ static int nf(uint8_t nf_id)
         ret = pthread_create(&thread_worker[i], NULL, &nf_worker,
                              (void *)(uint64_t)i);
         if (unlikely(ret != 0)) {
-            fprintf(stderr, "pthread_create() error: %s\n",
+            log_error("pthread_create() error: %s",
                     strerror(ret));
             return -1;
         }
@@ -430,7 +430,7 @@ static int nf(uint8_t nf_id)
     for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
         ret = pthread_join(thread_worker[i], NULL);
         if (unlikely(ret != 0)) {
-            fprintf(stderr, "pthread_join() error: %s\n",
+            log_error("pthread_join() error: %s",
                     strerror(ret));
             return -1;
         }
@@ -438,45 +438,45 @@ static int nf(uint8_t nf_id)
 
     ret = pthread_join(thread_rx, NULL);
     if (unlikely(ret != 0)) {
-        fprintf(stderr, "pthread_join() error: %s\n", strerror(ret));
+        log_error("pthread_join() error: %s", strerror(ret));
         return -1;
     }
 
     ret = pthread_join(thread_tx, NULL);
     if (unlikely(ret != 0)) {
-        fprintf(stderr, "pthread_join() error: %s\n", strerror(ret));
+        log_error("pthread_join() error: %s", strerror(ret));
         return -1;
     }
 
     for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
         ret = close(pipefd_rx[i][0]);
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "close() error: %s\n", strerror(errno));
+            log_error("close() error: %s", strerror(errno));
             return -1;
         }
 
         ret = close(pipefd_rx[i][1]);
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "close() error: %s\n", strerror(errno));
+            log_error("close() error: %s", strerror(errno));
             return -1;
         }
 
         ret = close(pipefd_tx[i][0]);
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "close() error: %s\n", strerror(errno));
+            log_error("close() error: %s", strerror(errno));
             return -1;
         }
 
         ret = close(pipefd_tx[i][1]);
         if (unlikely(ret == -1)) {
-            fprintf(stderr, "close() error: %s\n", strerror(errno));
+            log_error("close() error: %s", strerror(errno));
             return -1;
         }
     }
 
     ret = io_exit();
     if (unlikely(ret == -1)) {
-        fprintf(stderr, "io_exit() error\n");
+        log_error("io_exit() error");
         return -1;
     }
 
@@ -490,7 +490,7 @@ int main(int argc, char **argv)
 
     ret = rte_eal_init(argc, argv);
     if (unlikely(ret == -1)) {
-        fprintf(stderr, "rte_eal_init() error: %s\n",
+        log_error("rte_eal_init() error: %s",
                 rte_strerror(rte_errno));
         goto error_0;
     }
@@ -499,27 +499,27 @@ int main(int argc, char **argv)
     argv += ret;
 
     if (unlikely(argc == 1)) {
-        fprintf(stderr, "Network Function ID not provided\n");
+        log_error("Network Function ID not provided");
         goto error_1;
     }
 
     errno = 0;
     nf_id = strtol(argv[1], NULL, 10);
     if (unlikely(errno != 0 || nf_id < 1)) {
-        fprintf(stderr, "Invalid value for Network Function ID\n");
+        log_error("Invalid value for Network Function ID");
         goto error_1;
     }
 
     LocalCartStore = new_c_map(compare_e, NULL, NULL);
     ret = nf(nf_id);
     if (unlikely(ret == -1)) {
-        fprintf(stderr, "nf() error\n");
+        log_error("nf() error");
         goto error_1;
     }
 
     ret = rte_eal_cleanup();
     if (unlikely(ret < 0)) {
-        fprintf(stderr, "rte_eal_cleanup() error: %s\n",
+        log_error("rte_eal_cleanup() error: %s",
                 rte_strerror(-ret));
         goto error_0;
     }

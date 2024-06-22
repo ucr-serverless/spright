@@ -23,6 +23,8 @@
 
 #include <rte_mempool.h>
 
+#include "log.h"
+
 #define MEMZONE_NAME "SPRIGHT_MEMZONE"
 #define ROUTING_TABLE_SIZE 256
 #define HOSTNAME_MAX 256
