@@ -23,3 +23,6 @@ requirements.lock
 
 # Object and binary from SPRIGHT
 ebpf/*.o
+
+# cfg backup files
+cfg/*.bak
