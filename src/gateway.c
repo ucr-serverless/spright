@@ -531,6 +531,10 @@ static int conn_read(int sockfd)
 
     txn->sockfd = sockfd;
 
+    // TODO: parse tenant ID from HTTP request,
+    // use "0" as the default tenant ID for now.
+    txn->tenant_id = 0;
+
     string = strstr(txn->request, "/");
     if (unlikely(string == NULL)) {
         txn->route_id = 0;
