@@ -34,7 +34,7 @@ CLANG = clang
 CLANGFLAGS = -g -O2
 BPF_FLAGS = -target bpf
 
-COMMON_OBJS = src/log/log.o src/utility.o src/timer.o
+COMMON_OBJS = src/log/log.o src/utility.o src/timer.o src/io_helper.o
 
 .PHONY: all shm_mgr gateway nf clean
 

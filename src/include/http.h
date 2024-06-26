@@ -225,6 +225,8 @@ typedef struct _adresponse {
 } AdResponse;
 
 struct http_transaction {
+    uint32_t tenant_id;
+
     int sockfd;
     uint8_t route_id;
     uint8_t next_fn;

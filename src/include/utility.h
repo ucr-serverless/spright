@@ -68,7 +68,7 @@ char* httpQueryParser(char* req);
  * TODO: revisit the implementation for concurrent access
  */
 void set_node(uint8_t fn_id, uint8_t node_idx);
-uint8_t* get_node(uint8_t fn_id);
+uint8_t get_node(uint8_t fn_id);
 void delete_node(uint8_t fn_id);
 void print_ip_address(struct in_addr* ip);
 void print_rt_table();

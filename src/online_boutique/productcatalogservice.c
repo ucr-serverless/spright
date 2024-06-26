@@ -17,7 +17,6 @@
 */
 
 #include <errno.h>
-#include <fcntl.h>
 #include <math.h>
 #include <pthread.h>
 #include <stdint.h>
@@ -339,9 +338,8 @@ static void *nf_tx(void *arg)
     }
 
     for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
-        ret = fcntl(pipefd_tx[i][0], F_SETFL, O_NONBLOCK);
+        ret = set_nonblocking(pipefd_tx[i][0]);
         if (unlikely(ret == -1)) {
-            log_error("fcntl() error: %s", strerror(errno));
             return NULL;
         }
 

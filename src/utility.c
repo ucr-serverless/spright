@@ -23,8 +23,14 @@ void set_node(uint8_t fn_id, uint8_t node_idx) {
     cfg->inter_node_rt[fn_id] = node_idx;
 }
 
-uint8_t* get_node(uint8_t fn_id) {
-    return &cfg->inter_node_rt[fn_id];
+uint8_t get_node(uint8_t fn_id) {
+    uint8_t peer_node_idx = cfg->inter_node_rt[fn_id];
+    
+    log_debug("Destination function is %u on node %u (%s:%u).",
+        fn_id, peer_node_idx,
+        cfg->nodes[peer_node_idx].ip_address, INTERNAL_SERVER_PORT);
+
+    return peer_node_idx;
 }
 
 void delete_node(uint8_t fn_id) {

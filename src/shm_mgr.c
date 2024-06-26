@@ -47,6 +47,14 @@ static void cfg_print(void)
 
     printf("Name: %s\n", cfg->name);
 
+    printf("Number of Tenants: %d\n", cfg->n_tenants);
+    printf("Tenants:\n");
+    for (i = 0; i < cfg->n_tenants; i++) {
+        printf("\tID: %hhu\n", i);
+        printf("\tWeight: %d\n", cfg->tenants[i].weight);
+        printf("\n");
+    }
+
     printf("Number of NFs: %hhu\n", cfg->n_nfs);
     printf("NFs:\n");
     for (i = 0; i < cfg->n_nfs; i++) {
@@ -109,6 +117,7 @@ static int cfg_init(char *cfg_file)
     int j;
     int node;
     int port;
+    int weight;
 
     /* TODO: Change "flags" argument */
     cfg->mempool = rte_mempool_create(MEMPOOL_NAME, N_MEMPOOL_ELEMENTS,
@@ -380,6 +389,49 @@ static int cfg_init(char *cfg_file)
         }
 
         cfg->nodes[id].port = port;
+    }
+
+    setting = config_lookup(&config, "tenants");
+    if (unlikely(setting == NULL)) {
+        log_warn("Tenants configuration is missing.");
+        goto error_2;
+    }
+
+    ret = config_setting_is_list(setting);
+    if (unlikely(ret == CONFIG_FALSE)) {
+        log_warn("Tenants configuration is missing.");
+        goto error_2;
+    }
+
+    n = config_setting_length(setting);
+    cfg->n_tenants = n;
+
+    for (i = 0; i < n; i++) {
+        subsetting = config_setting_get_elem(setting, i);
+        if (unlikely(subsetting == NULL)) {
+            log_warn("Tenant-%d's configuration is missing.", i);
+            goto error_2;
+        }
+
+        ret = config_setting_is_group(subsetting);
+        if (unlikely(ret == CONFIG_FALSE)) {
+            log_warn("Tenant-%d's configuration is missing.", i);
+            goto error_2;
+        }
+
+        ret = config_setting_lookup_int(subsetting, "id", &id);
+        if (unlikely(ret == CONFIG_FALSE)) {
+            log_warn("Tenant-%d's ID is missing.", i);
+            goto error_2;
+        }
+
+        ret = config_setting_lookup_int(subsetting, "weight", &weight);
+        if (unlikely(ret == CONFIG_FALSE)) {
+            log_warn("Tenant-%d's weight is missing.", i);
+            goto error_2;
+        }
+
+        cfg->tenants[id].weight = weight;
     }
 
     if (is_hostname_matched == -1) {

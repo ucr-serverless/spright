@@ -24,10 +24,14 @@
 #include <rte_mempool.h>
 
 #include "log.h"
+#include "io.h"
 
 #define MEMZONE_NAME "SPRIGHT_MEMZONE"
 #define ROUTING_TABLE_SIZE 256
 #define HOSTNAME_MAX 256
+
+#define EXTERNAL_SERVER_PORT 8080
+#define INTERNAL_SERVER_PORT 8084
 
 int fn_id;
 
@@ -35,6 +39,11 @@ struct {
     struct rte_mempool *mempool;
 
     char name[64];
+
+    int n_tenants;
+    struct {
+        int weight;
+    } tenants[256];
 
     uint8_t n_nfs;
     struct {

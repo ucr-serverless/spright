@@ -39,12 +39,7 @@
 #include "utility.h"
 #include "timer.h"
 
-#define EXTERNAL_SERVER_PORT 8080
-#define INTERNAL_SERVER_PORT 8084
-
 #define BACKLOG (1U << 16)
-
-#define N_EVENTS_MAX (1U << 17)
 
 #define HTTP_RESPONSE "HTTP/1.1 200 OK\r\n" \
                       "Connection: close\r\n" \
@@ -152,33 +147,6 @@ static int get_client_info(int client_socket, char* ip_addr, int ip_addr_len) {
 #endif
 
     return client_port;
-}
-
-// Helper function to read exactly count bytes from fd into buf
-ssize_t read_full(int fd, void *buf, size_t count) {
-    size_t bytes_read = 0;
-    ssize_t result;
-
-    while (bytes_read < count) {
-        result = read(fd, (char *)buf + bytes_read, count - bytes_read);
-
-        if (result < 0) {
-            // Error occurred
-            if (errno == EINTR) {
-                // Interrupted by signal, continue reading
-                continue;
-            }
-            log_error("read() error: %s", strerror(errno));
-            return -1;
-        } else if (result == 0) {
-            // EOF reached
-            break;
-        }
-
-        bytes_read += result;
-    }
-
-    return bytes_read;
 }
 
 static int rpc_server_setup(int epfd) {
@@ -334,7 +302,10 @@ void* rpc_server_receive_thread(void* arg) {
     return NULL;
 }
 
-static int rpc_client_setup(char *server_ip, uint16_t server_port) {
+static int rpc_client_setup(char *server_ip, uint16_t server_port, uint8_t peer_node_idx) {
+    log_info("RPC client connects with node %u (%s:%u).", peer_node_idx,
+            cfg->nodes[peer_node_idx].ip_address, INTERNAL_SERVER_PORT);
+
     struct sockaddr_in server_addr;
     int sockfd;
     int ret;
@@ -372,6 +343,12 @@ static int rpc_client_setup(char *server_ip, uint16_t server_port) {
 }
 
 static int rpc_client_send(int peer_node_idx, struct http_transaction *txn) {
+    log_debug("Route id: %u, Hop Count %u, Next Hop: %u, Next Fn: %u, \
+        Caller Fn: %s (#%u), RPC Handler: %s()",
+        txn->route_id, txn->hop_count,
+        cfg->route[txn->route_id].hop[txn->hop_count],
+        txn->next_fn, txn->caller_nf, txn->caller_fn, txn->rpc_handler);
+
     ssize_t bytes_sent;
     int sockfd = peer_node_sockfds[peer_node_idx];
 
@@ -382,6 +359,8 @@ static int rpc_client_send(int peer_node_idx, struct http_transaction *txn) {
         log_error("send() error: %s", strerror(errno));
         return -1;
     }
+
+    log_debug("rpc_client_send is done.");
 
     return 0;
 }
@@ -400,6 +379,80 @@ static int rpc_client_send(int peer_node_idx, struct http_transaction *txn) {
 
 // 	return 0;
 // }
+
+void* rpc_client_thread(void* arg) {
+    int epoll_fd;
+    struct epoll_event ev, events[N_EVENTS_MAX];
+    int nfds;
+    int ret;
+
+    epoll_fd = epoll_create1(0);
+    if (epoll_fd == -1) {
+        perror("epoll_create1");
+        exit(EXIT_FAILURE);
+    }
+
+    ret = add_pipes_to_epoll(epoll_fd, &ev);
+    if (ret == -1) {
+        return NULL;
+    }
+
+    int gcd_weight = get_gcd_weight();
+    int max_weight = get_max_weight();
+    int current_index = -1;
+    int current_weight = max_weight;
+    struct http_transaction *txn = NULL;
+
+    while (1) {
+        nfds = epoll_wait(epoll_fd, events, N_EVENTS_MAX, -1);
+        if (nfds == -1) {
+            log_error("epoll_wait() error: %s", strerror(errno));
+            exit(EXIT_FAILURE);
+        }
+
+        for (int n = 0; n < nfds; n++) {
+            tenant_pipe* tp = (tenant_pipe*) events[n].data.ptr;
+
+            while (1) {
+                current_index = (current_index + 1) % cfg->n_tenants;
+                if (current_index == 0) {
+                    current_weight -= gcd_weight;
+                    if (current_weight <= 0) {
+                        current_weight = max_weight;
+                    }
+                }
+
+                if (tenant_pipes[current_index].weight >= current_weight) {
+                    txn = read_pipe(tp);
+                    if (txn == NULL) {
+                        close(tp->fd[0]);
+                        epoll_ctl(epoll_fd, EPOLL_CTL_DEL, tp->fd[0], NULL);
+                    }
+
+                    uint8_t peer_node_idx = get_node(txn->next_fn);
+
+                    if (peer_node_sockfds[peer_node_idx] == 0) {
+                        peer_node_sockfds[peer_node_idx] = rpc_client_setup(
+                                   cfg->nodes[peer_node_idx].ip_address,
+                                   INTERNAL_SERVER_PORT, peer_node_idx);
+                    } else if (peer_node_sockfds[peer_node_idx] < 0) {
+                        log_error("Invalid socket error.");
+                        return NULL;
+                    }
+
+                    ret = rpc_client_send(peer_node_idx, txn);
+
+                    rte_mempool_put(cfg->mempool, txn);
+
+                    break;
+                }
+            }
+        }
+    }
+
+    close(epoll_fd);
+    return NULL;
+}
 
 static int conn_accept(struct server_vars *sv)
 {
@@ -511,7 +564,7 @@ static int conn_write(int *sockfd)
     ssize_t bytes_sent;
     int ret;
 
-    log_debug("Waiting for the next write.", __func__);
+    log_debug("Waiting for the next write.");
 
     ret = io_rx((void **)&txn);
     if (unlikely(ret == -1)) {
@@ -521,33 +574,12 @@ static int conn_write(int *sockfd)
 
     // Inter-node Communication
     if (cfg->route[txn->route_id].hop[txn->hop_count] != fn_id) {
-        uint8_t *peer_node_idx = get_node(txn->next_fn);
-        log_debug("Destination function is %u on node %u (%s:%u).",
-                txn->next_fn, *peer_node_idx,
-                cfg->nodes[*peer_node_idx].ip_address, INTERNAL_SERVER_PORT);
-
-        if (peer_node_sockfds[*peer_node_idx] == 0) {
-            log_info("RPC client connects with node %u (%s:%u).",
-                *peer_node_idx, cfg->nodes[*peer_node_idx].ip_address,
-                INTERNAL_SERVER_PORT);
-            peer_node_sockfds[*peer_node_idx] = rpc_client_setup(
-                       cfg->nodes[*peer_node_idx].ip_address,
-                       INTERNAL_SERVER_PORT);
-        } else if (peer_node_sockfds[*peer_node_idx] < 0) {
-            log_error("Invalid socket error.");
+        log_debug("Enqueuing Tenant-%d's descriptor to weighted round robin queues.",
+                    txn->tenant_id);
+        ret = write_pipe(txn);
+        if (unlikely(ret == -1)) {
+            goto error_1;
         }
-
-        log_debug("Route id: %u, Hop Count %u, Next Hop: %u, Next Fn: %u, \
-            Caller Fn: %s (#%u), RPC Handler: %s()",
-            txn->route_id, txn->hop_count,
-            cfg->route[txn->route_id].hop[txn->hop_count],
-            txn->next_fn, txn->caller_nf, txn->caller_fn, txn->rpc_handler);
-
-        ret = rpc_client_send(*peer_node_idx, txn);
-
-        log_debug("rpc_client_send is done.");
-
-        rte_mempool_put(cfg->mempool, txn);
 
         return 1;
     }
@@ -648,11 +680,17 @@ static int server_init(struct server_vars *sv)
     int rpc_svr_epfd;
     pthread_t rpc_svr_setup_thread;
     pthread_t rpc_svr_recv_thread;
+    pthread_t rpc_clt_thread;
 
     log_info("Initializing intra-node I/O...");
     ret = io_init();
     if (unlikely(ret == -1)) {
         log_error("io_init() error");
+        return -1;
+    }
+
+    ret = init_tenant_pipes();
+    if (unlikely(ret == -1)) {
         return -1;
     }
 
@@ -669,6 +707,12 @@ static int server_init(struct server_vars *sv)
     }
 
     ret = pthread_create(&rpc_svr_recv_thread, NULL, &rpc_server_receive_thread, &rpc_svr_epfd);
+    if (unlikely(ret != 0)) {
+        log_error("pthread_create() error: %s", strerror(ret));
+        return -1;
+    }
+
+    ret = pthread_create(&rpc_clt_thread, NULL, &rpc_client_thread, NULL);
     if (unlikely(ret != 0)) {
         log_error("pthread_create() error: %s", strerror(ret));
         return -1;
