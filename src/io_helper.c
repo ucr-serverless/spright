@@ -136,6 +136,7 @@ int init_tenant_pipes(void) {
             return -1;
         }
         tenant_pipes[i].weight = cfg->tenants[i].weight;
+        tenant_pipes[i].tenant_id = (uint32_t) i;
     }
 
     return 0;

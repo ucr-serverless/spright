@@ -413,6 +413,8 @@ void* rpc_client_thread(void* arg) {
         for (int n = 0; n < nfds; n++) {
             tenant_pipe* tp = (tenant_pipe*) events[n].data.ptr;
 
+            log_debug("Tenant-%d's pipe is ready to be consumed ...", tp->tenant_id);
+
             while (1) {
                 current_index = (current_index + 1) % cfg->n_tenants;
                 if (current_index == 0) {
@@ -422,7 +424,12 @@ void* rpc_client_thread(void* arg) {
                     }
                 }
 
-                if (tenant_pipes[current_index].weight >= current_weight) {
+                log_debug("Tenant ID: %d \t Assigned Weight: %d \t Current Weight: %d ",
+                    current_index, tenant_pipes[current_index].weight, current_weight);
+
+                if (current_index == tp->tenant_id &&
+                        tenant_pipes[current_index].weight >= current_weight) {
+
                     txn = read_pipe(tp);
                     if (txn == NULL) {
                         close(tp->fd[0]);

@@ -33,6 +33,7 @@
 typedef struct {
     int fd[2]; // 0: read end, 1: write end
     int weight;
+    uint32_t tenant_id;
 } tenant_pipe;
 
 tenant_pipe tenant_pipes[MAX_TENANTS];
