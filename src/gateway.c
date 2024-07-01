@@ -302,6 +302,36 @@ void* rpc_server_receive_thread(void* arg) {
     return NULL;
 }
 
+int rpc_server(void* arg) {
+    int rpc_svr_epfd;
+    int ret;
+    pthread_t rpc_svr_setup_thread;
+    pthread_t rpc_svr_recv_thread;
+
+    rpc_svr_epfd = epoll_create1(0);
+    if (unlikely(rpc_svr_epfd == -1)) {
+        log_error("epoll_create1() error: %s", strerror(errno));
+        return -1;
+    }
+
+    ret = pthread_create(&rpc_svr_setup_thread, NULL, &rpc_server_setup_thread, &rpc_svr_epfd);
+    if (unlikely(ret != 0)) {
+        log_error("pthread_create() error: %s", strerror(ret));
+        return -1;
+    }
+
+    ret = pthread_create(&rpc_svr_recv_thread, NULL, &rpc_server_receive_thread, &rpc_svr_epfd);
+    if (unlikely(ret != 0)) {
+        log_error("pthread_create() error: %s", strerror(ret));
+        return -1;
+    }
+
+    pthread_join(rpc_svr_setup_thread, NULL);
+    pthread_join(rpc_svr_recv_thread, NULL);
+
+    return 0;
+}
+
 static int rpc_client_setup(char *server_ip, uint16_t server_port, uint8_t peer_node_idx) {
     log_info("RPC client connects with node %u (%s:%u).", peer_node_idx,
             cfg->nodes[peer_node_idx].ip_address, INTERNAL_SERVER_PORT);
@@ -379,7 +409,7 @@ static int rpc_client_send(int peer_node_idx, struct http_transaction *txn) {
 // 	return 0;
 // }
 
-int rpc_client_thread(void* arg) {
+int rpc_client(void* arg) {
     int epoll_fd;
     struct epoll_event ev, events[N_EVENTS_MAX];
     int nfds;
@@ -687,9 +717,6 @@ static int server_init(struct server_vars *sv)
     struct epoll_event event;
     int optval;
     int ret;
-    int rpc_svr_epfd;
-    pthread_t rpc_svr_setup_thread;
-    pthread_t rpc_svr_recv_thread;
 
     log_info("Initializing intra-node I/O...");
     ret = io_init();
@@ -700,24 +727,6 @@ static int server_init(struct server_vars *sv)
 
     ret = init_tenant_pipes();
     if (unlikely(ret == -1)) {
-        return -1;
-    }
-
-    rpc_svr_epfd = epoll_create1(0);
-    if (unlikely(rpc_svr_epfd == -1)) {
-        log_error("epoll_create1() error: %s", strerror(errno));
-        return -1;
-    }
-
-    ret = pthread_create(&rpc_svr_setup_thread, NULL, &rpc_server_setup_thread, &rpc_svr_epfd);
-    if (unlikely(ret != 0)) {
-        log_error("pthread_create() error: %s", strerror(ret));
-        return -1;
-    }
-
-    ret = pthread_create(&rpc_svr_recv_thread, NULL, &rpc_server_receive_thread, &rpc_svr_epfd);
-    if (unlikely(ret != 0)) {
-        log_error("pthread_create() error: %s", strerror(ret));
         return -1;
     }
 
@@ -874,7 +883,7 @@ static void metrics_collect(void)
 static int gateway(void)
 {
     const struct rte_memzone *memzone = NULL;
-    unsigned int lcore_worker[3];
+    unsigned int lcore_worker[4];
     struct server_vars sv;
     int ret;
     memset(peer_node_sockfds, 0, sizeof(peer_node_sockfds));
@@ -913,6 +922,12 @@ static int gateway(void)
         goto error_1;
     }
 
+    lcore_worker[3] = rte_get_next_lcore(lcore_worker[2], 1, 1);
+    if (unlikely(lcore_worker[1] == RTE_MAX_LCORE)) {
+        log_error("rte_get_next_lcore() error");
+        goto error_1;
+    }
+
     ret = rte_eal_remote_launch(server_process_rx, &sv, lcore_worker[0]);
     if (unlikely(ret < 0)) {
         log_error("rte_eal_remote_launch() error: %s",
@@ -927,7 +942,14 @@ static int gateway(void)
         goto error_1;
     }
 
-    ret = rte_eal_remote_launch(rpc_client_thread, NULL, lcore_worker[2]);
+    ret = rte_eal_remote_launch(rpc_client, NULL, lcore_worker[2]);
+    if (unlikely(ret < 0)) {
+        log_error("rte_eal_remote_launch() error: %s",
+                rte_strerror(-ret));
+        goto error_1;
+    }
+
+    ret = rte_eal_remote_launch(rpc_server, NULL, lcore_worker[3]);
     if (unlikely(ret < 0)) {
         log_error("rte_eal_remote_launch() error: %s",
                 rte_strerror(-ret));
@@ -950,7 +972,13 @@ static int gateway(void)
 
     ret = rte_eal_wait_lcore(lcore_worker[2]);
     if (unlikely(ret == -1)) {
-        log_error("server_process_tx() error");
+        log_error("rpc_client() error");
+        goto error_1;
+    }
+
+    ret = rte_eal_wait_lcore(lcore_worker[3]);
+    if (unlikely(ret == -1)) {
+        log_error("rpc_server() error");
         goto error_1;
     }
 
