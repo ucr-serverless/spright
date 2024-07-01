@@ -22,6 +22,7 @@
 #include <stdint.h>
 #include <fcntl.h>
 #include <sys/epoll.h>
+#include <sys/socket.h>
 
 #include "spright.h"
 #include "log.h"
@@ -55,5 +56,7 @@ int write_pipe(struct http_transaction *txn);
 struct http_transaction* read_pipe(tenant_pipe *tp);
 int add_pipes_to_epoll(int epoll_fd, struct epoll_event *ev);
 ssize_t read_full(int fd, void *buf, size_t count);
+
+int retry_connect(int sockfd, struct sockaddr *addr);
 
 #endif /* IO_H */

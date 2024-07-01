@@ -332,10 +332,9 @@ static int rpc_client_setup(char *server_ip, uint16_t server_port, uint8_t peer_
     server_addr.sin_port = htons(server_port);
     server_addr.sin_addr.s_addr = inet_addr(server_ip);
 
-    ret = connect(sockfd, (struct sockaddr *)&server_addr,
-                  sizeof(struct sockaddr_in));
+    ret = retry_connect(sockfd, (struct sockaddr *)&server_addr);
     if (unlikely(ret == -1)) {
-        log_error("connect() error: %s", strerror(errno));
+        log_error("connect() failed: %s", strerror(errno));
         return -1;
     }
 
@@ -380,7 +379,7 @@ static int rpc_client_send(int peer_node_idx, struct http_transaction *txn) {
 // 	return 0;
 // }
 
-void* rpc_client_thread(void* arg) {
+int rpc_client_thread(void* arg) {
     int epoll_fd;
     struct epoll_event ev, events[N_EVENTS_MAX];
     int nfds;
@@ -388,13 +387,13 @@ void* rpc_client_thread(void* arg) {
 
     epoll_fd = epoll_create1(0);
     if (epoll_fd == -1) {
-        perror("epoll_create1");
+        log_error("epoll_create1() error: %s", strerror(errno));
         exit(EXIT_FAILURE);
     }
 
     ret = add_pipes_to_epoll(epoll_fd, &ev);
     if (ret == -1) {
-        return NULL;
+        return ret;
     }
 
     int gcd_weight = get_gcd_weight();
@@ -444,7 +443,7 @@ void* rpc_client_thread(void* arg) {
                                    INTERNAL_SERVER_PORT, peer_node_idx);
                     } else if (peer_node_sockfds[peer_node_idx] < 0) {
                         log_error("Invalid socket error.");
-                        return NULL;
+                        return -1;
                     }
 
                     ret = rpc_client_send(peer_node_idx, txn);
@@ -458,7 +457,7 @@ void* rpc_client_thread(void* arg) {
     }
 
     close(epoll_fd);
-    return NULL;
+    return -1;
 }
 
 static int conn_accept(struct server_vars *sv)
@@ -691,7 +690,6 @@ static int server_init(struct server_vars *sv)
     int rpc_svr_epfd;
     pthread_t rpc_svr_setup_thread;
     pthread_t rpc_svr_recv_thread;
-    pthread_t rpc_clt_thread;
 
     log_info("Initializing intra-node I/O...");
     ret = io_init();
@@ -718,12 +716,6 @@ static int server_init(struct server_vars *sv)
     }
 
     ret = pthread_create(&rpc_svr_recv_thread, NULL, &rpc_server_receive_thread, &rpc_svr_epfd);
-    if (unlikely(ret != 0)) {
-        log_error("pthread_create() error: %s", strerror(ret));
-        return -1;
-    }
-
-    ret = pthread_create(&rpc_clt_thread, NULL, &rpc_client_thread, NULL);
     if (unlikely(ret != 0)) {
         log_error("pthread_create() error: %s", strerror(ret));
         return -1;
@@ -882,7 +874,7 @@ static void metrics_collect(void)
 static int gateway(void)
 {
     const struct rte_memzone *memzone = NULL;
-    unsigned int lcore_worker[2];
+    unsigned int lcore_worker[3];
     struct server_vars sv;
     int ret;
     memset(peer_node_sockfds, 0, sizeof(peer_node_sockfds));
@@ -915,6 +907,12 @@ static int gateway(void)
         goto error_1;
     }
 
+    lcore_worker[2] = rte_get_next_lcore(lcore_worker[1], 1, 1);
+    if (unlikely(lcore_worker[1] == RTE_MAX_LCORE)) {
+        log_error("rte_get_next_lcore() error");
+        goto error_1;
+    }
+
     ret = rte_eal_remote_launch(server_process_rx, &sv, lcore_worker[0]);
     if (unlikely(ret < 0)) {
         log_error("rte_eal_remote_launch() error: %s",
@@ -923,6 +921,13 @@ static int gateway(void)
     }
 
     ret = rte_eal_remote_launch(server_process_tx, &sv, lcore_worker[1]);
+    if (unlikely(ret < 0)) {
+        log_error("rte_eal_remote_launch() error: %s",
+                rte_strerror(-ret));
+        goto error_1;
+    }
+
+    ret = rte_eal_remote_launch(rpc_client_thread, NULL, lcore_worker[2]);
     if (unlikely(ret < 0)) {
         log_error("rte_eal_remote_launch() error: %s",
                 rte_strerror(-ret));
@@ -938,6 +943,12 @@ static int gateway(void)
     }
 
     ret = rte_eal_wait_lcore(lcore_worker[1]);
+    if (unlikely(ret == -1)) {
+        log_error("server_process_tx() error");
+        goto error_1;
+    }
+
+    ret = rte_eal_wait_lcore(lcore_worker[2]);
     if (unlikely(ret == -1)) {
         log_error("server_process_tx() error");
         goto error_1;

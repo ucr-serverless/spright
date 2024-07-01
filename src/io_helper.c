@@ -32,6 +32,9 @@
 
 #include "io.h"
 
+#define MAX_RETRIES 5
+#define RETRY_DELAY_US 5000 // 5 milliseconds
+
 /*
  * Calculate the Greatest Common Divisor
  */
@@ -182,4 +185,27 @@ ssize_t read_full(int fd, void *buf, size_t count) {
     }
 
     return bytes_read;
+}
+
+/*
+ * This approach will attempt to connect to the server multiple times,
+ * giving it some time to become ready. If the connection is not successful
+ * within the specified number of retries, the function will return an error.
+ */
+int retry_connect(int sockfd, struct sockaddr *addr) {
+    int attempts = 0;
+    int ret;
+
+    do {
+        ret = connect(sockfd, addr, sizeof(struct sockaddr_in));
+        if (ret == 0) {
+            break;
+        } else {
+            attempts++;
+            log_warn("connect() error: %s. Retrying %d times ...", strerror(errno), attempts);
+            usleep(RETRY_DELAY_US);
+        }
+    } while (ret == -1 && attempts < MAX_RETRIES);
+
+    return ret;
 }

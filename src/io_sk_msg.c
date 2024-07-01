@@ -46,8 +46,6 @@
 #endif /* SYS_pidfd_getfd */
 
 #define MAP_NAME "sock_map"
-#define MAX_RETRIES 5
-#define RETRY_DELAY_US 5000 // 5 milliseconds
 
 #define PORT_DUMMY 8081
 #define PORT_SOCKMAP 8082
@@ -340,26 +338,9 @@ static int init_gateway(void)
     addr.sin_port = htons(PORT_DUMMY);
     addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-    /*
-     * This approach will attempt to connect to the server multiple times,
-     * giving it some time to become ready. If the connection is not successful
-     * within the specified number of retries, the function will return an error.
-     */
-    int attempts = 0;
-    do {
-        ret = connect(sockfd_sk_msg, (struct sockaddr *)&addr,
-                    sizeof(struct sockaddr_in));
-        if (ret == 0) {
-            break;
-        } else {
-            attempts++;
-            log_warn("connect() error: %s. Retrying %d times ...", strerror(errno), attempts);
-            usleep(RETRY_DELAY_US);
-        }
-    } while (ret == -1 && attempts < MAX_RETRIES);
-
+    ret = retry_connect(sockfd_sk_msg, (struct sockaddr *)&addr);
     if (unlikely(ret == -1)) {
-        log_error("connect() error: %s", strerror(errno));
+        log_error("connect() failed: %s", strerror(errno));
         return -1;
     }
 
