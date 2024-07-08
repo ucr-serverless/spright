@@ -27,6 +27,7 @@
 #include "spright.h"
 #include "log.h"
 #include "http.h"
+#include "common.h"
 
 #define MAX_TENANTS (1U << 8)
 #define N_EVENTS_MAX (1U << 17)
@@ -37,7 +38,7 @@ typedef struct {
     uint32_t tenant_id;
 } tenant_pipe;
 
-tenant_pipe tenant_pipes[MAX_TENANTS];
+extern tenant_pipe tenant_pipes[MAX_TENANTS];
 
 int io_init(void);
 

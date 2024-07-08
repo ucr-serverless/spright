@@ -35,6 +35,8 @@
 #define MAX_RETRIES 5
 #define RETRY_DELAY_US 5000 // 5 milliseconds
 
+tenant_pipe tenant_pipes[MAX_TENANTS];
+
 /*
  * Calculate the Greatest Common Divisor
  */

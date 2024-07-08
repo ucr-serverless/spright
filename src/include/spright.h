@@ -33,9 +33,7 @@
 #define EXTERNAL_SERVER_PORT 8080
 #define INTERNAL_SERVER_PORT 8084
 
-int fn_id;
-
-struct {
+struct spright_cfg_s {
     struct rte_mempool *mempool;
 
     char name[64];
@@ -78,6 +76,6 @@ struct {
     } nodes[UINT8_MAX + 1];
 
     uint8_t inter_node_rt[ROUTING_TABLE_SIZE];
-} *cfg;
+};
 
 #endif /* SPRIGHT_H */

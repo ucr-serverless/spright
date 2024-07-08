@@ -22,7 +22,7 @@
 #include "http.h"
 #include "utility.h"
 
-char defaultCurrency[5];
+extern char defaultCurrency[5];
 
 void chooseAd(struct http_transaction *txn);
 
