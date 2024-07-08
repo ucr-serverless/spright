@@ -19,7 +19,7 @@ Follow steps below to set up SPRIGHT:
 Please refer to the [SPRIGHT documentation]() for details on installing, running and deploying SPRIGHT. -->
 
 ## SIGCOMM artifact evaluation ##
-To reproduce the experiment in [our paper](https://dl.acm.org/doi/abs/10.1145/3544216.3544259), please refer to [artifact documentation](docs/ARTIFACTS.md).
+To reproduce the experiment in [our paper](https://dl.acm.org/doi/abs/10.1145/3544216.3544259), please refer to commit [98434fd](https://github.com/ucr-serverless/spright/tree/98434fd1e4fb9498308151e863975ff6883d5bf7).
 
 ## Publication ##
 ~~~
