@@ -393,14 +393,14 @@ static int cfg_init(char *cfg_file)
 
     setting = config_lookup(&config, "tenants");
     if (unlikely(setting == NULL)) {
-        log_warn("Tenants configuration is missing.");
-        goto error_2;
+        log_error("Tenants configuration is required.");
+        goto error_1;
     }
 
     ret = config_setting_is_list(setting);
     if (unlikely(ret == CONFIG_FALSE)) {
-        log_warn("Tenants configuration is missing.");
-        goto error_2;
+        log_error("Tenants configuration is required.");
+        goto error_1;
     }
 
     n = config_setting_length(setting);
@@ -409,26 +409,26 @@ static int cfg_init(char *cfg_file)
     for (i = 0; i < n; i++) {
         subsetting = config_setting_get_elem(setting, i);
         if (unlikely(subsetting == NULL)) {
-            log_warn("Tenant-%d's configuration is missing.", i);
-            goto error_2;
+            log_error("Tenant-%d's configuration is required.", i);
+            goto error_1;
         }
 
         ret = config_setting_is_group(subsetting);
         if (unlikely(ret == CONFIG_FALSE)) {
-            log_warn("Tenant-%d's configuration is missing.", i);
-            goto error_2;
+            log_error("Tenant-%d's configuration is required.", i);
+            goto error_1;
         }
 
         ret = config_setting_lookup_int(subsetting, "id", &id);
         if (unlikely(ret == CONFIG_FALSE)) {
-            log_warn("Tenant-%d's ID is missing.", i);
-            goto error_2;
+            log_error("Tenant-%d's ID is required.", i);
+            goto error_1;
         }
 
         ret = config_setting_lookup_int(subsetting, "weight", &weight);
         if (unlikely(ret == CONFIG_FALSE)) {
-            log_warn("Tenant-%d's weight is missing.", i);
-            goto error_2;
+            log_error("Tenant-%d's weight is required.", i);
+            goto error_1;
         }
 
         cfg->tenants[id].weight = weight;
