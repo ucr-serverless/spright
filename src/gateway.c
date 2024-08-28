@@ -917,13 +917,13 @@ static int gateway(void)
     }
 
     lcore_worker[2] = rte_get_next_lcore(lcore_worker[1], 1, 1);
-    if (unlikely(lcore_worker[1] == RTE_MAX_LCORE)) {
+    if (unlikely(lcore_worker[2] == RTE_MAX_LCORE)) {
         log_error("rte_get_next_lcore() error");
         goto error_1;
     }
 
     lcore_worker[3] = rte_get_next_lcore(lcore_worker[2], 1, 1);
-    if (unlikely(lcore_worker[1] == RTE_MAX_LCORE)) {
+    if (unlikely(lcore_worker[3] == RTE_MAX_LCORE)) {
         log_error("rte_get_next_lcore() error");
         goto error_1;
     }
