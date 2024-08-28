@@ -1,8 +1,8 @@
 #!/bin/bash
 
 CPU_SHM_MGR=(0)
-CPU_GATEWAY=(0 1 2 3 4)
-CPU_NF=(5 6 7 8 9 20 21 22 23 24 25 26 27 28 29)
+CPU_GATEWAY=(0 1 2 3 4 5)
+CPU_NF=(6 7 8 9 20 21 22 23 24 25 26 27 28 29)
 
 if [ ${EUID} -ne 0 ]
 then
@@ -43,7 +43,7 @@ shm_mgr()
 gateway()
 {
 	exec bin/gateway_${io} \
-		-l ${CPU_GATEWAY[0]},${CPU_GATEWAY[1]},${CPU_GATEWAY[2]},${CPU_GATEWAY[3]},${CPU_GATEWAY[4]} \
+		-l ${CPU_GATEWAY[0]},${CPU_GATEWAY[1]},${CPU_GATEWAY[2]},${CPU_GATEWAY[3]},${CPU_GATEWAY[4]},${CPU_GATEWAY[5]} \
 		--main-lcore=${CPU_GATEWAY[0]} \
 		--file-prefix=spright \
 		--proc-type=secondary \

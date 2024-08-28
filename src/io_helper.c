@@ -147,7 +147,20 @@ int init_tenant_pipes(void) {
     return 0;
 }
 
-int add_pipes_to_epoll(int epoll_fd, struct epoll_event *ev) {
+int add_regular_pipe_to_epoll(int epoll_fd, struct epoll_event *ev, int pipe_fd) {
+    set_nonblocking(pipe_fd);
+    ev->events = EPOLLIN;
+    ev->data.fd = pipe_fd;
+
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, pipe_fd, ev) == -1) {
+        log_error("epoll_ctl(EPOLL_CTL_ADD): %s", strerror(errno));
+        return -1;
+    }
+
+    return 0;
+}
+
+int add_weighted_pipes_to_epoll(int epoll_fd, struct epoll_event *ev) {
     for (int i = 0; i < cfg->n_tenants; i++) {
         set_nonblocking(tenant_pipes[i].fd[0]);
         ev->events = EPOLLIN;

@@ -53,6 +53,15 @@ struct server_vars {
     int epfd;
 };
 
+// pipe between dispatcher and rpc_server thread
+static int pipefd_dispatcher__rpc_server[2];
+
+// pipe between dispatcher and server_process_rx thread
+static int pipefd_dispatcher__svr_ps_rx[2];
+
+// pipe between dispatcher and server_process_tx thread
+static int pipefd_dispatcher__svr_ps_tx[2];
+
 int peer_node_sockfds[ROUTING_TABLE_SIZE];
 
 static void configure_keepalive(int sockfd) {
@@ -147,6 +156,72 @@ static int get_client_info(int client_socket, char* ip_addr, int ip_addr_len) {
 #endif
 
     return client_port;
+}
+
+int dispatcher(void* arg) {
+    int epoll_fd;
+    struct epoll_event ev, events[N_EVENTS_MAX];
+    int nfds;
+    int ret;
+    struct http_transaction *txn = NULL;
+    ssize_t bytes_read;
+
+    epoll_fd = epoll_create1(0);
+    if (epoll_fd == -1) {
+        log_error("epoll_create1() error: %s", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    ret = add_regular_pipe_to_epoll(epoll_fd, &ev, pipefd_dispatcher__rpc_server[0]);
+    if (ret == -1) {
+        return ret;
+    }
+    ret = add_regular_pipe_to_epoll(epoll_fd, &ev, pipefd_dispatcher__svr_ps_rx[0]);
+    if (ret == -1) {
+        return ret;
+    }
+    ret = add_regular_pipe_to_epoll(epoll_fd, &ev, pipefd_dispatcher__svr_ps_tx[0]);
+    if (ret == -1) {
+        return ret;
+    }
+
+    while (1) {
+        nfds = epoll_wait(epoll_fd, events, N_EVENTS_MAX, -1);
+        if (nfds == -1) {
+            log_error("epoll_wait() error: %s", strerror(errno));
+            exit(EXIT_FAILURE);
+        }
+
+        for (int i = 0; i < nfds; i++) {
+            bytes_read = read(events[i].data.fd, &txn,
+                              sizeof(struct http_transaction *));
+            if (unlikely(bytes_read == -1)) {
+                log_error("read() error: %s",
+                        strerror(errno));
+                return -1;
+            }
+
+            if (txn->next_fn != cfg->route[txn->route_id].hop[txn->hop_count]) {
+                if (txn->hop_count == 0){
+                    txn->next_fn = cfg->route[txn->route_id].hop[txn->hop_count];
+                }
+                else {
+                    log_error("Next Function Not Valid!");
+                    return -1;
+                }
+            }
+
+            ret = io_tx(txn, txn->next_fn);
+            if (unlikely(ret == -1)) {
+                log_error("io_tx() error");
+                return -1;
+            }
+
+        }
+    }
+
+    close(epoll_fd);
+    return -1;
 }
 
 static int rpc_server_setup(int epfd) {
@@ -267,9 +342,10 @@ static int rpc_server_receive(int epfd) {
                         txn->route_id, txn->hop_count,
                         cfg->route[txn->route_id].hop[txn->hop_count],
                         txn->next_fn);
-            ret = io_tx(txn, txn->next_fn);
-            if (unlikely(ret == -1)) {
-                log_error("io_tx() error");
+            ssize_t bytes_written = write(pipefd_dispatcher__rpc_server[1], &txn,
+                                    sizeof(struct http_transaction*));
+            if (unlikely(bytes_written == -1)) {
+                log_error("write() error: %s", strerror(errno));
                 goto error_1;
             }
         }
@@ -421,7 +497,7 @@ int rpc_client(void* arg) {
         exit(EXIT_FAILURE);
     }
 
-    ret = add_pipes_to_epoll(epoll_fd, &ev);
+    ret = add_weighted_pipes_to_epoll(epoll_fd, &ev);
     if (ret == -1) {
         return ret;
     }
@@ -584,9 +660,10 @@ static int conn_read(int sockfd)
 
     txn->hop_count = 0;
 
-    ret = io_tx(txn, cfg->route[txn->route_id].hop[0]);
-    if (unlikely(ret == -1)) {
-        log_error("io_tx() error");
+    ssize_t bytes_written = write(pipefd_dispatcher__svr_ps_rx[1], &txn,
+                            sizeof(struct http_transaction*));
+    if (unlikely(bytes_written == -1)) {
+        log_error("write() error: %s", strerror(errno));
         goto error_1;
     }
 
@@ -630,9 +707,10 @@ static int conn_write(int *sockfd)
 
     // Intra-node Communication
     if (txn->hop_count < cfg->route[txn->route_id].length) {
-        ret = io_tx(txn, txn->next_fn);
-        if (unlikely(ret == -1)) {
-            log_error("io_tx() error");
+        ssize_t bytes_written = write(pipefd_dispatcher__svr_ps_tx[1], &txn,
+                                sizeof(struct http_transaction*));
+        if (unlikely(bytes_written == -1)) {
+            log_error("write() error: %s", strerror(errno));
             goto error_1;
         }
 
@@ -883,10 +961,28 @@ static void metrics_collect(void)
 static int gateway(void)
 {
     const struct rte_memzone *memzone = NULL;
-    unsigned int lcore_worker[4];
+    unsigned int lcore_worker[5];
     struct server_vars sv;
     int ret;
     memset(peer_node_sockfds, 0, sizeof(peer_node_sockfds));
+
+    ret = pipe(pipefd_dispatcher__rpc_server);
+    if (unlikely(ret == -1)) {
+        log_error("pipe() error: %s", strerror(errno));
+        goto error_1;
+    }
+
+    ret = pipe(pipefd_dispatcher__svr_ps_rx);
+    if (unlikely(ret == -1)) {
+        log_error("pipe() error: %s", strerror(errno));
+        goto error_1;
+    }
+
+    ret = pipe(pipefd_dispatcher__svr_ps_tx);
+    if (unlikely(ret == -1)) {
+        log_error("pipe() error: %s", strerror(errno));
+        goto error_1;
+    }
 
     fn_id = 0;
 
@@ -928,6 +1024,12 @@ static int gateway(void)
         goto error_1;
     }
 
+    lcore_worker[4] = rte_get_next_lcore(lcore_worker[3], 1, 1);
+    if (unlikely(lcore_worker[4] == RTE_MAX_LCORE)) {
+        log_error("rte_get_next_lcore() error");
+        goto error_1;
+    }
+
     ret = rte_eal_remote_launch(server_process_rx, &sv, lcore_worker[0]);
     if (unlikely(ret < 0)) {
         log_error("rte_eal_remote_launch() error: %s",
@@ -956,6 +1058,13 @@ static int gateway(void)
         goto error_1;
     }
 
+    ret = rte_eal_remote_launch(dispatcher, NULL, lcore_worker[4]);
+    if (unlikely(ret < 0)) {
+        log_error("rte_eal_remote_launch() error: %s",
+                rte_strerror(-ret));
+        goto error_1;
+    }
+
     metrics_collect();
 
     ret = rte_eal_wait_lcore(lcore_worker[0]);
@@ -977,6 +1086,12 @@ static int gateway(void)
     }
 
     ret = rte_eal_wait_lcore(lcore_worker[3]);
+    if (unlikely(ret == -1)) {
+        log_error("rpc_server() error");
+        goto error_1;
+    }
+
+    ret = rte_eal_wait_lcore(lcore_worker[4]);
     if (unlikely(ret == -1)) {
         log_error("rpc_server() error");
         goto error_1;
