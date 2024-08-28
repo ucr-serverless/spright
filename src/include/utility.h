@@ -38,7 +38,7 @@ void PrintListProductsResponse(struct http_transaction *txn);
 void PrintGetProductResponse(struct http_transaction *txn);
 void PrintSearchProductsResponse(struct http_transaction *txn);
 
-void PrintSupportedCurrencies (struct http_transaction *in);
+void PrintSupportedCurrencies(struct http_transaction *in);
 void PrintConversionResult(struct http_transaction *in);
 void printMoney(Money *money);
 void printCurrencyConversionRequest(CurrencyConversionRequest *request);
@@ -61,16 +61,16 @@ void MultiplySlow(Money *total, uint32_t n);
 void PrintPlaceOrderRequest(struct http_transaction *txn);
 void parsePlaceOrderRequest(struct http_transaction *txn);
 
-char* httpQueryParser(char* req);
+char *httpQueryParser(char *req);
 
-/* 
- * A simple key-value table for function-node mapping 
+/*
+ * A simple key-value table for function-node mapping
  * TODO: revisit the implementation for concurrent access
  */
 void set_node(uint8_t fn_id, uint8_t node_idx);
 uint8_t get_node(uint8_t fn_id);
 void delete_node(uint8_t fn_id);
-void print_ip_address(struct in_addr* ip);
+void print_ip_address(struct in_addr *ip);
 void print_rt_table();
 
 #endif /* UTILITY_H */

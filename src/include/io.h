@@ -19,20 +19,21 @@
 #ifndef IO_H
 #define IO_H
 
-#include <stdint.h>
 #include <fcntl.h>
+#include <stdint.h>
 #include <sys/epoll.h>
 #include <sys/socket.h>
 
-#include "spright.h"
-#include "log.h"
-#include "http.h"
 #include "common.h"
+#include "http.h"
+#include "log.h"
+#include "spright.h"
 
 #define MAX_TENANTS (1U << 8)
 #define N_EVENTS_MAX (1U << 17)
 
-typedef struct {
+typedef struct
+{
     int fd[2]; // 0: read end, 1: write end
     int weight;
     uint32_t tenant_id;
@@ -54,7 +55,7 @@ int get_max_weight(void);
 int set_nonblocking(int fd);
 int init_tenant_pipes(void);
 int write_pipe(struct http_transaction *txn);
-struct http_transaction* read_pipe(tenant_pipe *tp);
+struct http_transaction *read_pipe(tenant_pipe *tp);
 int add_regular_pipe_to_epoll(int epoll_fd, struct epoll_event *ev, int pipe_fd);
 int add_weighted_pipes_to_epoll(int epoll_fd, struct epoll_event *ev);
 ssize_t read_full(int fd, void *buf, size_t count);

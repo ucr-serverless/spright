@@ -33,9 +33,9 @@
 #include <bpf/bpf.h>
 #include <bpf/libbpf.h>
 
-#include "spright.h"
-#include "log.h"
 #include "io.h"
+#include "log.h"
+#include "spright.h"
 
 #ifndef SYS_pidfd_open
 #define SYS_pidfd_open 434
@@ -50,7 +50,8 @@
 #define PORT_DUMMY 8081
 #define PORT_SOCKMAP 8082
 
-struct metadata {
+struct metadata
+{
     int fn_id;
     void *obj;
 };
@@ -58,7 +59,7 @@ struct metadata {
 static int sockfd_sk_msg = -1;
 
 /* TODO: Cleanup on errors */
-static void *dummy_server(void* arg)
+static void *dummy_server(void *arg)
 {
     struct sockaddr_in addr;
     int sockfd_l;
@@ -67,15 +68,16 @@ static void *dummy_server(void* arg)
     int ret;
 
     sockfd_l = socket(AF_INET, SOCK_STREAM, 0);
-    if (unlikely(sockfd_l == -1)) {
+    if (unlikely(sockfd_l == -1))
+    {
         log_error("socket() error: %s", strerror(errno));
         pthread_exit(NULL);
     }
 
     optval = 1;
-    ret = setsockopt(sockfd_l, SOL_SOCKET, SO_REUSEADDR, &optval,
-                     sizeof(int));
-    if (unlikely(ret == -1)) {
+    ret = setsockopt(sockfd_l, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(int));
+    if (unlikely(ret == -1))
+    {
         log_error("setsockopt() error: %s", strerror(errno));
         pthread_exit(NULL);
     }
@@ -84,27 +86,29 @@ static void *dummy_server(void* arg)
     addr.sin_port = htons(PORT_DUMMY);
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-    ret = bind(sockfd_l, (struct sockaddr *)&addr,
-               sizeof(struct sockaddr_in));
-    if (unlikely(ret == -1)) {
+    ret = bind(sockfd_l, (struct sockaddr *)&addr, sizeof(struct sockaddr_in));
+    if (unlikely(ret == -1))
+    {
         log_error("bind() error: %s", strerror(errno));
         pthread_exit(NULL);
     }
 
     /* TODO: Correct backlog? */
     ret = listen(sockfd_l, 10);
-    if (unlikely(ret == -1)) {
+    if (unlikely(ret == -1))
+    {
         log_error("listen() error: %s", strerror(errno));
         pthread_exit(NULL);
     }
 
-    while (1) {
+    while (1)
+    {
         log_debug("Dummy server is ready for accepting new connection.");
 
         sockfd_c = accept(sockfd_l, NULL, NULL);
-        if (unlikely(sockfd_c == -1)) {
-            log_error("accept() error: %s",
-                    strerror(errno));
+        if (unlikely(sockfd_c == -1))
+        {
+            log_error("accept() error: %s", strerror(errno));
             pthread_exit(NULL);
         }
     }
@@ -127,15 +131,16 @@ static int sockmap_server(int fd_sk_msg_map)
     int ret;
 
     sockfd_l = socket(AF_INET, SOCK_STREAM, 0);
-    if (unlikely(sockfd_l == -1)) {
+    if (unlikely(sockfd_l == -1))
+    {
         log_error("socket() error: %s", strerror(errno));
         return -1;
     }
 
     optval = 1;
-    ret = setsockopt(sockfd_l, SOL_SOCKET, SO_REUSEADDR, &optval,
-                     sizeof(int));
-    if (unlikely(ret == -1)) {
+    ret = setsockopt(sockfd_l, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(int));
+    if (unlikely(ret == -1))
+    {
         log_error("setsockopt() error: %s", strerror(errno));
         return -1;
     }
@@ -144,71 +149,73 @@ static int sockmap_server(int fd_sk_msg_map)
     addr.sin_port = htons(PORT_SOCKMAP);
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-    ret = bind(sockfd_l, (struct sockaddr *)&addr,
-               sizeof(struct sockaddr_in));
-    if (unlikely(ret == -1)) {
+    ret = bind(sockfd_l, (struct sockaddr *)&addr, sizeof(struct sockaddr_in));
+    if (unlikely(ret == -1))
+    {
         log_error("bind() error: %s", strerror(errno));
         return -1;
     }
 
     /* TODO: Correct backlog? */
     ret = listen(sockfd_l, 10);
-    if (unlikely(ret == -1)) {
+    if (unlikely(ret == -1))
+    {
         log_error("listen() error: %s", strerror(errno));
         return -1;
     }
 
     // TODO: change to while(1), so that sockmap server can keep registering
     // socket of newly created functions to sockmap
-    for (i = 0; i < cfg->n_nfs; i++) {
+    for (i = 0; i < cfg->n_nfs; i++)
+    {
         sockfd_c = accept(sockfd_l, NULL, NULL);
-        if (unlikely(sockfd_c == -1)) {
-            log_error("accept() error: %s",
-                    strerror(errno));
+        if (unlikely(sockfd_c == -1))
+        {
+            log_error("accept() error: %s", strerror(errno));
             return -1;
         }
 
         bytes_received = recv(sockfd_c, buffer, 3 * sizeof(int), 0);
-        if (unlikely(bytes_received == -1)) {
+        if (unlikely(bytes_received == -1))
+        {
             log_error("recv() error: %s", strerror(errno));
             return -1;
         }
 
         pidfd = syscall(SYS_pidfd_open, buffer[0], 0);
-        if (unlikely(ret == -1)) {
-            log_error("SYS_pidfd_open() error: %s",
-                    strerror(errno));
+        if (unlikely(ret == -1))
+        {
+            log_error("SYS_pidfd_open() error: %s", strerror(errno));
             return -1;
         }
 
-        sockfd_sk_msg_nf = syscall(SYS_pidfd_getfd, pidfd, buffer[1],
-                                   0);
-        if (unlikely(ret == -1)) {
-            log_error("__NR_pidfd_getfd() error: %s",
-                    strerror(errno));
+        sockfd_sk_msg_nf = syscall(SYS_pidfd_getfd, pidfd, buffer[1], 0);
+        if (unlikely(ret == -1))
+        {
+            log_error("__NR_pidfd_getfd() error: %s", strerror(errno));
             return -1;
         }
 
-        ret = bpf_map_update_elem(fd_sk_msg_map, &buffer[2],
-                                  &sockfd_sk_msg_nf, 0);
-        if (unlikely(ret < 0)) {
-            log_error("bpf_map_update_elem() error: %s",
-                    strerror(-ret));
+        ret = bpf_map_update_elem(fd_sk_msg_map, &buffer[2], &sockfd_sk_msg_nf, 0);
+        if (unlikely(ret < 0))
+        {
+            log_error("bpf_map_update_elem() error: %s", strerror(-ret));
             return -1;
         }
 
-        log_info("%s: NF_ID %d -> SOCKFD %d", MAP_NAME, buffer[2],
-               sockfd_sk_msg_nf);
+        log_info("%s: NF_ID %d -> SOCKFD %d", MAP_NAME, buffer[2], sockfd_sk_msg_nf);
 
         ret = close(sockfd_c);
-        if (unlikely(ret == -1)) {
+        if (unlikely(ret == -1))
+        {
             log_error("close() error: %s", strerror(errno));
             return -1;
         }
     }
 
     ret = close(sockfd_l);
-    if (unlikely(ret == -1)) {
+    if (unlikely(ret == -1))
+    {
         log_error("close() error: %s", strerror(errno));
         return -1;
     }
@@ -216,19 +223,22 @@ static int sockmap_server(int fd_sk_msg_map)
     return 0;
 }
 
-struct sockmap_server_args {
+struct sockmap_server_args
+{
     int fd_sk_msg_map;
 };
 
-/* 
+/*
  * We run the sockmap server as a separate thread, so that it can keep alive in the
  * background and register the socket of newly created functions to the eBPF
  * sockmap.
  */
-void* sockmap_server_thread(void* arg) {
-    struct sockmap_server_args* args = (struct sockmap_server_args*)arg;
+void *sockmap_server_thread(void *arg)
+{
+    struct sockmap_server_args *args = (struct sockmap_server_args *)arg;
     int ret = sockmap_server(args->fd_sk_msg_map);
-    if (unlikely(ret == -1)) {
+    if (unlikely(ret == -1))
+    {
         log_error("sockmap_server() error");
     }
     return NULL;
@@ -244,7 +254,8 @@ static int sockmap_client(void)
     int ret;
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (unlikely(sockfd == -1)) {
+    if (unlikely(sockfd == -1))
+    {
         log_error("socket() error: %s", strerror(errno));
         return -1;
     }
@@ -253,9 +264,9 @@ static int sockmap_client(void)
     addr.sin_port = htons(PORT_SOCKMAP);
     addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-    ret = connect(sockfd, (struct sockaddr *)&addr,
-                  sizeof(struct sockaddr_in));
-    if (unlikely(ret == -1)) {
+    ret = connect(sockfd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in));
+    if (unlikely(ret == -1))
+    {
         log_error("connect() error: %s", strerror(errno));
         return -1;
     }
@@ -265,13 +276,15 @@ static int sockmap_client(void)
     buffer[2] = fn_id;
 
     bytes_sent = send(sockfd, buffer, 3 * sizeof(int), 0);
-    if (unlikely(bytes_sent == -1)) {
+    if (unlikely(bytes_sent == -1))
+    {
         log_error("send() error: %s", strerror(errno));
         return -1;
     }
 
     ret = close(sockfd);
-    if (unlikely(ret == -1)) {
+    if (unlikely(ret == -1))
+    {
         log_error("close() error: %s", strerror(errno));
         return -1;
     }
@@ -282,7 +295,7 @@ static int sockmap_client(void)
 /* TODO: Cleanup on errors */
 static int init_gateway(void)
 {
-    struct bpf_object* obj = NULL;
+    struct bpf_object *obj = NULL;
     struct sockaddr_in addr;
     int fd_sk_msg_prog;
     int fd_sk_msg_map;
@@ -291,45 +304,45 @@ static int init_gateway(void)
     int ret;
 
     ret = pthread_create(&dummy_svr_thread, NULL, &dummy_server, NULL);
-    if (unlikely(ret != 0)) {
+    if (unlikely(ret != 0))
+    {
         log_error("pthread_create() error: %s", strerror(ret));
         return -1;
     }
 
-    ret = bpf_prog_load("ebpf/sk_msg_kern.o", BPF_PROG_TYPE_SK_MSG, &obj,
-                        &fd_sk_msg_prog);
-    if (unlikely(ret < 0)) {
+    ret = bpf_prog_load("ebpf/sk_msg_kern.o", BPF_PROG_TYPE_SK_MSG, &obj, &fd_sk_msg_prog);
+    if (unlikely(ret < 0))
+    {
         log_error("bpf_prog_load() error: %s", strerror(-ret));
         return -1;
     }
 
     fd_sk_msg_map = bpf_object__find_map_fd_by_name(obj, MAP_NAME);
-    if (unlikely(fd_sk_msg_map < 0)) {
-        log_error("bpf_object__find_map_fd_by_name() error: %s",
-                strerror(-ret));
+    if (unlikely(fd_sk_msg_map < 0))
+    {
+        log_error("bpf_object__find_map_fd_by_name() error: %s", strerror(-ret));
         return -1;
     }
 
-    ret = bpf_prog_attach(fd_sk_msg_prog, fd_sk_msg_map, BPF_SK_MSG_VERDICT,
-                          0);
-    if (unlikely(ret < 0)) {
-        log_error("bpf_prog_attach() error: %s",
-                strerror(-ret));
+    ret = bpf_prog_attach(fd_sk_msg_prog, fd_sk_msg_map, BPF_SK_MSG_VERDICT, 0);
+    if (unlikely(ret < 0))
+    {
+        log_error("bpf_prog_attach() error: %s", strerror(-ret));
         return -1;
     }
 
-    struct sockmap_server_args args = {
-        .fd_sk_msg_map = fd_sk_msg_map
-    };
+    struct sockmap_server_args args = {.fd_sk_msg_map = fd_sk_msg_map};
 
     ret = pthread_create(&sockmap_svr_thread, NULL, sockmap_server_thread, &args);
-    if (unlikely(ret != 0)) {
+    if (unlikely(ret != 0))
+    {
         log_error("pthread_create() error: %s", strerror(ret));
         return -1;
     }
 
     sockfd_sk_msg = socket(AF_INET, SOCK_STREAM, 0);
-    if (unlikely(sockfd_sk_msg == -1)) {
+    if (unlikely(sockfd_sk_msg == -1))
+    {
         log_error("socket() error: %s", strerror(errno));
         return -1;
     }
@@ -339,15 +352,16 @@ static int init_gateway(void)
     addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
     ret = retry_connect(sockfd_sk_msg, (struct sockaddr *)&addr);
-    if (unlikely(ret == -1)) {
+    if (unlikely(ret == -1))
+    {
         log_error("connect() failed: %s", strerror(errno));
         return -1;
     }
 
     ret = bpf_map_update_elem(fd_sk_msg_map, &fn_id, &sockfd_sk_msg, 0);
-    if (unlikely(ret < 0)) {
-        log_error("bpf_map_update_elem() error: %s",
-                strerror(-ret));
+    if (unlikely(ret < 0))
+    {
+        log_error("bpf_map_update_elem() error: %s", strerror(-ret));
         return -1;
     }
 
@@ -361,7 +375,8 @@ static int init_nf(void)
     int ret;
 
     sockfd_sk_msg = socket(AF_INET, SOCK_STREAM, 0);
-    if (unlikely(sockfd_sk_msg == -1)) {
+    if (unlikely(sockfd_sk_msg == -1))
+    {
         log_error("socket() error: %s", strerror(errno));
         return -1;
     }
@@ -370,15 +385,16 @@ static int init_nf(void)
     addr.sin_port = htons(PORT_DUMMY);
     addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-    ret = connect(sockfd_sk_msg, (struct sockaddr *)&addr,
-                  sizeof(struct sockaddr_in));
-    if (unlikely(ret == -1)) {
+    ret = connect(sockfd_sk_msg, (struct sockaddr *)&addr, sizeof(struct sockaddr_in));
+    if (unlikely(ret == -1))
+    {
         log_error("connect() error: %s", strerror(errno));
         return -1;
     }
 
     ret = sockmap_client();
-    if (unlikely(ret == -1)) {
+    if (unlikely(ret == -1))
+    {
         log_error("sockmap_client() error");
         return -1;
     }
@@ -400,19 +416,25 @@ int io_init(void)
 {
     int ret;
 
-    if (fn_id == -1) {
+    if (fn_id == -1)
+    {
         return 0;
     }
 
-    if (fn_id == 0) {
+    if (fn_id == 0)
+    {
         ret = init_gateway();
-        if (unlikely(ret == -1)) {
+        if (unlikely(ret == -1))
+        {
             log_error("init_gateway() error");
             return -1;
         }
-    } else {
+    }
+    else
+    {
         ret = init_nf();
-        if (unlikely(ret == -1)) {
+        if (unlikely(ret == -1))
+        {
             log_error("init_nf() error");
             return -1;
         }
@@ -425,19 +447,25 @@ int io_exit(void)
 {
     int ret;
 
-    if (fn_id == -1) {
+    if (fn_id == -1)
+    {
         return 0;
     }
 
-    if (fn_id == 0) {
+    if (fn_id == 0)
+    {
         ret = exit_gateway();
-        if (unlikely(ret == -1)) {
+        if (unlikely(ret == -1))
+        {
             log_error("exit_gateway() error");
             return -1;
         }
-    } else {
+    }
+    else
+    {
         ret = exit_nf();
-        if (unlikely(ret == -1)) {
+        if (unlikely(ret == -1))
+        {
             log_error("exit_nf() error");
             return -1;
         }
@@ -452,7 +480,8 @@ int io_rx(void **obj)
     struct metadata m;
 
     bytes_received = recv(sockfd_sk_msg, &m, sizeof(struct metadata), 0);
-    if (unlikely(bytes_received == -1)) {
+    if (unlikely(bytes_received == -1))
+    {
         log_error("recv() error: %s", strerror(errno));
         return -1;
     }
@@ -471,7 +500,8 @@ int io_tx(void *obj, uint8_t next_fn)
     m.obj = obj;
 
     bytes_sent = send(sockfd_sk_msg, &m, sizeof(struct metadata), 0);
-    if (unlikely(bytes_sent == -1)) {
+    if (unlikely(bytes_sent == -1))
+    {
         log_error("send() error: %s", strerror(errno));
         return -1;
     }

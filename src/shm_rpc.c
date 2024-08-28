@@ -21,10 +21,11 @@
 
 char defaultCurrency[5] = "CAD";
 
-void returnResponse(struct http_transaction *txn) {
+void returnResponse(struct http_transaction *txn)
+{
     txn->hop_count += 100;
     txn->next_fn = GATEWAY;
-    
+
     // PrintSupportedCurrencies(txn);
     // PrintListProductsResponse(txn);
     // PrintGetCartResponse(txn);
@@ -36,14 +37,16 @@ void returnResponse(struct http_transaction *txn) {
     PrintTotalPrice(txn);
 }
 
-void chooseAd(struct http_transaction *txn) {
+void chooseAd(struct http_transaction *txn)
+{
     strcpy(txn->rpc_handler, "GetAds");
     txn->caller_fn = FRONTEND;
     txn->next_fn = AD_SVC;
     txn->hop_count++;
 }
 
-void getCurrencies(struct http_transaction *txn) {
+void getCurrencies(struct http_transaction *txn)
+{
     strcpy(txn->rpc_handler, "GetSupportedCurrencies");
     txn->caller_fn = FRONTEND;
     txn->next_fn = CURRENCY_SVC;
@@ -51,14 +54,16 @@ void getCurrencies(struct http_transaction *txn) {
 }
 
 // Get a list of products
-void getProducts(struct http_transaction *txn) {
+void getProducts(struct http_transaction *txn)
+{
     strcpy(txn->rpc_handler, "ListProducts");
     txn->caller_fn = FRONTEND;
     txn->next_fn = PRODUCTCATA_SVC;
     txn->hop_count++;
 }
 
-void getCart(struct http_transaction *txn) {
+void getCart(struct http_transaction *txn)
+{
     strcpy(txn->get_cart_request.UserId, "ucr-students");
 
     strcpy(txn->rpc_handler, "GetCart");
@@ -68,30 +73,41 @@ void getCart(struct http_transaction *txn) {
 }
 
 // Convert currency for a list of products
-void convertCurrencyOfProducts(struct http_transaction *txn) {
-    if (strcmp(defaultCurrency, "USD") == 0) {
+void convertCurrencyOfProducts(struct http_transaction *txn)
+{
+    if (strcmp(defaultCurrency, "USD") == 0)
+    {
         log_info("Default Currency is USD. Skip convertCurrency");
         int i = 0;
-        for (i = 0; i < txn->list_products_response.num_products; i++) {
+        for (i = 0; i < txn->list_products_response.num_products; i++)
+        {
             txn->product_view[i].Item = txn->list_products_response.Products[i];
             txn->product_view[i].Price = txn->list_products_response.Products[i].PriceUsd;
         }
         // returnResponse(txn);
         txn->hop_count++;
         return;
-    } else {
+    }
+    else
+    {
         log_info("Default Currency is %s. Do convertCurrency", defaultCurrency);
-        if (txn->productViewCntr != 0) {
-            txn->product_view[txn->productViewCntr - 1].Item = txn->list_products_response.Products[txn->productViewCntr - 1];
+        if (txn->productViewCntr != 0)
+        {
+            txn->product_view[txn->productViewCntr - 1].Item =
+                txn->list_products_response.Products[txn->productViewCntr - 1];
             txn->product_view[txn->productViewCntr - 1].Price = txn->currency_conversion_result;
         }
 
-        int size = sizeof(txn->product_view)/sizeof(txn->product_view[0]);
-        if (txn->productViewCntr < size) {
+        int size = sizeof(txn->product_view) / sizeof(txn->product_view[0]);
+        if (txn->productViewCntr < size)
+        {
             strcpy(txn->currency_conversion_req.ToCode, defaultCurrency);
-            strcpy(txn->currency_conversion_req.From.CurrencyCode, txn->list_products_response.Products[txn->productViewCntr].PriceUsd.CurrencyCode);
-            txn->currency_conversion_req.From.Units = txn->list_products_response.Products[txn->productViewCntr].PriceUsd.Units;
-            txn->currency_conversion_req.From.Nanos = txn->list_products_response.Products[txn->productViewCntr].PriceUsd.Nanos;
+            strcpy(txn->currency_conversion_req.From.CurrencyCode,
+                   txn->list_products_response.Products[txn->productViewCntr].PriceUsd.CurrencyCode);
+            txn->currency_conversion_req.From.Units =
+                txn->list_products_response.Products[txn->productViewCntr].PriceUsd.Units;
+            txn->currency_conversion_req.From.Nanos =
+                txn->list_products_response.Products[txn->productViewCntr].PriceUsd.Nanos;
 
             strcpy(txn->rpc_handler, "Convert");
             txn->caller_fn = FRONTEND;
@@ -99,7 +115,9 @@ void convertCurrencyOfProducts(struct http_transaction *txn) {
 
             txn->productViewCntr++;
             return;
-        } else {
+        }
+        else
+        {
             // returnResponse(txn);
             txn->hop_count++;
             return;
@@ -108,22 +126,29 @@ void convertCurrencyOfProducts(struct http_transaction *txn) {
 }
 
 // Get a single product
-void getProduct(struct http_transaction *txn) {
+void getProduct(struct http_transaction *txn)
+{
     char *query = httpQueryParser(txn->request);
     char *req = txn->request;
 
-    if (strstr(req, "/1/cart?") != NULL && strstr(req, "POST")) {
+    if (strstr(req, "/1/cart?") != NULL && strstr(req, "POST"))
+    {
         char *start_of_product_id = strtok(query, "&");
         strcpy(txn->get_product_request.Id, strchr(start_of_product_id, '=') + 1);
         log_info("Product ID: %s", txn->get_product_request.Id);
         // returnResponse(txn); return;
-    } else if (strstr(req, "/1/product") != NULL) {
+    }
+    else if (strstr(req, "/1/product") != NULL)
+    {
         strcpy(txn->get_product_request.Id, query);
         log_info("Product ID: %s", txn->get_product_request.Id);
-    } else {
+    }
+    else
+    {
         log_warn("HTTP Query cannot be parsed!");
         log_warn("\t#### %s", query);
-        returnResponse(txn); return;
+        returnResponse(txn);
+        return;
     }
 
     strcpy(txn->rpc_handler, "GetProduct");
@@ -132,7 +157,8 @@ void getProduct(struct http_transaction *txn) {
     txn->hop_count++;
 }
 
-void getRecommendations(struct http_transaction *txn) {
+void getRecommendations(struct http_transaction *txn)
+{
     strcpy(txn->list_recommendations_request.ProductId, txn->get_product_request.Id);
 
     strcpy(txn->rpc_handler, "ListRecommendations");
@@ -142,16 +168,21 @@ void getRecommendations(struct http_transaction *txn) {
 }
 
 // Convert currency for a product
-void convertCurrencyOfProduct(struct http_transaction *txn) {
-    if (strcmp(defaultCurrency, "USD") == 0) {
+void convertCurrencyOfProduct(struct http_transaction *txn)
+{
+    if (strcmp(defaultCurrency, "USD") == 0)
+    {
         log_info("Default Currency is USD. Skip convertCurrencyOfProduct");
         txn->product_view[0].Item = txn->get_product_response;
         txn->product_view[0].Price = txn->get_product_response.PriceUsd;
 
         getRecommendations(txn);
-    } else {
+    }
+    else
+    {
         log_info("Default Currency is %s. Do convertCurrencyOfProduct", defaultCurrency);
-        if (txn->productViewCntr != 0) {
+        if (txn->productViewCntr != 0)
+        {
             txn->product_view[txn->productViewCntr - 1].Item = txn->get_product_response;
             txn->product_view[txn->productViewCntr - 1].Price = txn->currency_conversion_result;
 
@@ -159,7 +190,8 @@ void convertCurrencyOfProduct(struct http_transaction *txn) {
         }
 
         int size = 1;
-        if (txn->productViewCntr < size) {
+        if (txn->productViewCntr < size)
+        {
             strcpy(txn->currency_conversion_req.ToCode, defaultCurrency);
             strcpy(txn->currency_conversion_req.From.CurrencyCode, txn->get_product_response.PriceUsd.CurrencyCode);
             txn->currency_conversion_req.From.Units = txn->get_product_response.PriceUsd.Units;
@@ -175,12 +207,14 @@ void convertCurrencyOfProduct(struct http_transaction *txn) {
     return;
 }
 
-void insertCart(struct http_transaction *txn) {
+void insertCart(struct http_transaction *txn)
+{
     char *query = httpQueryParser(txn->request);
     char *req = txn->request;
     AddItemRequest *in = &txn->add_item_request;
 
-    if (strstr(req, "/1/cart?") != NULL && strstr(req, "POST")) {
+    if (strstr(req, "/1/cart?") != NULL && strstr(req, "POST"))
+    {
         // log_info("Query : %s", query);
         // char *start_of_product_id = strtok(query, "&");
         char *start_of_quantity = strchr(query, '&') + 1;
@@ -188,10 +222,13 @@ void insertCart(struct http_transaction *txn) {
         // strcpy(txn->get_product_request.Id, strchr(start_of_product_id, '=') + 1);
         log_info("Product Quantity: %d", in->Item.Quantity);
         // product_id=66VCHSJNUP&quantity=1
-    } else {
+    }
+    else
+    {
         log_warn("HTTP Query cannot be parsed!");
         log_warn("\t#### %s", query);
-        returnResponse(txn); return;
+        returnResponse(txn);
+        return;
     }
 
     strcpy(in->UserId, "ucr-students");
@@ -203,13 +240,15 @@ void insertCart(struct http_transaction *txn) {
     txn->hop_count++;
 }
 
-void getShippingQuote(struct http_transaction *txn) {
-    GetQuoteRequest* in = &txn->get_quote_request;
+void getShippingQuote(struct http_transaction *txn)
+{
+    GetQuoteRequest *in = &txn->get_quote_request;
     in->num_items = 0;
     txn->get_quote_response.conversion_flag = false;
 
     int i;
-    for (i = 0; i < txn->get_cart_response.num_items; i++) {
+    for (i = 0; i < txn->get_cart_response.num_items; i++)
+    {
         in->Items[i].Quantity = i + 1;
         in->num_items++;
     }
@@ -221,16 +260,23 @@ void getShippingQuote(struct http_transaction *txn) {
 }
 
 // Convert currency for products in the cart
-void convertCurrencyOfCart(struct http_transaction *txn) {
-    if (strcmp(defaultCurrency, "USD") == 0) {
+void convertCurrencyOfCart(struct http_transaction *txn)
+{
+    if (strcmp(defaultCurrency, "USD") == 0)
+    {
         log_info("Default Currency is USD. Skip convertCurrencyOfCart");
-        calculateTotalPrice(txn); return;
-    } else {
-        if (txn->cartItemCurConvertCntr != 0) {
+        calculateTotalPrice(txn);
+        return;
+    }
+    else
+    {
+        if (txn->cartItemCurConvertCntr != 0)
+        {
             txn->cart_item_view[txn->cartItemCurConvertCntr - 1].Price = txn->currency_conversion_result;
         }
 
-        if (txn->cartItemCurConvertCntr < txn->cartItemViewCntr) {
+        if (txn->cartItemCurConvertCntr < txn->cartItemViewCntr)
+        {
             log_info("Default Currency is %s. Do convertCurrencyOfCart", defaultCurrency);
             strcpy(txn->currency_conversion_req.ToCode, defaultCurrency);
             txn->currency_conversion_req.From = txn->cart_item_view[txn->cartItemCurConvertCntr].Price;
@@ -241,28 +287,37 @@ void convertCurrencyOfCart(struct http_transaction *txn) {
 
             txn->cartItemCurConvertCntr++;
             return;
-        } else {
-            calculateTotalPrice(txn); return;
+        }
+        else
+        {
+            calculateTotalPrice(txn);
+            return;
         }
     }
 }
 
-void getCartItemInfo(struct http_transaction *txn) {
+void getCartItemInfo(struct http_transaction *txn)
+{
     log_info("%d items in the cart.", txn->get_cart_response.num_items);
-    if (txn->get_cart_response.num_items <= 0) {
+    if (txn->get_cart_response.num_items <= 0)
+    {
         log_info("None items in the cart.");
         txn->total_price.Units = 0;
         txn->total_price.Nanos = 0;
-        returnResponse(txn); return;
+        returnResponse(txn);
+        return;
     }
 
-    if (txn->cartItemViewCntr != 0) {
+    if (txn->cartItemViewCntr != 0)
+    {
         txn->cart_item_view[txn->cartItemViewCntr - 1].Item = txn->get_product_response;
-        txn->cart_item_view[txn->cartItemViewCntr - 1].Quantity = txn->get_cart_response.Items[txn->cartItemViewCntr - 1].Quantity;
+        txn->cart_item_view[txn->cartItemViewCntr - 1].Quantity =
+            txn->get_cart_response.Items[txn->cartItemViewCntr - 1].Quantity;
         txn->cart_item_view[txn->cartItemViewCntr - 1].Price = txn->get_product_response.PriceUsd;
     }
 
-    if (txn->cartItemViewCntr < txn->get_cart_response.num_items) {
+    if (txn->cartItemViewCntr < txn->get_cart_response.num_items)
+    {
         strcpy(txn->get_product_request.Id, txn->get_cart_response.Items[txn->cartItemViewCntr].ProductId);
         // log_info("Product ID: %s", txn->get_product_request.Id);
 
@@ -271,7 +326,9 @@ void getCartItemInfo(struct http_transaction *txn) {
         txn->next_fn = PRODUCTCATA_SVC;
 
         txn->cartItemViewCntr++;
-    } else {
+    }
+    else
+    {
         txn->cartItemCurConvertCntr = 0;
         convertCurrencyOfCart(txn);
         txn->hop_count++;
@@ -279,17 +336,22 @@ void getCartItemInfo(struct http_transaction *txn) {
 }
 
 // Convert currency for a ShippingQuote
-void convertCurrencyOfShippingQuote(struct http_transaction *txn) {
-    if (strcmp(defaultCurrency, "USD") == 0) {
+void convertCurrencyOfShippingQuote(struct http_transaction *txn)
+{
+    if (strcmp(defaultCurrency, "USD") == 0)
+    {
         log_info("Default Currency is USD. Skip convertCurrencyOfShippingQuote");
         txn->get_quote_response.conversion_flag = true;
-
-    } else {
-        if (txn->get_quote_response.conversion_flag == true) {
+    }
+    else
+    {
+        if (txn->get_quote_response.conversion_flag == true)
+        {
             txn->get_quote_response.CostUsd = txn->currency_conversion_result;
             log_info("Write back convertCurrencyOfShippingQuote");
-
-        } else {
+        }
+        else
+        {
             log_info("Default Currency is %s. Do convertCurrencyOfShippingQuote", defaultCurrency);
             strcpy(txn->currency_conversion_req.ToCode, defaultCurrency);
             strcpy(txn->currency_conversion_req.From.CurrencyCode, txn->get_quote_response.CostUsd.CurrencyCode);
@@ -304,13 +366,16 @@ void convertCurrencyOfShippingQuote(struct http_transaction *txn) {
     return;
 }
 
-void calculateTotalPrice(struct http_transaction *txn) {
+void calculateTotalPrice(struct http_transaction *txn)
+{
     log_info("Calculating total price...");
     int i = 0;
-    for (i = 0; i < txn->cartItemViewCntr; i++) {
+    for (i = 0; i < txn->cartItemViewCntr; i++)
+    {
         MultiplySlow(&txn->cart_item_view[i].Price, txn->cart_item_view[i].Quantity);
         Sum(&txn->total_price, &txn->cart_item_view[i].Price);
     }
     Sum(&txn->total_price, &txn->get_quote_response.CostUsd);
-    returnResponse(txn); return;
+    returnResponse(txn);
+    return;
 }

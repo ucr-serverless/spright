@@ -197,3 +197,6 @@ bin:
 clean:
 	@ echo "RM -r src/*.d src/*.o src/*/*.o src/*/*.d bin"
 	@ $(RM) -r src/*.d src/*.o src/*/*.o src/*/*.d bin
+
+format:
+	@ clang-format -i src/*.c src/include/*.h src/online_boutique/*.c src/log/*.c src/log/*.h

@@ -40,8 +40,10 @@ tenant_pipe tenant_pipes[MAX_TENANTS];
 /*
  * Calculate the Greatest Common Divisor
  */
-static int gcd(int a, int b) {
-    while (b != 0) {
+static int gcd(int a, int b)
+{
+    while (b != 0)
+    {
         int temp = b;
         b = a % b;
         a = temp;
@@ -53,13 +55,15 @@ static int gcd(int a, int b) {
 /*
  * Calculate the GCD of a list of numbers
  */
-int get_gcd_weight(void) {
+int get_gcd_weight(void)
+{
     if (cfg->n_tenants == 0)
         return 0;
 
     int result = cfg->tenants[0].weight;
 
-    for (int i = 1; i < cfg->n_tenants; i++) {
+    for (int i = 1; i < cfg->n_tenants; i++)
+    {
         result = gcd(result, cfg->tenants[i].weight);
     }
 
@@ -68,11 +72,14 @@ int get_gcd_weight(void) {
     return result;
 }
 
-int get_max_weight(void) {
+int get_max_weight(void)
+{
     int max_val = cfg->tenants[0].weight;
 
-    for (int i = 1; i < cfg->n_tenants; i++) {
-        if (cfg->tenants[i].weight > max_val) {
+    for (int i = 1; i < cfg->n_tenants; i++)
+    {
+        if (cfg->tenants[i].weight > max_val)
+        {
             max_val = cfg->tenants[i].weight;
         }
     }
@@ -83,15 +90,18 @@ int get_max_weight(void) {
 /*
  * Set file descriptor as non-blocking
  */
-int set_nonblocking(int fd) {
+int set_nonblocking(int fd)
+{
     int flags = fcntl(fd, F_GETFL, 0);
-    if (flags == -1) {
+    if (flags == -1)
+    {
         log_error("fcntl(F_GETFL) error: %s", strerror(errno));
         return -1;
     }
 
     flags = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-    if (flags == -1) {
+    if (flags == -1)
+    {
         log_error("fcntl(F_SETFL) error: %s", strerror(errno));
         return -1;
     }
@@ -99,12 +109,13 @@ int set_nonblocking(int fd) {
     return 0;
 }
 
-int write_pipe(struct http_transaction *txn) {
+int write_pipe(struct http_transaction *txn)
+{
     uint32_t tenant_id = txn->tenant_id;
 
-    ssize_t bytes_written = write(tenant_pipes[tenant_id].fd[1], &txn,
-                            sizeof(struct http_transaction*));
-    if (unlikely(bytes_written == -1)) {
+    ssize_t bytes_written = write(tenant_pipes[tenant_id].fd[1], &txn, sizeof(struct http_transaction *));
+    if (unlikely(bytes_written == -1))
+    {
         log_error("write() error: %s", strerror(errno));
         return -1;
     }
@@ -112,15 +123,21 @@ int write_pipe(struct http_transaction *txn) {
     return 0;
 }
 
-struct http_transaction* read_pipe(tenant_pipe *tp) {
+struct http_transaction *read_pipe(tenant_pipe *tp)
+{
     struct http_transaction *txn = NULL;
 
     int bytes_read = read(tp->fd[0], &txn, sizeof(struct http_transaction *));
-    if (bytes_read > 0) {
+    if (bytes_read > 0)
+    {
         return txn;
-    } else if (bytes_read == -1 && errno != EAGAIN) {
+    }
+    else if (bytes_read == -1 && errno != EAGAIN)
+    {
         log_error("Error while reading pipe: %s", strerror(errno));
-    } else if (bytes_read == 0) {
+    }
+    else if (bytes_read == 0)
+    {
         log_error("Unexpected end of pipe: %s", strerror(errno));
     }
 
@@ -130,29 +147,34 @@ struct http_transaction* read_pipe(tenant_pipe *tp) {
 /*
  * Initialize tenant pipes and weights
  */
-int init_tenant_pipes(void) {
+int init_tenant_pipes(void)
+{
     int num_tenants = cfg->n_tenants;
 
     log_info("Initializing %d tenant pipes and weights ...", num_tenants);
 
-    for (int i = 0; i < num_tenants; i++) {
-        if (pipe(tenant_pipes[i].fd) == -1) {
+    for (int i = 0; i < num_tenants; i++)
+    {
+        if (pipe(tenant_pipes[i].fd) == -1)
+        {
             log_error("pipe() error: %s", strerror(errno));
             return -1;
         }
         tenant_pipes[i].weight = cfg->tenants[i].weight;
-        tenant_pipes[i].tenant_id = (uint32_t) i;
+        tenant_pipes[i].tenant_id = (uint32_t)i;
     }
 
     return 0;
 }
 
-int add_regular_pipe_to_epoll(int epoll_fd, struct epoll_event *ev, int pipe_fd) {
+int add_regular_pipe_to_epoll(int epoll_fd, struct epoll_event *ev, int pipe_fd)
+{
     set_nonblocking(pipe_fd);
     ev->events = EPOLLIN;
     ev->data.fd = pipe_fd;
 
-    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, pipe_fd, ev) == -1) {
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, pipe_fd, ev) == -1)
+    {
         log_error("epoll_ctl(EPOLL_CTL_ADD): %s", strerror(errno));
         return -1;
     }
@@ -160,13 +182,16 @@ int add_regular_pipe_to_epoll(int epoll_fd, struct epoll_event *ev, int pipe_fd)
     return 0;
 }
 
-int add_weighted_pipes_to_epoll(int epoll_fd, struct epoll_event *ev) {
-    for (int i = 0; i < cfg->n_tenants; i++) {
+int add_weighted_pipes_to_epoll(int epoll_fd, struct epoll_event *ev)
+{
+    for (int i = 0; i < cfg->n_tenants; i++)
+    {
         set_nonblocking(tenant_pipes[i].fd[0]);
         ev->events = EPOLLIN;
         ev->data.ptr = &tenant_pipes[i];
 
-        if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, tenant_pipes[i].fd[0], ev) == -1) {
+        if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, tenant_pipes[i].fd[0], ev) == -1)
+        {
             log_error("epoll_ctl(EPOLL_CTL_ADD): %s", strerror(errno));
             return -1;
         }
@@ -176,22 +201,28 @@ int add_weighted_pipes_to_epoll(int epoll_fd, struct epoll_event *ev) {
 }
 
 // Helper function to read exactly count bytes from fd into buf
-ssize_t read_full(int fd, void *buf, size_t count) {
+ssize_t read_full(int fd, void *buf, size_t count)
+{
     size_t bytes_read = 0;
     ssize_t result;
 
-    while (bytes_read < count) {
+    while (bytes_read < count)
+    {
         result = read(fd, (char *)buf + bytes_read, count - bytes_read);
 
-        if (result < 0) {
+        if (result < 0)
+        {
             // Error occurred
-            if (errno == EINTR) {
+            if (errno == EINTR)
+            {
                 // Interrupted by signal, continue reading
                 continue;
             }
             log_error("read() error: %s", strerror(errno));
             return -1;
-        } else if (result == 0) {
+        }
+        else if (result == 0)
+        {
             // EOF reached
             break;
         }
@@ -207,15 +238,20 @@ ssize_t read_full(int fd, void *buf, size_t count) {
  * giving it some time to become ready. If the connection is not successful
  * within the specified number of retries, the function will return an error.
  */
-int retry_connect(int sockfd, struct sockaddr *addr) {
+int retry_connect(int sockfd, struct sockaddr *addr)
+{
     int attempts = 0;
     int ret;
 
-    do {
+    do
+    {
         ret = connect(sockfd, addr, sizeof(struct sockaddr_in));
-        if (ret == 0) {
+        if (ret == 0)
+        {
             break;
-        } else {
+        }
+        else
+        {
             attempts++;
             log_warn("connect() error: %s. Retrying %d times ...", strerror(errno), attempts);
             usleep(RETRY_DELAY_US);

@@ -46,15 +46,15 @@ static int init_primary(void)
     uint8_t i;
     uint8_t j;
 
-    for (i = 0; i < cfg->n_nfs + 1; i++) {
+    for (i = 0; i < cfg->n_nfs + 1; i++)
+    {
         snprintf(ring_name, RING_NAME_LENGTH_MAX, RING_NAME_FORMAT, i);
 
         /* TODO: Change "flags" argument */
-        ring[i] = rte_ring_create(ring_name, RING_LENGTH_MAX,
-                                  rte_socket_id(), 0);
-        if (unlikely(ring[i] == NULL)) {
-            log_error("rte_ring_create() error: %s",
-                    rte_strerror(rte_errno));
+        ring[i] = rte_ring_create(ring_name, RING_LENGTH_MAX, rte_socket_id(), 0);
+        if (unlikely(ring[i] == NULL))
+        {
+            log_error("rte_ring_create() error: %s", rte_strerror(rte_errno));
             goto error_0;
         }
     }
@@ -62,7 +62,8 @@ static int init_primary(void)
     return 0;
 
 error_0:
-    for (j = 0; j < i; j++) {
+    for (j = 0; j < i; j++)
+    {
         rte_ring_free(ring[j]);
     }
     return -1;
@@ -73,13 +74,14 @@ static int init_secondary(void)
     char ring_name[RING_NAME_LENGTH_MAX];
     uint8_t i;
 
-    for (i = 0; i < cfg->n_nfs + 1; i++) {
+    for (i = 0; i < cfg->n_nfs + 1; i++)
+    {
         snprintf(ring_name, RING_NAME_LENGTH_MAX, RING_NAME_FORMAT, i);
 
         ring[i] = rte_ring_lookup(ring_name);
-        if (unlikely(ring[i] == NULL)) {
-            log_error("rte_ring_lookup() error: %s",
-                    rte_strerror(rte_errno));
+        if (unlikely(ring[i] == NULL))
+        {
+            log_error("rte_ring_lookup() error: %s", rte_strerror(rte_errno));
             return -1;
         }
     }
@@ -91,7 +93,8 @@ static int exit_primary(void)
 {
     uint8_t i;
 
-    for (i = 0; i < cfg->n_nfs + 1; i++) {
+    for (i = 0; i < cfg->n_nfs + 1; i++)
+    {
         rte_ring_free(ring[i]);
     }
 
@@ -108,24 +111,32 @@ int io_init(void)
     int ret;
 
     ring = malloc((cfg->n_nfs + 1) * sizeof(struct rte_ring *));
-    if (unlikely(ring == NULL)) {
+    if (unlikely(ring == NULL))
+    {
         log_error("malloc() error: %s", strerror(errno));
         goto error_0;
     }
 
-    if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+    if (rte_eal_process_type() == RTE_PROC_PRIMARY)
+    {
         ret = init_primary();
-        if (unlikely(ret == -1)) {
+        if (unlikely(ret == -1))
+        {
             log_error("init_primary() error");
             goto error_1;
         }
-    } else if (rte_eal_process_type() == RTE_PROC_SECONDARY) {
+    }
+    else if (rte_eal_process_type() == RTE_PROC_SECONDARY)
+    {
         ret = init_secondary();
-        if (unlikely(ret == -1)) {
+        if (unlikely(ret == -1))
+        {
             log_error("init_secondary() error");
             goto error_1;
         }
-    } else {
+    }
+    else
+    {
         goto error_1;
     }
 
@@ -141,19 +152,26 @@ int io_exit(void)
 {
     int ret;
 
-    if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
+    if (rte_eal_process_type() == RTE_PROC_PRIMARY)
+    {
         ret = exit_primary();
-        if (unlikely(ret == -1)) {
+        if (unlikely(ret == -1))
+        {
             log_error("exit_primary() error");
             goto error_0;
         }
-    } else if (rte_eal_process_type() == RTE_PROC_SECONDARY) {
+    }
+    else if (rte_eal_process_type() == RTE_PROC_SECONDARY)
+    {
         ret = exit_secondary();
-        if (unlikely(ret == -1)) {
+        if (unlikely(ret == -1))
+        {
             log_error("exit_secondary() error");
             goto error_0;
         }
-    } else {
+    }
+    else
+    {
         goto error_0;
     }
 
@@ -168,14 +186,16 @@ error_0:
 
 int io_rx(void **obj)
 {
-    while (rte_ring_dequeue(ring[fn_id], obj) != 0);
+    while (rte_ring_dequeue(ring[fn_id], obj) != 0)
+        ;
 
     return 0;
 }
 
 int io_tx(void *obj, uint8_t next_fn)
 {
-    while (rte_ring_enqueue(ring[next_fn], obj) != 0);
+    while (rte_ring_enqueue(ring[next_fn], obj) != 0)
+        ;
 
     return 0;
 }

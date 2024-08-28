@@ -23,9 +23,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/epoll.h>
 #include <time.h>
 #include <unistd.h>
-#include <sys/epoll.h>
 #include <uuid/uuid.h>
 
 #include <rte_branch_prediction.h>
@@ -45,8 +45,10 @@ char defaultCurrency[5] = "CAD";
 
 void prepareOrderItemsAndShippingQuoteFromCart(struct http_transaction *txn);
 
-static void sendOrderConfirmation(struct http_transaction *txn) {
-    uuid_t binuuid; uuid_generate_random(binuuid);
+static void sendOrderConfirmation(struct http_transaction *txn)
+{
+    uuid_t binuuid;
+    uuid_generate_random(binuuid);
     uuid_unparse(binuuid, txn->order_result.OrderId);
     strcpy(txn->order_result.ShippingTrackingId, txn->ship_order_response.TrackingId);
     txn->order_result.ShippingCost = txn->get_quote_response.CostUsd;
@@ -60,7 +62,8 @@ static void sendOrderConfirmation(struct http_transaction *txn) {
     txn->checkoutsvc_hop_cnt++;
 }
 
-static void emptyUserCart(struct http_transaction *txn) {
+static void emptyUserCart(struct http_transaction *txn)
+{
     EmptyCartRequest *in = &txn->empty_cart_request;
     strcpy(in->UserId, "ucr-students");
 
@@ -70,7 +73,8 @@ static void emptyUserCart(struct http_transaction *txn) {
     txn->checkoutsvc_hop_cnt++;
 }
 
-static void shipOrder(struct http_transaction *txn) {
+static void shipOrder(struct http_transaction *txn)
+{
     ShipOrderRequest *in = &txn->ship_order_request;
     strcpy(in->address.StreetAddress, txn->place_order_request.address.StreetAddress);
     strcpy(in->address.City, txn->place_order_request.address.City);
@@ -84,11 +88,14 @@ static void shipOrder(struct http_transaction *txn) {
     txn->checkoutsvc_hop_cnt++;
 }
 
-static void chargeCard(struct http_transaction *txn) {
+static void chargeCard(struct http_transaction *txn)
+{
     strcpy(txn->charge_request.CreditCard.CreditCardNumber, txn->place_order_request.CreditCard.CreditCardNumber);
     txn->charge_request.CreditCard.CreditCardCvv = txn->place_order_request.CreditCard.CreditCardCvv;
-    txn->charge_request.CreditCard.CreditCardExpirationYear = txn->place_order_request.CreditCard.CreditCardExpirationYear;
-    txn->charge_request.CreditCard.CreditCardExpirationMonth = txn->place_order_request.CreditCard.CreditCardExpirationMonth;
+    txn->charge_request.CreditCard.CreditCardExpirationYear =
+        txn->place_order_request.CreditCard.CreditCardExpirationYear;
+    txn->charge_request.CreditCard.CreditCardExpirationMonth =
+        txn->place_order_request.CreditCard.CreditCardExpirationMonth;
 
     strcpy(txn->charge_request.Amount.CurrencyCode, txn->total_price.CurrencyCode);
     txn->charge_request.Amount.Units = txn->total_price.Units;
@@ -100,45 +107,56 @@ static void chargeCard(struct http_transaction *txn) {
     txn->checkoutsvc_hop_cnt++;
 }
 
-static void calculateTotalPrice(struct http_transaction *txn) {
+static void calculateTotalPrice(struct http_transaction *txn)
+{
     log_info("Calculating total price...");
     int i = 0;
-    for (i = 0; i < txn->orderItemViewCntr; i++) {
+    for (i = 0; i < txn->orderItemViewCntr; i++)
+    {
         MultiplySlow(&txn->order_item_view[i].Cost, txn->order_item_view[i].Item.Quantity);
         Sum(&txn->total_price, &txn->order_item_view[i].Cost);
     }
     log_info("\t\t>>>>>> priceItem(s) Subtotal: %ld.%d", txn->total_price.Units, txn->total_price.Nanos);
-    log_info("\t\t>>>>>> Shipping & Handling: %ld.%d", txn->get_quote_response.CostUsd.Units, txn->get_quote_response.CostUsd.Nanos);
+    log_info("\t\t>>>>>> Shipping & Handling: %ld.%d", txn->get_quote_response.CostUsd.Units,
+             txn->get_quote_response.CostUsd.Nanos);
     Sum(&txn->total_price, &txn->get_quote_response.CostUsd);
-    
+
     return;
 }
 
-static void returnResponseToFrontendWithOrderResult(struct http_transaction *txn) {
+static void returnResponseToFrontendWithOrderResult(struct http_transaction *txn)
+{
     txn->next_fn = FRONTEND;
     txn->caller_fn = CHECKOUT_SVC;
 }
 
-static void returnResponseToFrontend(struct http_transaction *txn) {
+static void returnResponseToFrontend(struct http_transaction *txn)
+{
     txn->next_fn = FRONTEND;
     txn->caller_fn = CHECKOUT_SVC;
 }
 
 // Convert currency for a ShippingQuote
-static void convertCurrencyOfShippingQuote(struct http_transaction *txn) {
-    if (strcmp(defaultCurrency, "USD") == 0) {
+static void convertCurrencyOfShippingQuote(struct http_transaction *txn)
+{
+    if (strcmp(defaultCurrency, "USD") == 0)
+    {
         log_info("Default Currency is USD. Skip convertCurrencyOfShippingQuote");
         txn->get_quote_response.conversion_flag = true;
         txn->checkoutsvc_hop_cnt++;
         prepareOrderItemsAndShippingQuoteFromCart(txn);
-    } else {
-        if (txn->get_quote_response.conversion_flag == true) {
+    }
+    else
+    {
+        if (txn->get_quote_response.conversion_flag == true)
+        {
             txn->get_quote_response.CostUsd = txn->currency_conversion_result;
             log_info("Write back convertCurrencyOfShippingQuote");
             txn->checkoutsvc_hop_cnt++;
             prepareOrderItemsAndShippingQuoteFromCart(txn);
-
-        } else {
+        }
+        else
+        {
             log_info("Default Currency is %s. Do convertCurrencyOfShippingQuote", defaultCurrency);
             strcpy(txn->currency_conversion_req.ToCode, defaultCurrency);
             strcpy(txn->currency_conversion_req.From.CurrencyCode, txn->get_quote_response.CostUsd.CurrencyCode);
@@ -155,13 +173,15 @@ static void convertCurrencyOfShippingQuote(struct http_transaction *txn) {
     return;
 }
 
-static void quoteShipping(struct http_transaction *txn) {
-    GetQuoteRequest* in = &txn->get_quote_request;
+static void quoteShipping(struct http_transaction *txn)
+{
+    GetQuoteRequest *in = &txn->get_quote_request;
     in->num_items = 0;
     txn->get_quote_response.conversion_flag = false;
 
     int i;
-    for (i = 0; i < txn->get_cart_response.num_items; i++) {
+    for (i = 0; i < txn->get_cart_response.num_items; i++)
+    {
         in->Items[i].Quantity = i + 1;
         in->num_items++;
     }
@@ -172,19 +192,25 @@ static void quoteShipping(struct http_transaction *txn) {
     txn->checkoutsvc_hop_cnt++;
 }
 
-
 // Convert currency for products in the cart
-static void convertCurrencyOfCart(struct http_transaction *txn) {
-    if (strcmp(defaultCurrency, "USD") == 0) {
+static void convertCurrencyOfCart(struct http_transaction *txn)
+{
+    if (strcmp(defaultCurrency, "USD") == 0)
+    {
         log_info("Default Currency is USD. Skip convertCurrencyOfCart");
         txn->checkoutsvc_hop_cnt++;
-        prepareOrderItemsAndShippingQuoteFromCart(txn); return;
-    } else {
-        if (txn->orderItemCurConvertCntr != 0) {
+        prepareOrderItemsAndShippingQuoteFromCart(txn);
+        return;
+    }
+    else
+    {
+        if (txn->orderItemCurConvertCntr != 0)
+        {
             txn->order_item_view[txn->orderItemCurConvertCntr - 1].Cost = txn->currency_conversion_result;
         }
 
-        if (txn->orderItemCurConvertCntr < txn->orderItemViewCntr) {
+        if (txn->orderItemCurConvertCntr < txn->orderItemViewCntr)
+        {
             log_info("Default Currency is %s. Do convertCurrencyOfCart", defaultCurrency);
             strcpy(txn->currency_conversion_req.ToCode, defaultCurrency);
             txn->currency_conversion_req.From = txn->order_item_view[txn->orderItemCurConvertCntr].Cost;
@@ -195,28 +221,36 @@ static void convertCurrencyOfCart(struct http_transaction *txn) {
 
             txn->orderItemCurConvertCntr++;
             return;
-        } else {
+        }
+        else
+        {
             txn->checkoutsvc_hop_cnt++;
-            prepareOrderItemsAndShippingQuoteFromCart(txn); return;
+            prepareOrderItemsAndShippingQuoteFromCart(txn);
+            return;
         }
     }
 }
 
-static void getOrderItemInfo(struct http_transaction *txn) {
+static void getOrderItemInfo(struct http_transaction *txn)
+{
     log_info("%d items in the cart.", txn->get_cart_response.num_items);
-    if (txn->get_cart_response.num_items <= 0) {
+    if (txn->get_cart_response.num_items <= 0)
+    {
         log_info("None items in the cart.");
         txn->total_price.Units = 0;
         txn->total_price.Nanos = 0;
-        returnResponseToFrontend(txn); return;
+        returnResponseToFrontend(txn);
+        return;
     }
 
-    if (txn->orderItemViewCntr != 0) {
+    if (txn->orderItemViewCntr != 0)
+    {
         strcpy(txn->order_item_view[txn->orderItemViewCntr - 1].Item.ProductId, txn->get_product_response.Id);
         txn->order_item_view[txn->orderItemViewCntr - 1].Cost = txn->get_product_response.PriceUsd;
     }
 
-    if (txn->orderItemViewCntr < txn->get_cart_response.num_items) {
+    if (txn->orderItemViewCntr < txn->get_cart_response.num_items)
+    {
         strcpy(txn->get_product_request.Id, txn->get_cart_response.Items[txn->orderItemViewCntr].ProductId);
         // log_info("Product ID: %s", txn->get_product_request.Id);
 
@@ -225,14 +259,17 @@ static void getOrderItemInfo(struct http_transaction *txn) {
         txn->next_fn = PRODUCTCATA_SVC;
 
         txn->orderItemViewCntr++;
-    } else {
+    }
+    else
+    {
         txn->orderItemCurConvertCntr = 0;
         convertCurrencyOfCart(txn);
         txn->checkoutsvc_hop_cnt++;
     }
 }
 
-static void getCart(struct http_transaction *txn) {
+static void getCart(struct http_transaction *txn)
+{
     strcpy(txn->get_cart_request.UserId, "ucr-students");
 
     strcpy(txn->rpc_handler, "GetCart");
@@ -241,57 +278,76 @@ static void getCart(struct http_transaction *txn) {
     txn->checkoutsvc_hop_cnt++;
 }
 
-static void prepOrderItems(struct http_transaction *txn) {
+static void prepOrderItems(struct http_transaction *txn)
+{
 
-    if (txn->checkoutsvc_hop_cnt == 1) {
+    if (txn->checkoutsvc_hop_cnt == 1)
+    {
         getOrderItemInfo(txn);
-    } else if (txn->checkoutsvc_hop_cnt == 2) {
+    }
+    else if (txn->checkoutsvc_hop_cnt == 2)
+    {
         convertCurrencyOfCart(txn);
-    } else {
+    }
+    else
+    {
         log_info("prepOrderItems doesn't know what to do for HOP %u.", txn->checkoutsvc_hop_cnt);
         returnResponseToFrontend(txn);
     }
 }
 
-void prepareOrderItemsAndShippingQuoteFromCart(struct http_transaction *txn) {
+void prepareOrderItemsAndShippingQuoteFromCart(struct http_transaction *txn)
+{
     log_info("Call prepareOrderItemsAndShippingQuoteFromCart ### Hop: %u", txn->checkoutsvc_hop_cnt);
 
-    if (txn->checkoutsvc_hop_cnt == 0) {
+    if (txn->checkoutsvc_hop_cnt == 0)
+    {
         getCart(txn);
         txn->orderItemViewCntr = 0;
-
-    } else if (txn->checkoutsvc_hop_cnt >= 1 && txn->checkoutsvc_hop_cnt <= 2) {
+    }
+    else if (txn->checkoutsvc_hop_cnt >= 1 && txn->checkoutsvc_hop_cnt <= 2)
+    {
         prepOrderItems(txn);
-
-    } else if (txn->checkoutsvc_hop_cnt == 3) {
+    }
+    else if (txn->checkoutsvc_hop_cnt == 3)
+    {
         quoteShipping(txn);
-
-    } else if (txn->checkoutsvc_hop_cnt == 4) {
+    }
+    else if (txn->checkoutsvc_hop_cnt == 4)
+    {
         convertCurrencyOfShippingQuote(txn);
-
-    } else if (txn->checkoutsvc_hop_cnt == 5) {
+    }
+    else if (txn->checkoutsvc_hop_cnt == 5)
+    {
         calculateTotalPrice(txn);
         chargeCard(txn);
-
-    } else if (txn->checkoutsvc_hop_cnt == 6) {
+    }
+    else if (txn->checkoutsvc_hop_cnt == 6)
+    {
         shipOrder(txn);
-
-    } else if (txn->checkoutsvc_hop_cnt == 7) {
+    }
+    else if (txn->checkoutsvc_hop_cnt == 7)
+    {
         emptyUserCart(txn);
-
-    } else if (txn->checkoutsvc_hop_cnt == 8) {
+    }
+    else if (txn->checkoutsvc_hop_cnt == 8)
+    {
         sendOrderConfirmation(txn);
-
-    } else if (txn->checkoutsvc_hop_cnt == 9) {
+    }
+    else if (txn->checkoutsvc_hop_cnt == 9)
+    {
         returnResponseToFrontendWithOrderResult(txn);
-
-    } else {
-        log_info("prepareOrderItemsAndShippingQuoteFromCart doesn't know what to do for HOP %u.", txn->checkoutsvc_hop_cnt);
+    }
+    else
+    {
+        log_info("prepareOrderItemsAndShippingQuoteFromCart doesn't know what to do for HOP %u.",
+                 txn->checkoutsvc_hop_cnt);
         returnResponseToFrontend(txn);
     }
 }
 
-static void PlaceOrder(struct http_transaction *txn) {
+static void PlaceOrder(struct http_transaction *txn)
+{
     prepareOrderItemsAndShippingQuoteFromCart(txn);
 }
 
@@ -305,10 +361,11 @@ static void *nf_worker(void *arg)
     /* TODO: Careful with this pointer as it may point to a stack */
     index = (uint64_t)arg;
 
-    while (1) {
-        bytes_read = read(pipefd_rx[index][0], &txn,
-                          sizeof(struct http_transaction *));
-        if (unlikely(bytes_read == -1)) {
+    while (1)
+    {
+        bytes_read = read(pipefd_rx[index][0], &txn, sizeof(struct http_transaction *));
+        if (unlikely(bytes_read == -1))
+        {
             log_error("read() error: %s", strerror(errno));
             return NULL;
         }
@@ -322,9 +379,9 @@ static void *nf_worker(void *arg)
         // 	// SendOrderConfirmation(txn);
         // }
 
-        bytes_written = write(pipefd_tx[index][1], &txn,
-                              sizeof(struct http_transaction *));
-        if (unlikely(bytes_written == -1)) {
+        bytes_written = write(pipefd_tx[index][1], &txn, sizeof(struct http_transaction *));
+        if (unlikely(bytes_written == -1))
+        {
             log_error("write() error: %s", strerror(errno));
             return NULL;
         }
@@ -340,16 +397,18 @@ static void *nf_rx(void *arg)
     uint8_t i;
     int ret;
 
-    for (i = 0; ; i = (i + 1) % cfg->nf[fn_id - 1].n_threads) {
+    for (i = 0;; i = (i + 1) % cfg->nf[fn_id - 1].n_threads)
+    {
         ret = io_rx((void **)&txn);
-        if (unlikely(ret == -1)) {
+        if (unlikely(ret == -1))
+        {
             log_error("io_rx() error");
             return NULL;
         }
 
-        bytes_written = write(pipefd_rx[i][1], &txn,
-                              sizeof(struct http_transaction *));
-        if (unlikely(bytes_written == -1)) {
+        bytes_written = write(pipefd_rx[i][1], &txn, sizeof(struct http_transaction *));
+        if (unlikely(bytes_written == -1))
+        {
             log_error("write() error: %s", strerror(errno));
             return NULL;
         }
@@ -369,55 +428,57 @@ static void *nf_tx(void *arg)
     int ret;
 
     epfd = epoll_create1(0);
-    if (unlikely(epfd == -1)) {
+    if (unlikely(epfd == -1))
+    {
         log_error("epoll_create1() error: %s", strerror(errno));
         return NULL;
     }
 
-    for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
+    for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++)
+    {
         ret = set_nonblocking(pipefd_tx[i][0]);
-        if (unlikely(ret == -1)) {
+        if (unlikely(ret == -1))
+        {
             return NULL;
         }
 
         event[0].events = EPOLLIN;
         event[0].data.fd = pipefd_tx[i][0];
 
-        ret = epoll_ctl(epfd, EPOLL_CTL_ADD, pipefd_tx[i][0],
-                        &event[0]);
-        if (unlikely(ret == -1)) {
-            log_error("epoll_ctl() error: %s",
-                    strerror(errno));
+        ret = epoll_ctl(epfd, EPOLL_CTL_ADD, pipefd_tx[i][0], &event[0]);
+        if (unlikely(ret == -1))
+        {
+            log_error("epoll_ctl() error: %s", strerror(errno));
             return NULL;
         }
     }
 
-    while (1) {
-        n_fds = epoll_wait(epfd, event, cfg->nf[fn_id - 1].n_threads,
-                           -1);
-        if (unlikely(n_fds == -1)) {
-            log_error("epoll_wait() error: %s",
-                    strerror(errno));
+    while (1)
+    {
+        n_fds = epoll_wait(epfd, event, cfg->nf[fn_id - 1].n_threads, -1);
+        if (unlikely(n_fds == -1))
+        {
+            log_error("epoll_wait() error: %s", strerror(errno));
             return NULL;
         }
 
-        for (i = 0; i < n_fds; i++) {
-            bytes_read = read(event[i].data.fd, &txn,
-                              sizeof(struct http_transaction *));
-            if (unlikely(bytes_read == -1)) {
-                log_error("read() error: %s",
-                        strerror(errno));
+        for (i = 0; i < n_fds; i++)
+        {
+            bytes_read = read(event[i].data.fd, &txn, sizeof(struct http_transaction *));
+            if (unlikely(bytes_read == -1))
+            {
+                log_error("read() error: %s", strerror(errno));
                 return NULL;
             }
 
             log_debug("Route id: %u, Hop Count %u, Next Hop: %u, Next Fn: %u, \
-                Caller Fn: %s (#%u), RPC Handler: %s()", 
-                txn->route_id, txn->hop_count,
-                cfg->route[txn->route_id].hop[txn->hop_count],
-                txn->next_fn, txn->caller_nf, txn->caller_fn, txn->rpc_handler);
+                Caller Fn: %s (#%u), RPC Handler: %s()",
+                      txn->route_id, txn->hop_count, cfg->route[txn->route_id].hop[txn->hop_count], txn->next_fn,
+                      txn->caller_nf, txn->caller_fn, txn->rpc_handler);
 
             ret = io_tx(txn, txn->next_fn);
-            if (unlikely(ret == -1)) {
+            if (unlikely(ret == -1))
+            {
                 log_error("io_tx() error");
                 return NULL;
             }
@@ -440,7 +501,8 @@ static int nf(uint8_t nf_id)
     fn_id = nf_id;
 
     memzone = rte_memzone_lookup(MEMZONE_NAME);
-    if (unlikely(memzone == NULL)) {
+    if (unlikely(memzone == NULL))
+    {
         log_error("rte_memzone_lookup() error");
         return -1;
     }
@@ -448,96 +510,111 @@ static int nf(uint8_t nf_id)
     cfg = memzone->addr;
 
     ret = io_init();
-    if (unlikely(ret == -1)) {
+    if (unlikely(ret == -1))
+    {
         log_error("io_init() error");
         return -1;
     }
 
-    for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
+    for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++)
+    {
         ret = pipe(pipefd_rx[i]);
-        if (unlikely(ret == -1)) {
+        if (unlikely(ret == -1))
+        {
             log_error("pipe() error: %s", strerror(errno));
             return -1;
         }
 
         ret = pipe(pipefd_tx[i]);
-        if (unlikely(ret == -1)) {
+        if (unlikely(ret == -1))
+        {
             log_error("pipe() error: %s", strerror(errno));
             return -1;
         }
     }
 
     ret = pthread_create(&thread_rx, NULL, &nf_rx, NULL);
-    if (unlikely(ret != 0)) {
+    if (unlikely(ret != 0))
+    {
         log_error("pthread_create() error: %s", strerror(ret));
         return -1;
     }
 
     ret = pthread_create(&thread_tx, NULL, &nf_tx, NULL);
-    if (unlikely(ret != 0)) {
+    if (unlikely(ret != 0))
+    {
         log_error("pthread_create() error: %s", strerror(ret));
         return -1;
     }
 
-    for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
-        ret = pthread_create(&thread_worker[i], NULL, &nf_worker,
-                             (void *)(uint64_t)i);
-        if (unlikely(ret != 0)) {
-            log_error("pthread_create() error: %s",
-                    strerror(ret));
+    for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++)
+    {
+        ret = pthread_create(&thread_worker[i], NULL, &nf_worker, (void *)(uint64_t)i);
+        if (unlikely(ret != 0))
+        {
+            log_error("pthread_create() error: %s", strerror(ret));
             return -1;
         }
     }
 
-    for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
+    for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++)
+    {
         ret = pthread_join(thread_worker[i], NULL);
-        if (unlikely(ret != 0)) {
-            log_error("pthread_join() error: %s",
-                    strerror(ret));
+        if (unlikely(ret != 0))
+        {
+            log_error("pthread_join() error: %s", strerror(ret));
             return -1;
         }
     }
 
     ret = pthread_join(thread_rx, NULL);
-    if (unlikely(ret != 0)) {
+    if (unlikely(ret != 0))
+    {
         log_error("pthread_join() error: %s", strerror(ret));
         return -1;
     }
 
     ret = pthread_join(thread_tx, NULL);
-    if (unlikely(ret != 0)) {
+    if (unlikely(ret != 0))
+    {
         log_error("pthread_join() error: %s", strerror(ret));
         return -1;
     }
 
-    for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++) {
+    for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++)
+    {
         ret = close(pipefd_rx[i][0]);
-        if (unlikely(ret == -1)) {
+        if (unlikely(ret == -1))
+        {
             log_error("close() error: %s", strerror(errno));
             return -1;
         }
 
         ret = close(pipefd_rx[i][1]);
-        if (unlikely(ret == -1)) {
+        if (unlikely(ret == -1))
+        {
             log_error("close() error: %s", strerror(errno));
             return -1;
         }
 
         ret = close(pipefd_tx[i][0]);
-        if (unlikely(ret == -1)) {
+        if (unlikely(ret == -1))
+        {
             log_error("close() error: %s", strerror(errno));
             return -1;
         }
 
         ret = close(pipefd_tx[i][1]);
-        if (unlikely(ret == -1)) {
+        if (unlikely(ret == -1))
+        {
             log_error("close() error: %s", strerror(errno));
             return -1;
         }
     }
 
     ret = io_exit();
-    if (unlikely(ret == -1)) {
+    if (unlikely(ret == -1))
+    {
         log_error("io_exit() error");
         return -1;
     }
@@ -553,37 +630,40 @@ int main(int argc, char **argv)
     int ret;
 
     ret = rte_eal_init(argc, argv);
-    if (unlikely(ret == -1)) {
-        log_error("rte_eal_init() error: %s",
-                rte_strerror(rte_errno));
+    if (unlikely(ret == -1))
+    {
+        log_error("rte_eal_init() error: %s", rte_strerror(rte_errno));
         goto error_0;
     }
 
     argc -= ret;
     argv += ret;
 
-    if (unlikely(argc == 1)) {
+    if (unlikely(argc == 1))
+    {
         log_error("Network Function ID not provided");
         goto error_1;
     }
 
     errno = 0;
     nf_id = strtol(argv[1], NULL, 10);
-    if (unlikely(errno != 0 || nf_id < 1)) {
+    if (unlikely(errno != 0 || nf_id < 1))
+    {
         log_error("Invalid value for Network Function ID");
         goto error_1;
     }
 
     ret = nf(nf_id);
-    if (unlikely(ret == -1)) {
+    if (unlikely(ret == -1))
+    {
         log_error("nf() error");
         goto error_1;
     }
 
     ret = rte_eal_cleanup();
-    if (unlikely(ret < 0)) {
-        log_error("rte_eal_cleanup() error: %s",
-                rte_strerror(-ret));
+    if (unlikely(ret < 0))
+    {
+        log_error("rte_eal_cleanup() error: %s", rte_strerror(-ret));
         goto error_0;
     }
 

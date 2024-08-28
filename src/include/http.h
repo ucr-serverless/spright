@@ -19,33 +19,34 @@
 #ifndef HTTP_H
 #define HTTP_H
 
-#include <stdint.h>
 #include <rte_eal.h>
+#include <stdint.h>
 
 #define HTTP_MSG_LENGTH_HEADER_MAX (1U << 12)
 #define HTTP_MSG_LENGTH_BODY_MAX (1U << 16)
-#define HTTP_MSG_LENGTH_MAX (HTTP_MSG_LENGTH_HEADER_MAX + \
-                             HTTP_MSG_LENGTH_BODY_MAX)
+#define HTTP_MSG_LENGTH_MAX (HTTP_MSG_LENGTH_HEADER_MAX + HTTP_MSG_LENGTH_BODY_MAX)
 
-#define GATEWAY 		(uint8_t)0
-#define FRONTEND 		(uint8_t)1
-#define CURRENCY_SVC 	(uint8_t)2
+#define GATEWAY (uint8_t)0
+#define FRONTEND (uint8_t)1
+#define CURRENCY_SVC (uint8_t)2
 #define PRODUCTCATA_SVC (uint8_t)3
-#define CART_SVC		(uint8_t)4
-#define RECOMMEND_SVC	(uint8_t)5
-#define SHIPPING_SVC	(uint8_t)6
-#define CHECKOUT_SVC	(uint8_t)7
-#define PAYMENT_SVC		(uint8_t)8
-#define EMAIL_SVC		(uint8_t)9
-#define AD_SVC			(uint8_t)10
+#define CART_SVC (uint8_t)4
+#define RECOMMEND_SVC (uint8_t)5
+#define SHIPPING_SVC (uint8_t)6
+#define CHECKOUT_SVC (uint8_t)7
+#define PAYMENT_SVC (uint8_t)8
+#define EMAIL_SVC (uint8_t)9
+#define AD_SVC (uint8_t)10
 
-typedef struct _money {
+typedef struct _money
+{
     char CurrencyCode[10];
     int64_t Units;
     int32_t Nanos;
 } Money;
 
-typedef struct _address {
+typedef struct _address
+{
     char StreetAddress[50];
     char City[15];
     char State[15];
@@ -53,17 +54,20 @@ typedef struct _address {
     int32_t ZipCode;
 } Address;
 
-typedef struct _cartItem {
+typedef struct _cartItem
+{
     char ProductId[50];
     int32_t Quantity;
 } CartItem;
 
-typedef struct _orderItem {
+typedef struct _orderItem
+{
     CartItem Item;
     Money Cost;
 } OrderItem;
 
-typedef struct _orderResult {
+typedef struct _orderResult
+{
     char OrderId[40];
     char ShippingTrackingId[100];
     Money ShippingCost;
@@ -71,7 +75,8 @@ typedef struct _orderResult {
     OrderItem Items[10];
 } OrderResult;
 
-typedef struct _cart {
+typedef struct _cart
+{
     char UserId[50];
     int num_items;
     CartItem Items[10];
@@ -81,20 +86,24 @@ typedef struct _cart {
 // 	bool return_code; // 1 - success
 // } AddItemResponse;
 
-typedef struct _addItemRequest{
+typedef struct _addItemRequest
+{
     char UserId[50];
     CartItem Item;
 } AddItemRequest;
 
-typedef struct _emptyCartRequest{
+typedef struct _emptyCartRequest
+{
     char UserId[50];
 } EmptyCartRequest;
 
-typedef struct _getCartRequest {
+typedef struct _getCartRequest
+{
     char UserId[50];
 } GetCartRequest;
 
-typedef struct _product {
+typedef struct _product
+{
     char Id[20];
     char Name[30];
     char Description[100];
@@ -106,83 +115,99 @@ typedef struct _product {
     char Categories[10][20];
 } Product;
 
-typedef struct _productView {
+typedef struct _productView
+{
     Product Item;
     Money Price;
 } productView;
 
-typedef struct _cartItemView {
+typedef struct _cartItemView
+{
     Product Item;
     int32_t Quantity;
     Money Price;
 } cartItemView;
 
-typedef struct _listProductsResponse {
+typedef struct _listProductsResponse
+{
     int num_products;
     Product Products[9];
 } ListProductsResponse;
 
-typedef struct _searchProductsResponse {
+typedef struct _searchProductsResponse
+{
     int num_products;
     Product Results[9];
 } SearchProductsResponse;
 
-typedef struct _getProductRequest{
+typedef struct _getProductRequest
+{
     char Id[20];
 } GetProductRequest;
 
-typedef struct _searchProductsRequest {
+typedef struct _searchProductsRequest
+{
     char Query[50];
 } SearchProductsRequest;
 
-typedef struct _listRecommendationsRequest {
+typedef struct _listRecommendationsRequest
+{
     // char UserId[50];
     char ProductId[20];
 } ListRecommendationsRequest;
 
-typedef struct _listRecommendationsResponse{
-    char ProductId [20];
+typedef struct _listRecommendationsResponse
+{
+    char ProductId[20];
 } ListRecommendationsResponse;
 
-typedef struct _shipOrderRequest {
+typedef struct _shipOrderRequest
+{
     Address address;
     CartItem Items[10];
 } ShipOrderRequest;
 
-typedef struct _shipOrderResponse{
+typedef struct _shipOrderResponse
+{
     char TrackingId[100];
 } ShipOrderResponse;
 
-typedef struct _getQuoteRequest{
+typedef struct _getQuoteRequest
+{
     Address address;
     int num_items;
     CartItem Items[10];
 } GetQuoteRequest;
 
-typedef struct _sendOrderConfirmationRequest {
+typedef struct _sendOrderConfirmationRequest
+{
     char Email[50];
     // OrderResult Order;
 } SendOrderConfirmationRequest;
 
-typedef struct _getQuoteResponse {
+typedef struct _getQuoteResponse
+{
     bool conversion_flag;
     Money CostUsd;
 } GetQuoteResponse;
 
-typedef struct _creditCardInfo {
+typedef struct _creditCardInfo
+{
     char CreditCardNumber[30];
     int32_t CreditCardCvv;
     int32_t CreditCardExpirationYear;
     int32_t CreditCardExpirationMonth;
 } CreditCardInfo;
 
-typedef struct _orderPrep {
+typedef struct _orderPrep
+{
     OrderItem orderItems[10];
     CartItem cartItems[10];
     Money shippingCostLocalized;
 } orderPrep;
 
-typedef struct _placeOrderRequest{
+typedef struct _placeOrderRequest
+{
     char UserId[50];
     char UserCurrency[5];
     Address address;
@@ -190,41 +215,49 @@ typedef struct _placeOrderRequest{
     CreditCardInfo CreditCard;
 } PlaceOrderRequest;
 
-typedef struct _chargeRequest {
+typedef struct _chargeRequest
+{
     Money Amount;
     CreditCardInfo CreditCard;
 } ChargeRequest;
 
-typedef struct _chargeResponse {
+typedef struct _chargeResponse
+{
     char TransactionId[40];
 } ChargeResponse;
 
-typedef struct _getSupportedCurrenciesResponse {
+typedef struct _getSupportedCurrenciesResponse
+{
     int num_currencies;
     char CurrencyCodes[6][10];
 } GetSupportedCurrenciesResponse;
 
-typedef struct _currencyConversionRequest {
+typedef struct _currencyConversionRequest
+{
     Money From;
     char ToCode[10];
 } CurrencyConversionRequest;
 
-typedef struct _ad {
-   char RedirectUrl[100];   
-   char Text[100];
+typedef struct _ad
+{
+    char RedirectUrl[100];
+    char Text[100];
 } Ad;
 
-typedef struct _adrequest {
+typedef struct _adrequest
+{
     int num_context_keys;
     char ContextKeys[10][100];
 } AdRequest;
 
-typedef struct _adresponse {
+typedef struct _adresponse
+{
     int num_ads;
     Ad Ads[10];
 } AdResponse;
 
-struct http_transaction {
+struct http_transaction
+{
     uint32_t tenant_id;
 
     int sockfd;

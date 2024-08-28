@@ -23,8 +23,8 @@
 
 #include <rte_mempool.h>
 
-#include "log.h"
 #include "io.h"
+#include "log.h"
 
 #define MEMZONE_NAME "SPRIGHT_MEMZONE"
 #define ROUTING_TABLE_SIZE 256
@@ -33,23 +33,27 @@
 #define EXTERNAL_SERVER_PORT 8080
 #define INTERNAL_SERVER_PORT 8084
 
-struct spright_cfg_s {
+struct spright_cfg_s
+{
     struct rte_mempool *mempool;
 
     char name[64];
 
     int n_tenants;
-    struct {
+    struct
+    {
         int weight;
     } tenants[256];
 
     uint8_t n_nfs;
-    struct {
+    struct
+    {
         char name[64];
 
         uint8_t n_threads;
 
-        struct {
+        struct
+        {
             uint8_t memory_mb;
             uint32_t sleep_ns;
             uint32_t compute;
@@ -59,7 +63,8 @@ struct spright_cfg_s {
     } nf[UINT8_MAX + 1];
 
     uint8_t n_routes;
-    struct {
+    struct
+    {
         char name[64];
 
         uint8_t length;
@@ -68,7 +73,8 @@ struct spright_cfg_s {
 
     uint8_t n_nodes;
     uint8_t local_node_idx;
-    struct {
+    struct
+    {
         char hostname[HOSTNAME_MAX];
         char ip_address[64];
         uint16_t port;
