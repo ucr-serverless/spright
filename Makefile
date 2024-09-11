@@ -23,7 +23,7 @@ $(error "DPDK is not installed")
 endif
 
 CFLAGS = $(shell pkg-config --cflags libconfig libdpdk)
-LDFLAGS = $(shell pkg-config --libs-only-L libconfig libdpdk)
+LDFLAGS = $(shell pkg-config --libs-only-L libconfig libdpdk) -L/usr/lib64
 LDLIBS = $(shell pkg-config --libs-only-l libconfig libdpdk)
 
 CFLAGS += -Isrc/include -Isrc/cstl/inc -Isrc/log -MMD \

@@ -38,7 +38,7 @@
 
 #define MEMPOOL_NAME "SPRIGHT_MEMPOOL"
 
-#define N_MEMPOOL_ELEMENTS (1U << 16)
+#define N_MEMPOOL_ELEMENTS (1U << 12)
 
 static void cfg_print(void)
 {
