@@ -17,6 +17,15 @@ else
 	io=sk_msg
 fi
 
+if [ ${BIN_PATH} ]
+then
+	echo "Executing bins under ${BIN_PATH}"
+	build_path=${BIN_PATH}
+else
+	echo "BIN_PATH is not specified; use the default path or consider adding BIN_PATH before ${0}."
+	build_path=bin/
+fi
+
 print_usage()
 {
 	echo "usage: ${0} < shm_mgr CFG_FILE | gateway | nf NF_ID >" 1>&2
@@ -30,7 +39,7 @@ shm_mgr()
 		exit 1
 	fi
 
-	exec bin/shm_mgr_${io} \
+	exec ${build_path}/shm_mgr_${io} \
 		-l ${CPU_SHM_MGR[0]} \
 		--file-prefix=spright \
 		--proc-type=primary \
@@ -42,7 +51,7 @@ shm_mgr()
 
 gateway()
 {
-	exec bin/gateway_${io} \
+	exec ${build_path}/gateway_${io} \
 		-l ${CPU_GATEWAY[0]},${CPU_GATEWAY[1]},${CPU_GATEWAY[2]},${CPU_GATEWAY[3]},${CPU_GATEWAY[4]},${CPU_GATEWAY[5]} \
 		--main-lcore=${CPU_GATEWAY[0]} \
 		--file-prefix=spright \
@@ -66,7 +75,7 @@ nf()
 		go=""
 	fi
 
-	exec bin/${go}nf_${io} \
+	exec ${build_path}/${go}nf_${io} \
 		-l ${CPU_NF[$((${1} - 1))]} \
 		--file-prefix=spright \
 		--proc-type=secondary \
@@ -91,7 +100,7 @@ adservice()
 		go=""
 	fi
 
-	exec bin/${go}nf_adservice_${io} \
+	exec ${build_path}/${go}nf_adservice_${io} \
 		-l ${CPU_NF[$((${1} - 1))]} \
 		--file-prefix=spright \
 		--proc-type=secondary \
@@ -116,7 +125,7 @@ currencyservice()
 		go=""
 	fi
 
-	exec bin/${go}nf_currencyservice_${io} \
+	exec ${build_path}/${go}nf_currencyservice_${io} \
 		-l ${CPU_NF[$((${1} - 1))]} \
 		--file-prefix=spright \
 		--proc-type=secondary \
@@ -141,7 +150,7 @@ emailservice()
 		go=""
 	fi
 
-	exec bin/${go}nf_emailservice_${io} \
+	exec ${build_path}/${go}nf_emailservice_${io} \
 		-l ${CPU_NF[$((${1} - 1))]} \
 		--file-prefix=spright \
 		--proc-type=secondary \
@@ -166,7 +175,7 @@ paymentservice()
 		go=""
 	fi
 
-	exec bin/${go}nf_paymentservice_${io} \
+	exec ${build_path}/${go}nf_paymentservice_${io} \
 		-l ${CPU_NF[$((${1} - 1))]} \
 		--file-prefix=spright \
 		--proc-type=secondary \
@@ -191,7 +200,7 @@ shippingservice()
 		go=""
 	fi
 
-	exec bin/${go}nf_shippingservice_${io} \
+	exec ${build_path}/${go}nf_shippingservice_${io} \
 		-l ${CPU_NF[$((${1} - 1))]} \
 		--file-prefix=spright \
 		--proc-type=secondary \
@@ -216,7 +225,7 @@ productcatalogservice()
 		go=""
 	fi
 
-	exec bin/${go}nf_productcatalogservice_${io} \
+	exec ${build_path}/${go}nf_productcatalogservice_${io} \
 		-l ${CPU_NF[$((${1} - 1))]} \
 		--file-prefix=spright \
 		--proc-type=secondary \
@@ -241,7 +250,7 @@ cartservice()
 		go=""
 	fi
 
-	exec bin/${go}nf_cartservice_${io} \
+	exec ${build_path}/${go}nf_cartservice_${io} \
 		-l ${CPU_NF[$((${1} - 1))]} \
 		--file-prefix=spright \
 		--proc-type=secondary \
@@ -266,7 +275,7 @@ recommendationservice()
 		go=""
 	fi
 
-	exec bin/${go}nf_recommendationservice_${io} \
+	exec ${build_path}/${go}nf_recommendationservice_${io} \
 		-l ${CPU_NF[$((${1} - 1))]} \
 		--file-prefix=spright \
 		--proc-type=secondary \
@@ -291,7 +300,7 @@ frontendservice()
 		go=""
 	fi
 
-	exec bin/${go}nf_frontendservice_${io} \
+	exec ${build_path}/${go}nf_frontendservice_${io} \
 		-l ${CPU_NF[$((${1} - 1))]} \
 		--file-prefix=spright \
 		--proc-type=secondary \
@@ -316,7 +325,7 @@ checkoutservice()
 		go=""
 	fi
 
-	exec bin/${go}nf_checkoutservice_${io} \
+	exec ${build_path}/${go}nf_checkoutservice_${io} \
 		-l ${CPU_NF[$((${1} - 1))]} \
 		--file-prefix=spright \
 		--proc-type=secondary \
