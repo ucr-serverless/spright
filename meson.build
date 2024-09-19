@@ -24,7 +24,7 @@ project('spright', 'c',
 add_project_arguments('-Wno-unused-parameter', language: 'c')
 add_project_arguments('-Wno-error=sign-compare', language: 'c')
 
-# Check for dependencies
+# Check for deps
 libconfig_dep = dependency('libconfig', required: true)
 dpdk_dep = dependency('libdpdk', required: true)
 
@@ -35,7 +35,7 @@ cflags = ['-MMD', '-MP', '-O3', '-Wall', '-Werror', '-DLOG_USE_COLOR']
 ldflags = ['-L/usr/lib64']
 ldlibs = ['-lbpf', '-lm', '-pthread', '-luuid']
 
-# Source files for common objects
+# src files for common objects
 common_src = [
   'src/log/log.c',
   'src/utility.c',
@@ -51,13 +51,11 @@ common_objs = static_library('common', common_src,
   dependencies: [libconfig_dep, dpdk_dep]
 )
 
-cc = meson.get_compiler('c')
-libclib_dep = declare_dependency(
-  dependencies: cc.find_library('libclib', dirs: [meson.current_source_dir() / 'src/cstl/src']),
-  include_directories: include_directories('src/cstl/src')  # Adjust the path if needed
-)
+# Include the cstl directory in root build
+subdir('src/cstl')
 
 # Binaries definitions
+# TODO: use loops to define binaries
 binaries = [
   ['sockmap_manager', ['src/sockmap_manager.c']],
   ['shm_mgr_rte_ring', ['src/io_rte_ring.c', 'src/shm_mgr.c']],
@@ -88,15 +86,15 @@ binaries = [
   ['nf_checkoutservice_sk_msg', ['src/io_sk_msg.c', 'src/online_boutique/checkoutservice.c']],
 ]
 
-# Executable rules
+# Generate bins
 foreach bin : binaries
   executable(bin[0],
     sources: bin[1] + common_src,
     include_directories: inc_dirs,
     c_args: cflags,
     link_args: ldflags + ldlibs,
-    dependencies: [libconfig_dep, dpdk_dep, libclib_dep],
-    link_with: [common_objs],
+    dependencies: [libconfig_dep, dpdk_dep],
+    link_with: [common_objs, libclib_dep],
     install: false
   )
 endforeach
