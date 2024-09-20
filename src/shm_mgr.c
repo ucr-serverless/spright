@@ -38,7 +38,19 @@
 
 #define MEMPOOL_NAME "SPRIGHT_MEMPOOL"
 
-#define N_MEMPOOL_ELEMENTS (1U << 12)
+// Qi's note: Due to the relatively small main memory of the DPU (arm64),
+// we cannot allocate many hugepages on the DPU. Therefore, we need to reduce
+// the number of DPDK mempool elements created by shm_mgr on the DPU.
+#if defined(__x86_64__) || defined(_M_X64)
+    #define N_MEMPOOL_ELEMENTS (1U << 16)
+    #pragma message ("Compiling for x86_64: N_MEMPOOL_ELEMENTS set to (1U << 16)")
+#elif defined(__aarch64__) || defined(_M_ARM64)
+    #define N_MEMPOOL_ELEMENTS (1U << 12)
+    #pragma message ("Compiling for arm64: N_MEMPOOL_ELEMENTS set to (1U << 12)")
+#else
+    #error "Unsupported architecture"
+#endif
+
 
 static void cfg_print(void)
 {
