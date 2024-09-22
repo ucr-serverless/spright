@@ -20,6 +20,18 @@ project('spright', 'c',
   meson_version: '>= 0.61.2'
 )
 
+# Comment this line to restore warnings of experimental DOCA features
+add_project_arguments('-D DOCA_ALLOW_EXPERIMENTAL_API', language: ['c', 'cpp'])
+
+doca_dependencies = []
+# Required for all DOCA programs
+doca_dependencies += dependency('doca-common')
+# The DOCA library of the sample itself
+doca_dependencies += dependency('doca-dma')
+doca_dependencies += dependency('doca-comm-channel')
+# Utility DOCA library for executables
+doca_dependencies += dependency('doca-argp')
+
 # Disable compiler warnings
 add_project_arguments('-Wno-unused-parameter', language: 'c')
 add_project_arguments('-Wno-error=sign-compare', language: 'c')
@@ -84,6 +96,10 @@ binaries = [
   ['nf_frontendservice_sk_msg', ['src/io_sk_msg.c', 'src/shm_rpc.c', 'src/online_boutique/frontendservice.c']],
   ['nf_checkoutservice_rte_ring', ['src/io_rte_ring.c', 'src/online_boutique/checkoutservice.c']],
   ['nf_checkoutservice_sk_msg', ['src/io_sk_msg.c', 'src/online_boutique/checkoutservice.c']],
+  ['gateway_doca_sk_msg', ['src/io_sk_msg.c', 'src/dpu_common.c', 'src/pack.c', 'src/utils.c', 'src/gateway_doca.c']],
+  ['gateway_doca_rte_ring', ['src/io_rte_ring.c', 'src/dpu_common.c', 'src/pack.c', 'src/utils.c', 'src/gateway_doca.c']],
+  ['shm_mgr_doca_rte_ring', ['src/io_rte_ring.c', 'src/dpu_common.c', 'src/pack.c', 'src/utils.c', 'src/shm_mgr_doca.c']],
+  ['shm_mgr_doca_sk_msg', ['src/io_sk_msg.c', 'src/dpu_common.c', 'src/pack.c', 'src/utils.c', 'src/shm_mgr_doca.c']],
 ]
 
 # Generate bins
@@ -93,7 +109,7 @@ foreach bin : binaries
     include_directories: inc_dirs,
     c_args: cflags,
     link_args: ldflags + ldlibs,
-    dependencies: [libconfig_dep, dpdk_dep],
+    dependencies: [libconfig_dep, dpdk_dep] + doca_dependencies,
     link_with: [common_objs, libclib_dep],
     install: false
   )
