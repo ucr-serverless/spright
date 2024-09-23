@@ -150,7 +150,7 @@ static int rpc_server(int fd_sk_msg_map)
         return -1;
     }
 
-    // for (i = 0; i < cfg->n_nfs; i++) {
+    // for (i = 0; i < spright_cfg->n_nfs; i++) {
     for (;;)
     {
         sockfd_c = accept(sockfd_l, NULL, NULL);

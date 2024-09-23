@@ -46,7 +46,7 @@ static int init_primary(void)
     uint8_t i;
     uint8_t j;
 
-    for (i = 0; i < cfg->n_nfs + 1; i++)
+    for (i = 0; i < spright_cfg->n_nfs + 1; i++)
     {
         snprintf(ring_name, RING_NAME_LENGTH_MAX, RING_NAME_FORMAT, i);
 
@@ -74,7 +74,7 @@ static int init_secondary(void)
     char ring_name[RING_NAME_LENGTH_MAX];
     uint8_t i;
 
-    for (i = 0; i < cfg->n_nfs + 1; i++)
+    for (i = 0; i < spright_cfg->n_nfs + 1; i++)
     {
         snprintf(ring_name, RING_NAME_LENGTH_MAX, RING_NAME_FORMAT, i);
 
@@ -93,7 +93,7 @@ static int exit_primary(void)
 {
     uint8_t i;
 
-    for (i = 0; i < cfg->n_nfs + 1; i++)
+    for (i = 0; i < spright_cfg->n_nfs + 1; i++)
     {
         rte_ring_free(ring[i]);
     }
@@ -110,7 +110,7 @@ int io_init(void)
 {
     int ret;
 
-    ring = malloc((cfg->n_nfs + 1) * sizeof(struct rte_ring *));
+    ring = malloc((spright_cfg->n_nfs + 1) * sizeof(struct rte_ring *));
     if (unlikely(ring == NULL))
     {
         log_error("malloc() error: %s", strerror(errno));

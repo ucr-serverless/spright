@@ -166,7 +166,7 @@ static int sockmap_server(int fd_sk_msg_map)
 
     // TODO: change to while(1), so that sockmap server can keep registering
     // socket of newly created functions to sockmap
-    for (i = 0; i < cfg->n_nfs; i++)
+    for (i = 0; i < spright_cfg->n_nfs; i++)
     {
         sockfd_c = accept(sockfd_l, NULL, NULL);
         if (unlikely(sockfd_c == -1))

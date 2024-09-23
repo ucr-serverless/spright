@@ -90,7 +90,7 @@ package main
 // 		goto error_1;
 // 	}
 //
-// 	cfg = memzone->addr;
+// 	spright_cfg = memzone->addr;
 //
 // 	ret = io_init();
 // 	if (unlikely(ret == -1)) {
@@ -141,7 +141,7 @@ package main
 // 	struct http_transaction *txn;
 // 	int ret;
 //
-// 	ret = rte_mempool_get(cfg->mempool, (void **)&txn);
+// 	ret = rte_mempool_get(spright_cfg->mempool, (void **)&txn);
 // 	if (unlikely(ret < 0)) {
 // 		fprintf(stderr, "rte_mempool_get() error: %s\n",
 // 		        rte_strerror(-ret));
@@ -153,7 +153,7 @@ package main
 //
 // static void txn_delete(struct http_transaction *txn)
 // {
-// 	rte_mempool_put(cfg->mempool, txn);
+// 	rte_mempool_put(spright_cfg->mempool, txn);
 // }
 //
 // static uint8_t route(struct http_transaction *txn)
@@ -162,8 +162,8 @@ package main
 //
 // 	txn->hop_count++;
 //
-// 	if (likely(txn->hop_count < cfg->route[txn->route_id].length)) {
-// 		next_nf = cfg->route[txn->route_id].node[txn->hop_count];
+// 	if (likely(txn->hop_count < spright_cfg->route[txn->route_id].length)) {
+// 		next_nf = spright_cfg->route[txn->route_id].node[txn->hop_count];
 // 	} else {
 // 		next_nf = 0;
 // 	}
@@ -172,24 +172,24 @@ package main
 //
 // static int get_num_workers(uint8_t nf_id)
 // {
-// 	uint8_t num_workers = cfg->nf[nf_id - 1].n_threads;
+// 	uint8_t num_workers = spright_cfg->nf[nf_id - 1].n_threads;
 // 	return (int) num_workers;
 // }
 // static uint8_t get_route_len(uint8_t route_id)
 // {
-// 	return cfg->route[route_id].length;
+// 	return spright_cfg->route[route_id].length;
 // }
 // static uint8_t get_route_hop(uint8_t route_id, uint8_t hop_idx)
 // {
-// 	return cfg->route[route_id].node[hop_idx];
+// 	return spright_cfg->route[route_id].node[hop_idx];
 // }
 // static char* get_nf_name(uint8_t nf_id)
 // {
-// 	return cfg->nf[nf_id - 1].name;;
+// 	return spright_cfg->nf[nf_id - 1].name;;
 // }
 // static uint8_t get_n_nfs()
 // {
-// 	return cfg->n_nfs;
+// 	return spright_cfg->n_nfs;
 // }
 import "C"
 

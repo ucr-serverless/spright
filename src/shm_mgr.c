@@ -57,60 +57,60 @@ static void cfg_print(void)
     uint8_t i;
     uint8_t j;
 
-    printf("Name: %s\n", cfg->name);
+    printf("Name: %s\n", spright_cfg->name);
 
-    printf("Number of Tenants: %d\n", cfg->n_tenants);
+    printf("Number of Tenants: %d\n", spright_cfg->n_tenants);
     printf("Tenants:\n");
-    for (i = 0; i < cfg->n_tenants; i++)
+    for (i = 0; i < spright_cfg->n_tenants; i++)
     {
         printf("\tID: %hhu\n", i);
-        printf("\tWeight: %d\n", cfg->tenants[i].weight);
+        printf("\tWeight: %d\n", spright_cfg->tenants[i].weight);
         printf("\n");
     }
 
-    printf("Number of NFs: %hhu\n", cfg->n_nfs);
+    printf("Number of NFs: %hhu\n", spright_cfg->n_nfs);
     printf("NFs:\n");
-    for (i = 0; i < cfg->n_nfs; i++)
+    for (i = 0; i < spright_cfg->n_nfs; i++)
     {
         printf("\tID: %hhu\n", i + 1);
-        printf("\tName: %s\n", cfg->nf[i].name);
-        printf("\tNumber of Threads: %hhu\n", cfg->nf[i].n_threads);
+        printf("\tName: %s\n", spright_cfg->nf[i].name);
+        printf("\tNumber of Threads: %hhu\n", spright_cfg->nf[i].n_threads);
         printf("\tParams:\n");
-        printf("\t\tmemory_mb: %hhu\n", cfg->nf[i].param.memory_mb);
-        printf("\t\tsleep_ns: %u\n", cfg->nf[i].param.sleep_ns);
-        printf("\t\tcompute: %u\n", cfg->nf[i].param.compute);
-        printf("\tNode: %u\n", cfg->nf[i].node);
+        printf("\t\tmemory_mb: %hhu\n", spright_cfg->nf[i].param.memory_mb);
+        printf("\t\tsleep_ns: %u\n", spright_cfg->nf[i].param.sleep_ns);
+        printf("\t\tcompute: %u\n", spright_cfg->nf[i].param.compute);
+        printf("\tNode: %u\n", spright_cfg->nf[i].node);
         printf("\n");
     }
 
-    printf("Number of Routes: %hhu\n", cfg->n_routes);
+    printf("Number of Routes: %hhu\n", spright_cfg->n_routes);
     printf("Routes:\n");
-    for (i = 0; i < cfg->n_routes; i++)
+    for (i = 0; i < spright_cfg->n_routes; i++)
     {
         printf("\tID: %hhu\n", i);
-        printf("\tName: %s\n", cfg->route[i].name);
-        printf("\tLength = %hhu\n", cfg->route[i].length);
-        if (cfg->route[i].length > 0)
+        printf("\tName: %s\n", spright_cfg->route[i].name);
+        printf("\tLength = %hhu\n", spright_cfg->route[i].length);
+        if (spright_cfg->route[i].length > 0)
         {
             printf("\tHops = [");
-            for (j = 0; j < cfg->route[i].length; j++)
+            for (j = 0; j < spright_cfg->route[i].length; j++)
             {
-                printf("%hhu ", cfg->route[i].hop[j]);
+                printf("%hhu ", spright_cfg->route[i].hop[j]);
             }
             printf("\b]\n");
         }
         printf("\n");
     }
 
-    printf("Number of Nodes: %hhu\n", cfg->n_nodes);
-    printf("Local Node Index: %u\n", cfg->local_node_idx);
+    printf("Number of Nodes: %hhu\n", spright_cfg->n_nodes);
+    printf("Local Node Index: %u\n", spright_cfg->local_node_idx);
     printf("Nodes:\n");
-    for (i = 0; i < cfg->n_nodes; i++)
+    for (i = 0; i < spright_cfg->n_nodes; i++)
     {
         printf("\tID: %hhu\n", i);
-        printf("\tHostname: %s\n", cfg->nodes[i].hostname);
-        printf("\tIP Address: %s\n", cfg->nodes[i].ip_address);
-        printf("\tPort = %u\n", cfg->nodes[i].port);
+        printf("\tHostname: %s\n", spright_cfg->nodes[i].hostname);
+        printf("\tIP Address: %s\n", spright_cfg->nodes[i].ip_address);
+        printf("\tPort = %u\n", spright_cfg->nodes[i].port);
         printf("\n");
     }
 
@@ -138,9 +138,9 @@ static int cfg_init(char *cfg_file)
     int weight;
 
     /* TODO: Change "flags" argument */
-    cfg->mempool = rte_mempool_create(MEMPOOL_NAME, N_MEMPOOL_ELEMENTS, sizeof(struct http_transaction), 0, 0, NULL,
+    spright_cfg->mempool = rte_mempool_create(MEMPOOL_NAME, N_MEMPOOL_ELEMENTS, sizeof(struct http_transaction), 0, 0, NULL,
                                       NULL, NULL, NULL, rte_socket_id(), 0);
-    if (unlikely(cfg->mempool == NULL))
+    if (unlikely(spright_cfg->mempool == NULL))
     {
         log_error("rte_mempool_create() error: %s", rte_strerror(rte_errno));
         goto error_0;
@@ -162,7 +162,7 @@ static int cfg_init(char *cfg_file)
         goto error_1;
     }
 
-    strcpy(cfg->name, name);
+    strcpy(spright_cfg->name, name);
 
     setting = config_lookup(&config, "nfs");
     if (unlikely(setting == NULL))
@@ -179,7 +179,7 @@ static int cfg_init(char *cfg_file)
     }
 
     n = config_setting_length(setting);
-    cfg->n_nfs = n;
+    spright_cfg->n_nfs = n;
 
     for (i = 0; i < n; i++)
     {
@@ -211,7 +211,7 @@ static int cfg_init(char *cfg_file)
             goto error_1;
         }
 
-        strcpy(cfg->nf[id - 1].name, name);
+        strcpy(spright_cfg->nf[id - 1].name, name);
 
         ret = config_setting_lookup_int(subsetting, "n_threads", &value);
         if (unlikely(ret == CONFIG_FALSE))
@@ -220,7 +220,7 @@ static int cfg_init(char *cfg_file)
             goto error_1;
         }
 
-        cfg->nf[id - 1].n_threads = value;
+        spright_cfg->nf[id - 1].n_threads = value;
 
         subsubsetting = config_setting_lookup(subsetting, "params");
         if (unlikely(subsubsetting == NULL))
@@ -243,7 +243,7 @@ static int cfg_init(char *cfg_file)
             goto error_1;
         }
 
-        cfg->nf[id - 1].param.memory_mb = value;
+        spright_cfg->nf[id - 1].param.memory_mb = value;
 
         ret = config_setting_lookup_int(subsubsetting, "sleep_ns", &value);
         if (unlikely(ret == CONFIG_FALSE))
@@ -252,7 +252,7 @@ static int cfg_init(char *cfg_file)
             goto error_1;
         }
 
-        cfg->nf[id - 1].param.sleep_ns = value;
+        spright_cfg->nf[id - 1].param.sleep_ns = value;
 
         ret = config_setting_lookup_int(subsubsetting, "compute", &value);
         if (unlikely(ret == CONFIG_FALSE))
@@ -261,7 +261,7 @@ static int cfg_init(char *cfg_file)
             goto error_1;
         }
 
-        cfg->nf[id - 1].param.compute = value;
+        spright_cfg->nf[id - 1].param.compute = value;
 
         ret = config_setting_lookup_int(subsetting, "node", &node);
         if (unlikely(ret == CONFIG_FALSE))
@@ -270,7 +270,7 @@ static int cfg_init(char *cfg_file)
             node = 0;
         }
 
-        cfg->nf[id - 1].node = node;
+        spright_cfg->nf[id - 1].node = node;
         set_node(id, node);
     }
 
@@ -289,10 +289,10 @@ static int cfg_init(char *cfg_file)
     }
 
     n = config_setting_length(setting);
-    cfg->n_routes = n + 1;
+    spright_cfg->n_routes = n + 1;
 
-    strcpy(cfg->route[0].name, "Default");
-    cfg->route[0].length = 0;
+    strcpy(spright_cfg->route[0].name, "Default");
+    spright_cfg->route[0].length = 0;
 
     for (i = 0; i < n; i++)
     {
@@ -329,7 +329,7 @@ static int cfg_init(char *cfg_file)
             goto error_1;
         }
 
-        strcpy(cfg->route[id].name, name);
+        strcpy(spright_cfg->route[id].name, name);
 
         subsubsetting = config_setting_lookup(subsetting, "hops");
         if (unlikely(subsubsetting == NULL))
@@ -346,12 +346,12 @@ static int cfg_init(char *cfg_file)
         }
 
         m = config_setting_length(subsubsetting);
-        cfg->route[id].length = m;
+        spright_cfg->route[id].length = m;
 
         for (j = 0; j < m; j++)
         {
             value = config_setting_get_int_elem(subsubsetting, j);
-            cfg->route[id].hop[j] = value;
+            spright_cfg->route[id].hop[j] = value;
         }
     }
 
@@ -378,7 +378,7 @@ static int cfg_init(char *cfg_file)
     }
 
     n = config_setting_length(setting);
-    cfg->n_nodes = n;
+    spright_cfg->n_nodes = n;
 
     for (i = 0; i < n; i++)
     {
@@ -410,12 +410,12 @@ static int cfg_init(char *cfg_file)
             goto error_2;
         }
 
-        strcpy(cfg->nodes[id].hostname, hostname);
+        strcpy(spright_cfg->nodes[id].hostname, hostname);
 
         /* Compare the hostnames */
-        if (strcmp(local_hostname, cfg->nodes[id].hostname) == 0)
+        if (strcmp(local_hostname, spright_cfg->nodes[id].hostname) == 0)
         {
-            cfg->local_node_idx = i;
+            spright_cfg->local_node_idx = i;
             is_hostname_matched = 1;
             log_info("Hostnames match: %s, node index: %u", local_hostname, i);
         }
@@ -431,7 +431,7 @@ static int cfg_init(char *cfg_file)
             goto error_2;
         }
 
-        strcpy(cfg->nodes[id].ip_address, ip_address);
+        strcpy(spright_cfg->nodes[id].ip_address, ip_address);
 
         ret = config_setting_lookup_int(subsetting, "port", &port);
         if (unlikely(ret == CONFIG_FALSE))
@@ -440,7 +440,7 @@ static int cfg_init(char *cfg_file)
             goto error_2;
         }
 
-        cfg->nodes[id].port = port;
+        spright_cfg->nodes[id].port = port;
     }
 
     setting = config_lookup(&config, "tenants");
@@ -458,7 +458,7 @@ static int cfg_init(char *cfg_file)
     }
 
     n = config_setting_length(setting);
-    cfg->n_tenants = n;
+    spright_cfg->n_tenants = n;
 
     for (i = 0; i < n; i++)
     {
@@ -490,7 +490,7 @@ static int cfg_init(char *cfg_file)
             goto error_1;
         }
 
-        cfg->tenants[id].weight = weight;
+        spright_cfg->tenants[id].weight = weight;
     }
 
     if (is_hostname_matched == -1)
@@ -507,14 +507,14 @@ error_2:
 
 error_1:
     config_destroy(&config);
-    rte_mempool_free(cfg->mempool);
+    rte_mempool_free(spright_cfg->mempool);
 error_0:
     return -1;
 }
 
 static int cfg_exit(void)
 {
-    rte_mempool_free(cfg->mempool);
+    rte_mempool_free(spright_cfg->mempool);
 
     return 0;
 }
@@ -526,16 +526,16 @@ static int shm_mgr(char *cfg_file)
 
     fn_id = -1;
 
-    memzone = rte_memzone_reserve(MEMZONE_NAME, sizeof(*cfg), rte_socket_id(), 0);
+    memzone = rte_memzone_reserve(MEMZONE_NAME, sizeof(*spright_cfg), rte_socket_id(), 0);
     if (unlikely(memzone == NULL))
     {
         log_error("rte_memzone_reserve() error: %s", rte_strerror(rte_errno));
         goto error_0;
     }
 
-    memset(memzone->addr, 0U, sizeof(*cfg));
+    memset(memzone->addr, 0U, sizeof(*spright_cfg));
 
-    cfg = memzone->addr;
+    spright_cfg = memzone->addr;
 
     ret = cfg_init(cfg_file);
     if (unlikely(ret == -1))

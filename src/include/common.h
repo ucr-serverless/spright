@@ -22,6 +22,6 @@
 #include "spright.h"
 
 extern int fn_id;
-extern struct spright_cfg_s *cfg;
+extern struct spright_cfg_s *spright_cfg;
 
 #endif /* COMMON_H */

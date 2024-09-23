@@ -223,11 +223,11 @@ int dispatcher(void *arg)
                 return -1;
             }
 
-            if (txn->next_fn != cfg->route[txn->route_id].hop[txn->hop_count])
+            if (txn->next_fn != spright_cfg->route[txn->route_id].hop[txn->hop_count])
             {
                 if (txn->hop_count == 0)
                 {
-                    txn->next_fn = cfg->route[txn->route_id].hop[txn->hop_count];
+                    txn->next_fn = spright_cfg->route[txn->route_id].hop[txn->hop_count];
                     log_debug("Dispatcher receives a request from conn_read.");
                 }
                 else
@@ -276,7 +276,7 @@ static int rpc_server_setup(int epfd)
 
     addr.sin_family = AF_INET;
     addr.sin_port = htons(INTERNAL_SERVER_PORT);
-    addr.sin_addr.s_addr = inet_addr(cfg->nodes[cfg->local_node_idx].ip_address);
+    addr.sin_addr.s_addr = inet_addr(spright_cfg->nodes[spright_cfg->local_node_idx].ip_address);
 
     ret = bind(sockfd_l, (struct sockaddr *)&addr, sizeof(struct sockaddr_in));
     if (unlikely(ret == -1))
@@ -293,7 +293,7 @@ static int rpc_server_setup(int epfd)
         return -1;
     }
 
-    if (cfg->n_nodes == 1)
+    if (spright_cfg->n_nodes == 1)
     {
         log_warn("No PEER NODE CONFIGURED. Terminating the RPC server...");
         goto error;
@@ -351,7 +351,7 @@ static int rpc_server_receive(int epfd)
 
         for (i = 0; i < n_events; i++)
         {
-            ret = rte_mempool_get(cfg->mempool, (void **)&txn);
+            ret = rte_mempool_get(spright_cfg->mempool, (void **)&txn);
             if (unlikely(ret < 0))
             {
                 log_error("rte_mempool_get() error: %s", rte_strerror(-ret));
@@ -378,7 +378,7 @@ static int rpc_server_receive(int epfd)
 
             // Send txn to local function
             log_debug("\tRoute id: %u, Hop Count %u, Next Hop: %u, Next Fn: %u", txn->route_id, txn->hop_count,
-                      cfg->route[txn->route_id].hop[txn->hop_count], txn->next_fn);
+                      spright_cfg->route[txn->route_id].hop[txn->hop_count], txn->next_fn);
             ssize_t bytes_written = write(pipefd_dispatcher__rpc_server[1], &txn, sizeof(struct http_transaction *));
             if (unlikely(bytes_written == -1))
             {
@@ -389,7 +389,7 @@ static int rpc_server_receive(int epfd)
     }
 
 error_1:
-    rte_mempool_put(cfg->mempool, txn);
+    rte_mempool_put(spright_cfg->mempool, txn);
     ret = epoll_ctl(epfd, EPOLL_CTL_DEL, sockfd_c, NULL);
     if (unlikely(ret == -1))
     {
@@ -456,7 +456,7 @@ int rpc_server(void *arg)
 
 static int rpc_client_setup(char *server_ip, uint16_t server_port, uint8_t peer_node_idx)
 {
-    log_info("RPC client connects with node %u (%s:%u).", peer_node_idx, cfg->nodes[peer_node_idx].ip_address,
+    log_info("RPC client connects with node %u (%s:%u).", peer_node_idx, spright_cfg->nodes[peer_node_idx].ip_address,
              INTERNAL_SERVER_PORT);
 
     struct sockaddr_in server_addr;
@@ -501,7 +501,7 @@ static int rpc_client_send(int peer_node_idx, struct http_transaction *txn)
 {
     log_debug("Route id: %u, Hop Count %u, Next Hop: %u, Next Fn: %u, \
         Caller Fn: %s (#%u), RPC Handler: %s()",
-              txn->route_id, txn->hop_count, cfg->route[txn->route_id].hop[txn->hop_count], txn->next_fn,
+              txn->route_id, txn->hop_count, spright_cfg->route[txn->route_id].hop[txn->hop_count], txn->next_fn,
               txn->caller_nf, txn->caller_fn, txn->rpc_handler);
 
     ssize_t bytes_sent;
@@ -579,7 +579,7 @@ int rpc_client(void *arg)
 
             while (1)
             {
-                current_index = (current_index + 1) % cfg->n_tenants;
+                current_index = (current_index + 1) % spright_cfg->n_tenants;
                 if (current_index == 0)
                 {
                     current_weight -= gcd_weight;
@@ -607,7 +607,7 @@ int rpc_client(void *arg)
                     if (peer_node_sockfds[peer_node_idx] == 0)
                     {
                         peer_node_sockfds[peer_node_idx] =
-                            rpc_client_setup(cfg->nodes[peer_node_idx].ip_address, INTERNAL_SERVER_PORT, peer_node_idx);
+                            rpc_client_setup(spright_cfg->nodes[peer_node_idx].ip_address, INTERNAL_SERVER_PORT, peer_node_idx);
                     }
                     else if (peer_node_sockfds[peer_node_idx] < 0)
                     {
@@ -617,7 +617,7 @@ int rpc_client(void *arg)
 
                     ret = rpc_client_send(peer_node_idx, txn);
 
-                    rte_mempool_put(cfg->mempool, txn);
+                    rte_mempool_put(spright_cfg->mempool, txn);
 
                     break;
                 }
@@ -701,7 +701,7 @@ static int http_response(struct http_transaction *txn)
         return -1;
     }
 
-    rte_mempool_put(cfg->mempool, txn);
+    rte_mempool_put(spright_cfg->mempool, txn);
 
     return 0;
 }
@@ -713,7 +713,7 @@ static int conn_read(int sockfd)
     int ret;
 
     // TODO: use exported buffers from host
-    ret = rte_mempool_get(cfg->mempool, (void **)&txn);
+    ret = rte_mempool_get(spright_cfg->mempool, (void **)&txn);
     if (unlikely(ret < 0))
     {
         log_error("rte_mempool_get() error: %s", rte_strerror(-ret));
@@ -770,7 +770,7 @@ static int conn_read(int sockfd)
     return 0;
 
 error_1:
-    rte_mempool_put(cfg->mempool, txn);
+    rte_mempool_put(spright_cfg->mempool, txn);
 error_0:
     return -1;
 }
@@ -792,7 +792,7 @@ error_0:
 //     // }
 
 //     // Inter-node Communication
-//     if (cfg->route[txn->route_id].hop[txn->hop_count] != fn_id)
+//     if (spright_cfg->route[txn->route_id].hop[txn->hop_count] != fn_id)
 //     {
 //         log_debug("Enqueuing Tenant-%d's descriptor to weighted round robin queues.", txn->tenant_id);
 //         ret = write_pipe(txn);
@@ -805,11 +805,11 @@ error_0:
 //     }
 
 //     txn->hop_count++;
-//     log_debug("Next hop is %u", cfg->route[txn->route_id].hop[txn->hop_count]);
-//     txn->next_fn = cfg->route[txn->route_id].hop[txn->hop_count];
+//     log_debug("Next hop is %u", spright_cfg->route[txn->route_id].hop[txn->hop_count]);
+//     txn->next_fn = spright_cfg->route[txn->route_id].hop[txn->hop_count];
 
 //     // Intra-node Communication
-//     if (txn->hop_count < cfg->route[txn->route_id].length)
+//     if (txn->hop_count < spright_cfg->route[txn->route_id].length)
 //     {
 //         ssize_t bytes_written = write(pipefd_dispatcher__svr_ps_tx[1], &txn, sizeof(struct http_transaction *));
 //         if (unlikely(bytes_written == -1))
@@ -835,12 +835,12 @@ error_0:
 //         goto error_1;
 //     }
 
-//     rte_mempool_put(cfg->mempool, txn);
+//     rte_mempool_put(spright_cfg->mempool, txn);
 
 //     return 0;
 
 // error_1:
-//     rte_mempool_put(cfg->mempool, txn);
+//     rte_mempool_put(spright_cfg->mempool, txn);
 // // error_0:
 //     return -1;
 // }
@@ -1132,7 +1132,7 @@ static int gateway(struct dma_copy_cfg *dma_cfg,
         goto error_0;
     }
 
-    cfg = memzone->addr;
+    spright_cfg = memzone->addr;
 
     // TODO: get exported cfg from host
 

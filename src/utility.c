@@ -21,22 +21,22 @@
 
 void set_node(uint8_t fn_id, uint8_t node_idx)
 {
-    cfg->inter_node_rt[fn_id] = node_idx;
+    spright_cfg->inter_node_rt[fn_id] = node_idx;
 }
 
 uint8_t get_node(uint8_t fn_id)
 {
-    uint8_t peer_node_idx = cfg->inter_node_rt[fn_id];
+    uint8_t peer_node_idx = spright_cfg->inter_node_rt[fn_id];
 
     log_debug("Destination function is %u on node %u (%s:%u).", fn_id, peer_node_idx,
-              cfg->nodes[peer_node_idx].ip_address, INTERNAL_SERVER_PORT);
+              spright_cfg->nodes[peer_node_idx].ip_address, INTERNAL_SERVER_PORT);
 
     return peer_node_idx;
 }
 
 void delete_node(uint8_t fn_id)
 {
-    cfg->inter_node_rt[fn_id] = 0;
+    spright_cfg->inter_node_rt[fn_id] = 0;
 }
 
 void print_ip_address(struct in_addr *ip)
@@ -47,9 +47,9 @@ void print_ip_address(struct in_addr *ip)
 void print_rt_table()
 {
     printf("Inter-node Routing Table\n");
-    for (int i = 1; i <= cfg->n_nfs; i++)
+    for (int i = 1; i <= spright_cfg->n_nfs; i++)
     {
-        printf("\tFn: %d, Node: %d\n", i, cfg->inter_node_rt[i]);
+        printf("\tFn: %d, Node: %d\n", i, spright_cfg->inter_node_rt[i]);
     }
 }
 

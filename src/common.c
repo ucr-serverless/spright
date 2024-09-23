@@ -17,4 +17,4 @@
 */
 
 int fn_id;
-struct spright_cfg_s *cfg;
+struct spright_cfg_s *spright_cfg;

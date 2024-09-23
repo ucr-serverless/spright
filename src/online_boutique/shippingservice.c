@@ -249,7 +249,7 @@ static void *nf_rx(void *arg)
     uint8_t i;
     int ret;
 
-    for (i = 0;; i = (i + 1) % cfg->nf[fn_id - 1].n_threads)
+    for (i = 0;; i = (i + 1) % spright_cfg->nf[fn_id - 1].n_threads)
     {
         ret = io_rx((void **)&txn);
         if (unlikely(ret == -1))
@@ -286,7 +286,7 @@ static void *nf_tx(void *arg)
         return NULL;
     }
 
-    for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++)
+    for (i = 0; i < spright_cfg->nf[fn_id - 1].n_threads; i++)
     {
         ret = set_nonblocking(pipefd_tx[i][0]);
         if (unlikely(ret == -1))
@@ -307,7 +307,7 @@ static void *nf_tx(void *arg)
 
     while (1)
     {
-        n_fds = epoll_wait(epfd, event, cfg->nf[fn_id - 1].n_threads, -1);
+        n_fds = epoll_wait(epfd, event, spright_cfg->nf[fn_id - 1].n_threads, -1);
         if (unlikely(n_fds == -1))
         {
             log_error("epoll_wait() error: %s", strerror(errno));
@@ -324,7 +324,7 @@ static void *nf_tx(void *arg)
             }
 
             log_debug("Route id: %u, Hop Count %u, Next Hop: %u, Next Fn: %u", txn->route_id, txn->hop_count,
-                      cfg->route[txn->route_id].hop[txn->hop_count], txn->next_fn);
+                      spright_cfg->route[txn->route_id].hop[txn->hop_count], txn->next_fn);
 
             ret = io_tx(txn, txn->next_fn);
             if (unlikely(ret == -1))
@@ -357,7 +357,7 @@ static int nf(uint8_t nf_id)
         return -1;
     }
 
-    cfg = memzone->addr;
+    spright_cfg = memzone->addr;
 
     ret = io_init();
     if (unlikely(ret == -1))
@@ -366,7 +366,7 @@ static int nf(uint8_t nf_id)
         return -1;
     }
 
-    for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++)
+    for (i = 0; i < spright_cfg->nf[fn_id - 1].n_threads; i++)
     {
         ret = pipe(pipefd_rx[i]);
         if (unlikely(ret == -1))
@@ -397,7 +397,7 @@ static int nf(uint8_t nf_id)
         return -1;
     }
 
-    for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++)
+    for (i = 0; i < spright_cfg->nf[fn_id - 1].n_threads; i++)
     {
         ret = pthread_create(&thread_worker[i], NULL, &nf_worker, (void *)(uint64_t)i);
         if (unlikely(ret != 0))
@@ -407,7 +407,7 @@ static int nf(uint8_t nf_id)
         }
     }
 
-    for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++)
+    for (i = 0; i < spright_cfg->nf[fn_id - 1].n_threads; i++)
     {
         ret = pthread_join(thread_worker[i], NULL);
         if (unlikely(ret != 0))
@@ -431,7 +431,7 @@ static int nf(uint8_t nf_id)
         return -1;
     }
 
-    for (i = 0; i < cfg->nf[fn_id - 1].n_threads; i++)
+    for (i = 0; i < spright_cfg->nf[fn_id - 1].n_threads; i++)
     {
         ret = close(pipefd_rx[i][0]);
         if (unlikely(ret == -1))

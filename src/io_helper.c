@@ -57,14 +57,14 @@ static int gcd(int a, int b)
  */
 int get_gcd_weight(void)
 {
-    if (cfg->n_tenants == 0)
+    if (spright_cfg->n_tenants == 0)
         return 0;
 
-    int result = cfg->tenants[0].weight;
+    int result = spright_cfg->tenants[0].weight;
 
-    for (int i = 1; i < cfg->n_tenants; i++)
+    for (int i = 1; i < spright_cfg->n_tenants; i++)
     {
-        result = gcd(result, cfg->tenants[i].weight);
+        result = gcd(result, spright_cfg->tenants[i].weight);
     }
 
     log_info("GCD weight: %d", result);
@@ -74,13 +74,13 @@ int get_gcd_weight(void)
 
 int get_max_weight(void)
 {
-    int max_val = cfg->tenants[0].weight;
+    int max_val = spright_cfg->tenants[0].weight;
 
-    for (int i = 1; i < cfg->n_tenants; i++)
+    for (int i = 1; i < spright_cfg->n_tenants; i++)
     {
-        if (cfg->tenants[i].weight > max_val)
+        if (spright_cfg->tenants[i].weight > max_val)
         {
-            max_val = cfg->tenants[i].weight;
+            max_val = spright_cfg->tenants[i].weight;
         }
     }
 
@@ -149,7 +149,7 @@ struct http_transaction *read_pipe(tenant_pipe *tp)
  */
 int init_tenant_pipes(void)
 {
-    int num_tenants = cfg->n_tenants;
+    int num_tenants = spright_cfg->n_tenants;
 
     log_info("Initializing %d tenant pipes and weights ...", num_tenants);
 
@@ -160,7 +160,7 @@ int init_tenant_pipes(void)
             log_error("pipe() error: %s", strerror(errno));
             return -1;
         }
-        tenant_pipes[i].weight = cfg->tenants[i].weight;
+        tenant_pipes[i].weight = spright_cfg->tenants[i].weight;
         tenant_pipes[i].tenant_id = (uint32_t)i;
     }
 
@@ -184,7 +184,7 @@ int add_regular_pipe_to_epoll(int epoll_fd, struct epoll_event *ev, int pipe_fd)
 
 int add_weighted_pipes_to_epoll(int epoll_fd, struct epoll_event *ev)
 {
-    for (int i = 0; i < cfg->n_tenants; i++)
+    for (int i = 0; i < spright_cfg->n_tenants; i++)
     {
         set_nonblocking(tenant_pipes[i].fd[0]);
         ev->events = EPOLLIN;
