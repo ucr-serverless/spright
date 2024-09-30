@@ -29,6 +29,9 @@
 #include <doca_log.h>
 #include <doca_pe.h>
 
+#include <time.h>
+#include "spright.h"
+
 #define MAX_ARG_SIZE 128	      /* PCI address and file path maximum length */
 #define CC_MAX_MSG_SIZE 4080	      /* Comm Channel message maximum size */
 #define SERVER_NAME "dma copy server" /* Comm Channel service name */
@@ -128,7 +131,8 @@ doca_error_t open_dma_device(struct doca_dev **dev);
  */
 doca_error_t host_start_dma_copy(struct dma_copy_cfg *dma_cfg,
                  struct doca_comm_channel_ep_t *ep,
-                 struct doca_comm_channel_addr_t **peer_addr);
+                 struct doca_comm_channel_addr_t **peer_addr,
+                 struct spright_cfg_s *spright_cfg);
 
 /*
  * Start DMA operation on the DPU

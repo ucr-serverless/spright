@@ -1135,6 +1135,10 @@ static int gateway(struct dma_copy_cfg *dma_cfg,
     spright_cfg = memzone->addr;
 
     // TODO: get exported cfg from host
+    // Test DOCA Comm Channel
+    doca_error_t result = dpu_start_dma_copy(dma_cfg, ep, peer_addr);
+    if (result != DOCA_SUCCESS)
+        return -1;
 
     ret = server_init(&sv);
     if (unlikely(ret == -1))
@@ -1212,11 +1216,6 @@ static int gateway(struct dma_copy_cfg *dma_cfg,
         log_error("rte_eal_remote_launch() error: %s", rte_strerror(-ret));
         goto error_1;
     }
-
-    // Test DOCA Comm Channel
-    doca_error_t result = dpu_start_dma_copy(dma_cfg, ep, peer_addr);
-    if (result != DOCA_SUCCESS)
-        return -1;
 
     metrics_collect();
 

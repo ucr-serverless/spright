@@ -44,6 +44,71 @@
 
 DOCA_LOG_REGISTER(DPU_COMMON)
 
+static void spright_cfg_print(struct spright_cfg_s *spright_cfg)
+{
+    uint8_t i;
+    uint8_t j;
+
+    printf("Name: %s\n", spright_cfg->name);
+
+    printf("Number of Tenants: %d\n", spright_cfg->n_tenants);
+    printf("Tenants:\n");
+    for (i = 0; i < spright_cfg->n_tenants; i++)
+    {
+        printf("\tID: %hhu\n", i);
+        printf("\tWeight: %d\n", spright_cfg->tenants[i].weight);
+        printf("\n");
+    }
+
+    printf("Number of NFs: %hhu\n", spright_cfg->n_nfs);
+    printf("NFs:\n");
+    for (i = 0; i < spright_cfg->n_nfs; i++)
+    {
+        printf("\tID: %hhu\n", i + 1);
+        printf("\tName: %s\n", spright_cfg->nf[i].name);
+        printf("\tNumber of Threads: %hhu\n", spright_cfg->nf[i].n_threads);
+        printf("\tParams:\n");
+        printf("\t\tmemory_mb: %hhu\n", spright_cfg->nf[i].param.memory_mb);
+        printf("\t\tsleep_ns: %u\n", spright_cfg->nf[i].param.sleep_ns);
+        printf("\t\tcompute: %u\n", spright_cfg->nf[i].param.compute);
+        printf("\tNode: %u\n", spright_cfg->nf[i].node);
+        printf("\n");
+    }
+
+    printf("Number of Routes: %hhu\n", spright_cfg->n_routes);
+    printf("Routes:\n");
+    for (i = 0; i < spright_cfg->n_routes; i++)
+    {
+        printf("\tID: %hhu\n", i);
+        printf("\tName: %s\n", spright_cfg->route[i].name);
+        printf("\tLength = %hhu\n", spright_cfg->route[i].length);
+        if (spright_cfg->route[i].length > 0)
+        {
+            printf("\tHops = [");
+            for (j = 0; j < spright_cfg->route[i].length; j++)
+            {
+                printf("%hhu ", spright_cfg->route[i].hop[j]);
+            }
+            printf("\b]\n");
+        }
+        printf("\n");
+    }
+
+    printf("Number of Nodes: %hhu\n", spright_cfg->n_nodes);
+    printf("Local Node Index: %u\n", spright_cfg->local_node_idx);
+    printf("Nodes:\n");
+    for (i = 0; i < spright_cfg->n_nodes; i++)
+    {
+        printf("\tID: %hhu\n", i);
+        printf("\tHostname: %s\n", spright_cfg->nodes[i].hostname);
+        printf("\tIP Address: %s\n", spright_cfg->nodes[i].ip_address);
+        printf("\tPort = %u\n", spright_cfg->nodes[i].port);
+        printf("\n");
+    }
+
+    // print_rt_table();
+}
+
 /*
  * Get DOCA DMA maximum buffer size allowed
  *
@@ -481,7 +546,7 @@ static doca_error_t memory_alloc_and_populate(struct doca_mmap *mmap,
         return result;
     }
 
-    *buffer = (char *)malloc(buffer_len);
+    // *buffer = (char *)malloc(buffer_len);
     if (*buffer == NULL) {
         DOCA_LOG_ERR("Failed to allocate memory for source buffer");
         return DOCA_ERROR_NO_MEMORY;
@@ -1310,13 +1375,18 @@ free_state:
 
 doca_error_t host_start_dma_copy(struct dma_copy_cfg *dma_cfg,
                  struct doca_comm_channel_ep_t *ep,
-                 struct doca_comm_channel_addr_t **peer_addr)
+                 struct doca_comm_channel_addr_t **peer_addr,
+                 struct spright_cfg_s *spright_cfg)
 {
     struct doca_mmap *mmap = NULL;
     struct doca_dev *dev = NULL;
-    char *buffer = NULL;
+    // char *buffer = NULL;
     const void *export_desc = NULL;
     doca_error_t result, tmp_result;
+
+    if (spright_cfg == NULL)
+        return DOCA_ERROR_UNKNOWN;
+    printf("0x%" PRIXPTR ", len: %lu \n", (uintptr_t)spright_cfg, sizeof(struct spright_cfg_s));
 
     /* Negotiate DMA copy direction with DPU */
     result = host_negotiate_dma_direction_and_size(dma_cfg, ep, peer_addr);
@@ -1346,9 +1416,12 @@ doca_error_t host_start_dma_copy(struct dma_copy_cfg *dma_cfg,
         goto destroy_mmap;
     }
 
-    result = memory_alloc_and_populate(mmap, dma_cfg->file_size, dpu_access, &buffer);
+    // result = memory_alloc_and_populate(mmap, dma_cfg->file_size, dpu_access, &buffer);
+    result = memory_alloc_and_populate(mmap, sizeof(struct spright_cfg_s), dpu_access, (char**) &spright_cfg);
     if (result != DOCA_SUCCESS)
         goto destroy_mmap;
+
+    // Test local mmap
 
     /* Export memory map and send it to DPU */
     result = host_export_memory_map_to_dpu(mmap, dev, ep, peer_addr, &export_desc);
@@ -1356,14 +1429,15 @@ doca_error_t host_start_dma_copy(struct dma_copy_cfg *dma_cfg,
         goto free_buffer;
 
     /* Fill the buffer before DPU starts DMA operation */
-    if (dma_cfg->is_file_found_locally) {
-        result = fill_buffer_with_file_content(dma_cfg, buffer);
-        if (result != DOCA_SUCCESS)
-            goto free_buffer;
-    }
+    // if (dma_cfg->is_file_found_locally) {
+    //     result = fill_buffer_with_file_content(dma_cfg, buffer);
+    //     if (result != DOCA_SUCCESS)
+    //         goto free_buffer;
+    // }
 
     /* Send source buffer address and offset (entire buffer) to enable DMA and wait until DPU is done */
-    result = host_send_addr_and_offset(buffer, dma_cfg->file_size, ep, peer_addr);
+    // result = host_send_addr_and_offset(buffer, dma_cfg->file_size, ep, peer_addr);
+    result = host_send_addr_and_offset((char*) spright_cfg, sizeof(struct spright_cfg_s), ep, peer_addr);
     if (result != DOCA_SUCCESS)
         goto free_buffer;
 
@@ -1373,15 +1447,16 @@ doca_error_t host_start_dma_copy(struct dma_copy_cfg *dma_cfg,
         goto free_buffer;
 
     DOCA_LOG_INFO("Final status message was successfully received");
+    sleep(30);
 
-    if (!dma_cfg->is_file_found_locally) {
-        /*  File was copied successfully into the buffer, save it into file */
-        DOCA_LOG_INFO("Writing DMA buffer into a file on %s", dma_cfg->file_path);
-        result = save_buffer_into_a_file(dma_cfg, buffer);
-    }
+    // if (!dma_cfg->is_file_found_locally) {
+    //     /*  File was copied successfully into the buffer, save it into file */
+    //     DOCA_LOG_INFO("Writing DMA buffer into a file on %s", dma_cfg->file_path);
+    //     result = save_buffer_into_a_file(dma_cfg, buffer);
+    // }
 
 free_buffer:
-    free(buffer);
+    // free(buffer);
 destroy_mmap:
     tmp_result = doca_mmap_destroy(mmap);
     if (tmp_result != DOCA_SUCCESS) {
@@ -1446,7 +1521,11 @@ doca_error_t dpu_start_dma_copy(struct dma_copy_cfg *dma_cfg,
     if (result != DOCA_SUCCESS)
         goto stop_dma;
 
-    result = memory_alloc_and_populate(state->src_mmap, dma_cfg->file_size, access_flags, &buffer);
+    // struct spright_cfg_s *buffer;
+    buffer = malloc(sizeof(struct spright_cfg_s));
+
+    // result = memory_alloc_and_populate(state->src_mmap, dma_cfg->file_size, access_flags, &buffer);
+    result = memory_alloc_and_populate(state->src_mmap, sizeof(struct spright_cfg_s), access_flags, &buffer);
     if (result != DOCA_SUCCESS)
         goto stop_dma;
 
@@ -1471,6 +1550,8 @@ doca_error_t dpu_start_dma_copy(struct dma_copy_cfg *dma_cfg,
     if (result != DOCA_SUCCESS)
         goto destroy_remote_mmap;
 
+    printf("host_dma_addr: 0x%" PRIXPTR ", host_dma_offset: %lu\n", (uintptr_t)host_dma_addr, host_dma_offset);
+
     /* Construct DOCA buffer for remote (Host) address range */
     result = doca_buf_inventory_buf_get_by_addr(state->buf_inv,
                             remote_mmap,
@@ -1482,6 +1563,16 @@ doca_error_t dpu_start_dma_copy(struct dma_copy_cfg *dma_cfg,
         send_status_msg(ep, peer_addr, STATUS_FAILURE);
         goto destroy_remote_mmap;
     }
+
+    struct spright_cfg_s *scfg;
+    size_t scfg_len;
+    doca_buf_get_data(remote_doca_buf, (void **)&scfg);
+    doca_buf_get_data_len(remote_doca_buf, &scfg_len);
+    printf("scfg: 0x%" PRIXPTR ", scfg_len: %lu\n", (uintptr_t)scfg, scfg_len);
+
+    doca_buf_set_data(remote_doca_buf, scfg, host_dma_offset);
+
+    spright_cfg_print((struct spright_cfg_s *)scfg);
 
     /* Construct DOCA buffer for local (DPU) address range */
     result = doca_buf_inventory_buf_get_by_addr(state->buf_inv,
@@ -1496,13 +1587,13 @@ doca_error_t dpu_start_dma_copy(struct dma_copy_cfg *dma_cfg,
     }
 
     /* Fill buffer in file content if relevant */
-    if (dma_cfg->is_file_found_locally) {
-        result = fill_buffer_with_file_content(dma_cfg, buffer);
-        if (result != DOCA_SUCCESS) {
-            send_status_msg(ep, peer_addr, STATUS_FAILURE);
-            goto destroy_local_buf;
-        }
-    }
+    // if (dma_cfg->is_file_found_locally) {
+    //     result = fill_buffer_with_file_content(dma_cfg, buffer);
+    //     if (result != DOCA_SUCCESS) {
+    //         send_status_msg(ep, peer_addr, STATUS_FAILURE);
+    //         goto destroy_local_buf;
+    //     }
+    // }
 
     /* Submit DMA task into the progress engine and wait until task completion */
     result = dpu_submit_dma_task(dma_cfg,
@@ -1518,6 +1609,8 @@ doca_error_t dpu_start_dma_copy(struct dma_copy_cfg *dma_cfg,
     }
 
     send_status_msg(ep, peer_addr, STATUS_SUCCESS);
+
+    spright_cfg_print((struct spright_cfg_s *)buffer);
 
 destroy_local_buf:
     tmp_result = doca_buf_dec_refcount(local_doca_buf, NULL);

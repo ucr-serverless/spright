@@ -550,17 +550,18 @@ static int shm_mgr(char *spright_cfg_file,
         goto error_1;
     }
 
+    printf("0x%" PRIXPTR "\n", (uintptr_t)spright_cfg);
+    // Test DOCA Comm Channel
+    doca_error_t result = host_start_dma_copy(dma_cfg, ep, peer_addr, spright_cfg);
+    if (result != DOCA_SUCCESS)
+        return -1;
+
     ret = io_init();
     if (unlikely(ret == -1))
     {
         log_error("io_init() error");
         goto error_2;
     }
-
-    // Test DOCA Comm Channel
-    doca_error_t result = host_start_dma_copy(dma_cfg, ep, peer_addr);
-    if (result != DOCA_SUCCESS)
-        return -1;
 
     /* TODO: Exit loop on interrupt */
     while (1)

@@ -35,6 +35,9 @@ doca_dependencies += dependency('doca-argp')
 # Disable compiler warnings
 add_project_arguments('-Wno-unused-parameter', language: 'c')
 add_project_arguments('-Wno-error=sign-compare', language: 'c')
+add_project_arguments('-Wno-error=unused-function', language: 'c')
+add_project_arguments('-Wno-error=unused-label', language: 'c')
+add_project_arguments('-Wno-error=unused-variable', language: 'c')
 
 # Check for deps
 libconfig_dep = dependency('libconfig', required: true)
