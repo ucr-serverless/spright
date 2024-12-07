@@ -260,3 +260,81 @@ int retry_connect(int sockfd, struct sockaddr *addr)
 
     return ret;
 }
+
+// Retry mechanism for send()
+ssize_t retry_send(int sockfd, const void *buf, size_t len, int flags)
+{
+    int attempts = 0;
+    ssize_t bytes_sent;
+
+    do 
+    {
+        bytes_sent = send(sockfd, buf, len, flags);
+        
+        // Check for successful send
+        if (bytes_sent > 0)
+        {
+            return bytes_sent;
+        }
+        
+        // Check for critical errors that shouldn't be retried
+        if (bytes_sent == -1 && 
+            (errno == EBADF || errno == ENOTSOCK || errno == EFAULT))
+        {
+            return bytes_sent;
+        }
+        
+        // Increment attempts and log warning
+        attempts++;
+        log_warn("send() error: %s. Retrying %d/%d times ...", 
+                 strerror(errno), attempts, MAX_RETRIES);
+        
+        // Small delay between retries
+        usleep(RETRY_DELAY_US);
+    } 
+    while (bytes_sent == -1 && attempts < MAX_RETRIES);
+
+    return bytes_sent;
+}
+
+// Retry mechanism for recv()
+ssize_t retry_recv(int sockfd, void *buf, size_t len, int flags)
+{
+    int attempts = 0;
+    ssize_t bytes_received;
+
+    do 
+    {
+        bytes_received = recv(sockfd, buf, len, flags);
+        
+        // Check for successful receive
+        if (bytes_received > 0)
+        {
+            return bytes_received;
+        }
+        
+        // Check for connection closed
+        if (bytes_received == 0)
+        {
+            return bytes_received;
+        }
+        
+        // Check for critical errors that shouldn't be retried
+        if (bytes_received == -1 && 
+            (errno == EBADF || errno == ENOTSOCK || errno == EFAULT))
+        {
+            return bytes_received;
+        }
+        
+        // Increment attempts and log warning
+        attempts++;
+        log_warn("recv() error: %s. Retrying %d/%d times ...", 
+                 strerror(errno), attempts, MAX_RETRIES);
+        
+        // Small delay between retries
+        usleep(RETRY_DELAY_US);
+    } 
+    while (bytes_received == -1 && attempts < MAX_RETRIES);
+
+    return bytes_received;
+}

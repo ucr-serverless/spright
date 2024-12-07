@@ -344,3 +344,24 @@ char *httpQueryParser(char *req)
 
     return start_of_query;
 }
+
+void debug_http_transaction(struct http_transaction* tx) {
+    if (tx == NULL) {
+        log_error("Error: NULL http_transaction pointer");
+        return;
+    }
+
+    log_debug("=== Start HTTP Transaction Debug Info ===");
+    log_debug("Basic Information:");
+    log_debug("  Tenant ID: %u", tx->tenant_id);
+    log_debug("  Socket FD: %d", tx->sockfd);
+    log_debug("  Route ID: %u", tx->route_id);
+    log_debug("  Next Function: %u", tx->next_fn);
+    log_debug("  Hop Count: %u", tx->hop_count);
+    log_debug("  Caller Function: %u", tx->caller_fn);
+
+    log_debug("Handlers and Callers:");
+    log_debug("  RPC Handler: %s", tx->rpc_handler);
+    log_debug("  Caller NF: %s", tx->caller_nf);
+    log_debug("=== End HTTP Transaction Debug Info ===");
+}

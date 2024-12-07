@@ -61,5 +61,7 @@ int add_weighted_pipes_to_epoll(int epoll_fd, struct epoll_event *ev);
 ssize_t read_full(int fd, void *buf, size_t count);
 
 int retry_connect(int sockfd, struct sockaddr *addr);
+ssize_t retry_send(int sockfd, const void *buf, size_t len, int flags);
+ssize_t retry_recv(int sockfd, void *buf, size_t len, int flags);
 
 #endif /* IO_H */

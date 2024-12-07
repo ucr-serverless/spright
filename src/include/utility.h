@@ -73,4 +73,6 @@ void delete_node(uint8_t fn_id);
 void print_ip_address(struct in_addr *ip);
 void print_rt_table();
 
+void debug_http_transaction(struct http_transaction *);
+
 #endif /* UTILITY_H */

@@ -50,6 +50,10 @@
 #define PORT_DUMMY 8081
 #define PORT_SOCKMAP 8082
 
+// TODO: Find a way to obtain from configuration file
+// because you have to change this when using container
+#define GATEWAY_IP "127.0.0.1"
+
 struct metadata
 {
     int fn_id;
@@ -262,7 +266,7 @@ static int sockmap_client(void)
 
     addr.sin_family = AF_INET;
     addr.sin_port = htons(PORT_SOCKMAP);
-    addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    addr.sin_addr.s_addr = inet_addr(GATEWAY_IP);
 
     ret = connect(sockfd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in));
     if (unlikely(ret == -1))
@@ -349,7 +353,7 @@ static int init_gateway(void)
 
     addr.sin_family = AF_INET;
     addr.sin_port = htons(PORT_DUMMY);
-    addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    addr.sin_addr.s_addr = inet_addr(GATEWAY_IP);
 
     ret = retry_connect(sockfd_sk_msg, (struct sockaddr *)&addr);
     if (unlikely(ret == -1))
@@ -383,7 +387,7 @@ static int init_nf(void)
 
     addr.sin_family = AF_INET;
     addr.sin_port = htons(PORT_DUMMY);
-    addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    addr.sin_addr.s_addr = inet_addr(GATEWAY_IP);
 
     ret = connect(sockfd_sk_msg, (struct sockaddr *)&addr, sizeof(struct sockaddr_in));
     if (unlikely(ret == -1))
