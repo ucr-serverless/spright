@@ -1,5 +1,5 @@
 /*
-# Copyright 2022 University of California, Riverside
+# Copyright 2025 University of California, Riverside
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -243,8 +243,7 @@ static void *nf_tx(void *arg)
                 txn->next_fn = 0;
             }
 
-            log_debug("Route id: %u, Hop Count %u, Next Hop: %u, Next Fn: %u, \
-                Caller Fn: %s (#%u), RPC Handler: %s()",
+            log_debug("Route id: %u, Hop Count %u, Next Hop: %u, Next Fn: %u, Caller Fn: %s (#%u), RPC Handler: %s()",
                       txn->route_id, txn->hop_count, cfg->route[txn->route_id].hop[txn->hop_count], txn->next_fn,
                       txn->caller_nf, txn->caller_fn, txn->rpc_handler);
 

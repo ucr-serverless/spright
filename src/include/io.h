@@ -1,5 +1,5 @@
 /*
-# Copyright 2022 University of California, Riverside
+# Copyright 2025 University of California, Riverside
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -42,23 +42,24 @@ typedef struct
 extern tenant_pipe tenant_pipes[MAX_TENANTS];
 
 int io_init(void);
-
 int io_exit(void);
-
 int io_rx(void **obj);
-
 int io_tx(void *obj, uint8_t next_fn);
 
 int get_gcd_weight(void);
 int get_max_weight(void);
 
-int set_nonblocking(int fd);
 int init_tenant_pipes(void);
 int write_pipe(struct http_transaction *txn);
 struct http_transaction *read_pipe(tenant_pipe *tp);
 int add_regular_pipe_to_epoll(int epoll_fd, struct epoll_event *ev, int pipe_fd);
 int add_weighted_pipes_to_epoll(int epoll_fd, struct epoll_event *ev);
+
+int set_nonblocking(int fd);
 ssize_t read_full(int fd, void *buf, size_t count);
+int get_client_info(int client_socket, char *ip_addr, int ip_addr_len);
+int create_server_socket(const char *ip, int port);
+void configure_keepalive(int sockfd);
 
 int retry_connect(int sockfd, struct sockaddr *addr);
 

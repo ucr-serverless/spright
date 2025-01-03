@@ -1,5 +1,5 @@
 /*
-# Copyright 2022 University of California, Riverside
+# Copyright 2025 University of California, Riverside
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -261,6 +261,7 @@ struct http_transaction
     uint32_t tenant_id;
 
     int sockfd;
+    void *sk_ctx;
     uint8_t route_id;
     uint8_t next_fn;
     uint8_t hop_count;
