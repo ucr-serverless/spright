@@ -1,5 +1,5 @@
 /*
-# Copyright 2024 University of California, Riverside
+# Copyright 2025 University of California, Riverside
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,6 +25,8 @@
 #include <sys/socket.h>
 #include <sys/syscall.h>
 #include <unistd.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 
 #include <rte_branch_prediction.h>
 #include <rte_errno.h>
@@ -32,6 +34,7 @@
 
 #include "io.h"
 
+#define BACKLOG (1U << 16)
 #define MAX_RETRIES 5
 #define RETRY_DELAY_US 5000 // 5 milliseconds
 
@@ -259,4 +262,150 @@ int retry_connect(int sockfd, struct sockaddr *addr)
     } while (ret == -1 && attempts < MAX_RETRIES);
 
     return ret;
+}
+
+/**
+ * @brief Input a client socket fd, output the IP adderss and port used by the client
+ *
+ *
+ * @param[in] client_socket: The client socket fd.
+ * @param[out] ip_addr: The client's IP address in human readable form,
+ * e.g., "10.0.1.1". if ip_addr is NULL, it is not copied.
+ * @param[out] ip_addr_len: the length of the ip_addr, at least 16 if ip_addr is not NULL
+ * @return The port of the client socket.
+ */
+int get_client_info(int client_socket, char *ip_addr, int ip_addr_len)
+{
+
+#ifdef ENABLE_TIMER
+    struct timespec t_start;
+    struct timespec t_end;
+
+    get_monotonic_time(&t_start);
+#endif
+
+    struct sockaddr_in addr;
+    socklen_t addr_len = sizeof(addr);
+    int client_port;
+
+    log_debug("run getpeername.", __func__);
+
+    // Get the address of the peer (client) connected to the socket
+    if (getpeername(client_socket, (struct sockaddr *)&addr, &addr_len) == -1)
+    {
+        log_error("getpeername failed.");
+        close(client_socket);
+        return -1;
+    }
+
+    // Convert IP address to human-readable form
+    char ip_str[INET_ADDRSTRLEN];
+    if (inet_ntop(AF_INET, &addr.sin_addr, ip_str, sizeof(ip_str)) == NULL)
+    {
+        log_error("inet_ntop failed.");
+        close(client_socket);
+        return -1;
+    }
+
+    client_port = ntohs(addr.sin_port);
+
+    if (ip_addr)
+    {
+        assert(ip_addr_len >= INET_ADDRSTRLEN);
+        strncpy(ip_addr, ip_str, ip_addr_len);
+        log_debug("client address copied");
+    }
+
+    // Print client's IP address and port number
+    log_debug("Client address: %s:%d", ip_str, client_port);
+
+#ifdef ENABLE_TIMER
+    get_monotonic_time(&t_end);
+    log_debug("[%s] execution latency: %ld.", __func__, get_elapsed_time_nano(&t_start, &t_end));
+#endif
+
+    return client_port;
+}
+
+int create_server_socket(const char *ip, int port)
+{
+    int server_fd;
+    int ret;
+    int optval;
+    struct sockaddr_in addr;
+
+    server_fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+    if (unlikely(server_fd == -1))
+    {
+        log_error("socket() error: %s", strerror(errno));
+        return -1;
+    }
+
+    optval = 1;
+    ret = setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(int));
+    if (unlikely(ret == -1))
+    {
+        log_error("setsockopt() error: %s", strerror(errno));
+        return -1;
+    }
+
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    addr.sin_addr.s_addr = inet_addr(ip);
+
+    ret = bind(server_fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in));
+    if (unlikely(ret == -1))
+    {
+        log_error("bind() error: %s", strerror(errno));
+        return -1;
+    }
+
+    ret = listen(server_fd, BACKLOG);
+    if (unlikely(ret == -1))
+    {
+        log_error("listen() error: %s", strerror(errno));
+        return -1;
+    }
+
+    return server_fd;
+}
+
+void configure_keepalive(int sockfd)
+{
+    int optval;
+    socklen_t optlen = sizeof(optval);
+
+    // Enable TCP keep-alive
+    optval = 1;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_KEEPALIVE, &optval, optlen) < 0)
+    {
+        log_fatal("setsockopt(SO_KEEPALIVE)");
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
+
+    // Set TCP keep-alive parameters
+    optval = 60; // Seconds before sending keepalive probes
+    if (setsockopt(sockfd, IPPROTO_TCP, TCP_KEEPIDLE, &optval, optlen) < 0)
+    {
+        log_fatal("setsockopt(TCP_KEEPIDLE)");
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
+
+    optval = 10; // Interval in seconds between keepalive probes
+    if (setsockopt(sockfd, IPPROTO_TCP, TCP_KEEPINTVL, &optval, optlen) < 0)
+    {
+        log_fatal("setsockopt(TCP_KEEPINTVL)");
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
+
+    optval = 5; // Number of unacknowledged probes before considering the connection dead
+    if (setsockopt(sockfd, IPPROTO_TCP, TCP_KEEPCNT, &optval, optlen) < 0)
+    {
+        log_fatal("setsockopt(TCP_KEEPCNT)");
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
 }
