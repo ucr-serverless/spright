@@ -123,7 +123,7 @@ static void MockListProductsResponse(struct http_transaction *txn)
 // ListRecommendations fetch list of products from product catalog stub
 static void ListRecommendations(struct http_transaction *txn)
 {
-    log_info("[ListRecommendations] received request");
+    log_debug("[ListRecommendations] received request");
 
     ListProductsResponse *list_products_response = &txn->list_products_response;
     ListRecommendationsRequest *list_recommendations_request = &txn->list_recommendations_request;
@@ -166,8 +166,8 @@ static void *nf_worker(void *arg)
         }
         else
         {
-            log_info("%s() is not supported", txn->rpc_handler);
-            log_info("\t\t#### Run Mock Test ####");
+            log_debug("%s() is not supported", txn->rpc_handler);
+            log_debug("\t\t#### Run Mock Test ####");
             MockListProductsResponse(txn);
             ListRecommendations(txn);
             PrintListRecommendationsResponse(txn);
