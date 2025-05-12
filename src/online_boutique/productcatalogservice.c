@@ -125,7 +125,7 @@ static void parseCatalog(struct clib_map *map)
         char *key = clib_strdup(product_ids[i]);
         int key_length = (int)strlen(key) + 1;
         Product value = products[i];
-        log_info("Inserting [%s -> %s]", key, value.Name);
+        log_debug("Inserting [%s -> %s]", key, value.Name);
         insert_c_map(map, key, key_length, &value, sizeof(Product));
         free(key);
     }
@@ -165,7 +165,7 @@ static void GetProduct(struct http_transaction *txn)
     {
         if (strcmp(req->Id, product_ids[i]) == 0)
         {
-            log_info("Get Product: %s", product_ids[i]);
+            log_debug("Get Product: %s", product_ids[i]);
             num_products++;
             *found = products[i];
             break;
@@ -174,7 +174,7 @@ static void GetProduct(struct http_transaction *txn)
 
     if (num_products == 0)
     {
-        log_info("no product with ID %s", req->Id);
+        log_debug("no product with ID %s", req->Id);
     }
     return;
 }
@@ -238,8 +238,8 @@ static void *nf_worker(void *arg)
         }
         else
         {
-            log_info("%s() is not supported", txn->rpc_handler);
-            log_info("\t\t#### Run Mock Test ####");
+            log_debug("%s() is not supported", txn->rpc_handler);
+            log_debug("\t\t#### Run Mock Test ####");
             ListProducts(txn);
             PrintListProductsResponse(txn);
             MockGetProductRequest(txn);
