@@ -22,8 +22,8 @@
 #include <rte_eal.h>
 #include <stdint.h>
 
-#define HTTP_MSG_LENGTH_HEADER_MAX (1U << 12)
-#define HTTP_MSG_LENGTH_BODY_MAX (1U << 16)
+#define HTTP_MSG_LENGTH_HEADER_MAX (1U << 10)
+#define HTTP_MSG_LENGTH_BODY_MAX (1U << 10)
 #define HTTP_MSG_LENGTH_MAX (HTTP_MSG_LENGTH_HEADER_MAX + HTTP_MSG_LENGTH_BODY_MAX)
 
 #define GATEWAY (uint8_t)0

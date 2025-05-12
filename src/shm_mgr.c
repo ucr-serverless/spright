@@ -33,6 +33,7 @@
 #include "http.h"
 #include "io.h"
 #include "log.h"
+#include "log/log.h"
 #include "spright.h"
 #include "utility.h"
 
@@ -591,6 +592,8 @@ error_0:
 int main(int argc, char **argv)
 {
     int ret;
+
+    log_set_level(LOG_INFO);
 
     ret = rte_eal_init(argc, argv);
     if (unlikely(ret == -1))
