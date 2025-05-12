@@ -33,7 +33,6 @@
 #include "http.h"
 #include "io.h"
 #include "log.h"
-#include "log/log.h"
 #include "spright.h"
 #include "utility.h"
 
