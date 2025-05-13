@@ -592,6 +592,8 @@ int main(int argc, char **argv)
 {
     int ret;
 
+    log_set_level(LOG_INFO);
+
     ret = rte_eal_init(argc, argv);
     if (unlikely(ret == -1))
     {

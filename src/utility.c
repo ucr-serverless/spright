@@ -41,7 +41,7 @@ void delete_node(uint8_t fn_id)
 
 void print_ip_address(struct in_addr *ip)
 {
-    log_info("%s", inet_ntoa(*ip));
+    log_debug("%s", inet_ntoa(*ip));
 }
 
 void print_rt_table()
@@ -56,10 +56,10 @@ void print_rt_table()
 void PrintAdResponse(struct http_transaction *in)
 {
     int i;
-    log_info("Ads in AdResponse:");
+    log_debug("Ads in AdResponse:");
     for (i = 0; i < in->ad_response.num_ads; i++)
     {
-        log_info("Ad[%d] RedirectUrl: %s\tText: %s", i + 1, in->ad_response.Ads[i].RedirectUrl,
+        log_debug("Ad[%d] RedirectUrl: %s\tText: %s", i + 1, in->ad_response.Ads[i].RedirectUrl,
                  in->ad_response.Ads[i].Text);
     }
     printf("\n");
@@ -67,34 +67,34 @@ void PrintAdResponse(struct http_transaction *in)
 
 void PrintSupportedCurrencies(struct http_transaction *in)
 {
-    log_info("Supported Currencies: ");
+    log_debug("Supported Currencies: ");
     int i = 0;
     for (i = 0; i < in->get_supported_currencies_response.num_currencies; i++)
     {
-        log_info("%d. %s\t", i + 1, in->get_supported_currencies_response.CurrencyCodes[i]);
+        log_debug("%d. %s\t", i + 1, in->get_supported_currencies_response.CurrencyCodes[i]);
     }
     printf("\n");
 }
 
 void PrintProduct(Product *p)
 {
-    log_info("Product Name: %s\t ID: %s", p->Name, p->Id);
-    log_info("Product Description: %s", p->Description);
-    log_info("Product Picture: %s", p->Picture);
-    log_info("Product Price: %s %ld.%d", p->PriceUsd.CurrencyCode, p->PriceUsd.Units, p->PriceUsd.Nanos);
-    log_info("Product Categories: ");
+    log_debug("Product Name: %s\t ID: %s", p->Name, p->Id);
+    log_debug("Product Description: %s", p->Description);
+    log_debug("Product Picture: %s", p->Picture);
+    log_debug("Product Price: %s %ld.%d", p->PriceUsd.CurrencyCode, p->PriceUsd.Units, p->PriceUsd.Nanos);
+    log_debug("Product Categories: ");
 
     int i = 0;
     for (i = 0; i < p->num_categories; i++)
     {
-        log_info("%d. %s\t", i + 1, p->Categories[i]);
+        log_debug("%d. %s\t", i + 1, p->Categories[i]);
     }
     printf("\n");
 }
 
 void PrintListProductsResponse(struct http_transaction *txn)
 {
-    log_info("### PrintListProductsResponse ###");
+    log_debug("### PrintListProductsResponse ###");
     ListProductsResponse *out = &txn->list_products_response;
     int size = sizeof(out->Products) / sizeof(out->Products[0]);
     int i = 0;
@@ -107,13 +107,13 @@ void PrintListProductsResponse(struct http_transaction *txn)
 
 void PrintGetProductResponse(struct http_transaction *txn)
 {
-    log_info("### PrintGetProductResponse ###");
+    log_debug("### PrintGetProductResponse ###");
     PrintProduct(&txn->get_product_response);
 }
 
 void PrintSearchProductsResponse(struct http_transaction *txn)
 {
-    log_info("### PrintSearchProductsResponse ###");
+    log_debug("### PrintSearchProductsResponse ###");
     SearchProductsResponse *out = &txn->search_products_response;
     int i;
     for (i = 0; i < out->num_products; i++)
@@ -125,20 +125,20 @@ void PrintSearchProductsResponse(struct http_transaction *txn)
 
 void PrintGetCartResponse(struct http_transaction *txn)
 {
-    log_info("\t\t#### PrintGetCartResponse ####");
+    log_debug("\t\t#### PrintGetCartResponse ####");
     Cart *out = &txn->get_cart_response;
-    log_info("Cart for user %s: ", out->UserId);
+    log_debug("Cart for user %s: ", out->UserId);
 
     if (txn->get_cart_response.num_items == -1)
     {
-        log_info("EMPTY CART!");
+        log_debug("EMPTY CART!");
         return;
     }
 
     int i;
     for (i = 0; i < out->num_items; i++)
     {
-        log_info("\t%d. ProductId: %s \tQuantity: %d", i + 1, out->Items[i].ProductId, out->Items[i].Quantity);
+        log_debug("\t%d. ProductId: %s \tQuantity: %d", i + 1, out->Items[i].ProductId, out->Items[i].Quantity);
     }
     printf("\n");
     return;
@@ -146,9 +146,9 @@ void PrintGetCartResponse(struct http_transaction *txn)
 
 void PrintConversionResult(struct http_transaction *in)
 {
-    log_info("Conversion result: ");
-    log_info("CurrencyCode: %s\t", in->currency_conversion_result.CurrencyCode);
-    log_info("Value: %ld.%d", in->currency_conversion_result.Units, in->currency_conversion_result.Nanos);
+    log_debug("Conversion result: ");
+    log_debug("CurrencyCode: %s\t", in->currency_conversion_result.CurrencyCode);
+    log_debug("Value: %ld.%d", in->currency_conversion_result.Units, in->currency_conversion_result.Nanos);
 }
 
 void printMoney(Money *money)
@@ -177,7 +177,7 @@ void MockCurrencyConversionRequest(struct http_transaction *in)
 
 void PrintProductView(struct http_transaction *txn)
 {
-    log_info("\t\t#### ProductView ####");
+    log_debug("\t\t#### ProductView ####");
 
     // int size = sizeof(txn->product_view)/sizeof(txn->product_view[0]);
     int size = txn->productViewCntr;
@@ -186,32 +186,32 @@ void PrintProductView(struct http_transaction *txn)
     {
         Product *p = &txn->product_view[i].Item;
         Money *m = &txn->product_view[i].Price;
-        log_info("Product Name: %s\t ID: %s", p->Name, p->Id);
-        log_info("Product %s Price:  %ld.%d", p->PriceUsd.CurrencyCode, p->PriceUsd.Units, p->PriceUsd.Nanos);
-        log_info("Product %s Price:  %ld.%d", m->CurrencyCode, m->Units, m->Nanos);
+        log_debug("Product Name: %s\t ID: %s", p->Name, p->Id);
+        log_debug("Product %s Price:  %ld.%d", p->PriceUsd.CurrencyCode, p->PriceUsd.Units, p->PriceUsd.Nanos);
+        log_debug("Product %s Price:  %ld.%d", m->CurrencyCode, m->Units, m->Nanos);
     }
 }
 
 void PrintListRecommendationsResponse(struct http_transaction *txn)
 {
-    log_info("Recommended Product ID: %s", txn->list_recommendations_response.ProductId);
+    log_debug("Recommended Product ID: %s", txn->list_recommendations_response.ProductId);
 }
 
 void PrintShipOrderResponse(struct http_transaction *txn)
 {
     ShipOrderResponse *out = &txn->ship_order_response;
-    log_info("Tracking ID: %s", out->TrackingId);
+    log_debug("Tracking ID: %s", out->TrackingId);
 }
 
 void PrintGetQuoteResponse(struct http_transaction *txn)
 {
     GetQuoteResponse *out = &txn->get_quote_response;
-    log_info("Shipping cost: %s %ld.%d", out->CostUsd.CurrencyCode, out->CostUsd.Units, out->CostUsd.Nanos);
+    log_debug("Shipping cost: %s %ld.%d", out->CostUsd.CurrencyCode, out->CostUsd.Units, out->CostUsd.Nanos);
 }
 
 void PrintTotalPrice(struct http_transaction *txn)
 {
-    log_info("Total Price:  %ld.%d", txn->total_price.Units, txn->total_price.Nanos);
+    log_debug("Total Price:  %ld.%d", txn->total_price.Units, txn->total_price.Nanos);
 }
 
 void Sum(Money *total, Money *add)
@@ -257,73 +257,73 @@ void MultiplySlow(Money *total, uint32_t n)
 
 void PrintPlaceOrderRequest(struct http_transaction *txn)
 {
-    log_info("email: %s", txn->place_order_request.Email);
-    log_info("street_address: %s", txn->place_order_request.address.StreetAddress);
-    log_info("zip_code: %d", txn->place_order_request.address.ZipCode);
-    log_info("city: %s", txn->place_order_request.address.City);
+    log_debug("email: %s", txn->place_order_request.Email);
+    log_debug("street_address: %s", txn->place_order_request.address.StreetAddress);
+    log_debug("zip_code: %d", txn->place_order_request.address.ZipCode);
+    log_debug("city: %s", txn->place_order_request.address.City);
     ;
-    log_info("state: %s", txn->place_order_request.address.State);
-    log_info("country: %s", txn->place_order_request.address.Country);
-    log_info("credit_card_number: %s", txn->place_order_request.CreditCard.CreditCardNumber);
-    log_info("credit_card_expiration_month: %d", txn->place_order_request.CreditCard.CreditCardExpirationMonth);
-    log_info("credit_card_expiration_year: %d", txn->place_order_request.CreditCard.CreditCardExpirationYear);
-    log_info("credit_card_cvv: %d", txn->place_order_request.CreditCard.CreditCardCvv);
+    log_debug("state: %s", txn->place_order_request.address.State);
+    log_debug("country: %s", txn->place_order_request.address.Country);
+    log_debug("credit_card_number: %s", txn->place_order_request.CreditCard.CreditCardNumber);
+    log_debug("credit_card_expiration_month: %d", txn->place_order_request.CreditCard.CreditCardExpirationMonth);
+    log_debug("credit_card_expiration_year: %d", txn->place_order_request.CreditCard.CreditCardExpirationYear);
+    log_debug("credit_card_cvv: %d", txn->place_order_request.CreditCard.CreditCardCvv);
 }
 
 void parsePlaceOrderRequest(struct http_transaction *txn)
 {
     char *query = httpQueryParser(txn->request);
-    // log_info("QUERY: %s", query);
+    // log_debug("QUERY: %s", query);
 
     char *start_of_query = strtok(query, "&");
     // char *email = strchr(start_of_query, '=') + 1;
     strcpy(txn->place_order_request.Email, strchr(start_of_query, '=') + 1);
-    // log_info("email: %s", txn->place_order_request.Email);
+    // log_debug("email: %s", txn->place_order_request.Email);
 
     start_of_query = strtok(NULL, "&");
     // char *street_address = strchr(start_of_query, '=') + 1;
     strcpy(txn->place_order_request.address.StreetAddress, strchr(start_of_query, '=') + 1);
-    // log_info("street_address: %s", txn->place_order_request.address.StreetAddress);
+    // log_debug("street_address: %s", txn->place_order_request.address.StreetAddress);
 
     start_of_query = strtok(NULL, "&");
     // char *zip_code = strchr(start_of_query, '=') + 1;
     txn->place_order_request.address.ZipCode = atoi(strchr(start_of_query, '=') + 1);
-    // log_info("zip_code: %d", txn->place_order_request.address.ZipCode);
+    // log_debug("zip_code: %d", txn->place_order_request.address.ZipCode);
 
     start_of_query = strtok(NULL, "&");
     // char *city = strchr(start_of_query, '=') + 1;
     strcpy(txn->place_order_request.address.City, strchr(start_of_query, '=') + 1);
-    // log_info("city: %s", txn->place_order_request.address.City);
+    // log_debug("city: %s", txn->place_order_request.address.City);
 
     start_of_query = strtok(NULL, "&");
     // char *state = strchr(start_of_query, '=') + 1;
     strcpy(txn->place_order_request.address.State, strchr(start_of_query, '=') + 1);
-    // log_info("state: %s", txn->place_order_request.address.State);
+    // log_debug("state: %s", txn->place_order_request.address.State);
 
     start_of_query = strtok(NULL, "&");
     // char *country = strchr(start_of_query, '=') + 1;
     strcpy(txn->place_order_request.address.Country, strchr(start_of_query, '=') + 1);
-    // log_info("country: %s", txn->place_order_request.address.Country);
+    // log_debug("country: %s", txn->place_order_request.address.Country);
 
     start_of_query = strtok(NULL, "&");
     // char *credit_card_number = strchr(start_of_query, '=') + 1;
     strcpy(txn->place_order_request.CreditCard.CreditCardNumber, strchr(start_of_query, '=') + 1);
-    // log_info("credit_card_number: %s", txn->place_order_request.CreditCard.CreditCardNumber);
+    // log_debug("credit_card_number: %s", txn->place_order_request.CreditCard.CreditCardNumber);
 
     start_of_query = strtok(NULL, "&");
     // char *credit_card_expiration_month = strchr(start_of_query, '=') + 1;
     txn->place_order_request.CreditCard.CreditCardExpirationMonth = atoi(strchr(start_of_query, '=') + 1);
-    // log_info("credit_card_expiration_month: %d", txn->place_order_request.CreditCard.CreditCardExpirationMonth);
+    // log_debug("credit_card_expiration_month: %d", txn->place_order_request.CreditCard.CreditCardExpirationMonth);
 
     start_of_query = strtok(NULL, "&");
     // char *credit_card_expiration_year = strchr(start_of_query, '=') + 1;
     txn->place_order_request.CreditCard.CreditCardExpirationYear = atoi(strchr(start_of_query, '=') + 1);
-    // log_info("credit_card_expiration_year: %d", txn->place_order_request.CreditCard.CreditCardExpirationYear);
+    // log_debug("credit_card_expiration_year: %d", txn->place_order_request.CreditCard.CreditCardExpirationYear);
 
     start_of_query = strtok(NULL, "&");
     // char *credit_card_cvv = strchr(start_of_query, '=') + 1;
     txn->place_order_request.CreditCard.CreditCardCvv = atoi(strchr(start_of_query, '=') + 1);
-    // log_info("credit_card_cvv: %d", txn->place_order_request.CreditCard.CreditCardCvv);
+    // log_debug("credit_card_cvv: %d", txn->place_order_request.CreditCard.CreditCardCvv);
 }
 
 char *httpQueryParser(char *req)

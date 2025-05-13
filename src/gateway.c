@@ -821,6 +821,9 @@ int main(int argc, char **argv)
 {
     log_set_level_from_env();
 
+    // show all logs larger than level DEBUG
+    // The level enum is defined in log.h
+    log_set_level(LOG_INFO);
     int ret;
 
     ret = rte_eal_init(argc, argv);

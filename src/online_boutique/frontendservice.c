@@ -45,7 +45,7 @@ static int pipefd_tx[UINT8_MAX][2];
 
 static void setCurrencyHandler(struct http_transaction *txn)
 {
-    log_info("Call setCurrencyHandler");
+    log_debug("Call setCurrencyHandler");
     char *query = httpQueryParser(txn->request);
     char _defaultCurrency[5] = "CAD";
     strcpy(_defaultCurrency, strchr(query, '=') + 1);
@@ -56,7 +56,7 @@ static void setCurrencyHandler(struct http_transaction *txn)
 
 static void homeHandler(struct http_transaction *txn)
 {
-    log_info("Call homeHandler ### Hop: %u", txn->hop_count);
+    log_debug("Call homeHandler ### Hop: %u", txn->hop_count);
 
     if (txn->hop_count == 0)
     {
@@ -94,7 +94,7 @@ static void homeHandler(struct http_transaction *txn)
 
 static void productHandler(struct http_transaction *txn)
 {
-    log_info("Call productHandler ### Hop: %u", txn->hop_count);
+    log_debug("Call productHandler ### Hop: %u", txn->hop_count);
 
     if (txn->hop_count == 0)
     {
@@ -131,7 +131,7 @@ static void productHandler(struct http_transaction *txn)
 
 static void addToCartHandler(struct http_transaction *txn)
 {
-    log_info("Call addToCartHandler ### Hop: %u", txn->hop_count);
+    log_debug("Call addToCartHandler ### Hop: %u", txn->hop_count);
     if (txn->hop_count == 0)
     {
         getProduct(txn);
@@ -147,14 +147,14 @@ static void addToCartHandler(struct http_transaction *txn)
     }
     else
     {
-        log_info("addToCartHandler doesn't know what to do for HOP %u.", txn->hop_count);
+        log_debug("addToCartHandler doesn't know what to do for HOP %u.", txn->hop_count);
         returnResponse(txn);
     }
 }
 
 static void viewCartHandler(struct http_transaction *txn)
 {
-    log_info("Call viewCartHandler ### Hop: %u", txn->hop_count);
+    log_debug("Call viewCartHandler ### Hop: %u", txn->hop_count);
     if (txn->hop_count == 0)
     {
         getCurrencies(txn);
@@ -183,7 +183,7 @@ static void viewCartHandler(struct http_transaction *txn)
         }
         else
         {
-            log_info("Set get_quote_response.conversion_flag as true");
+            log_debug("Set get_quote_response.conversion_flag as true");
             txn->get_quote_response.conversion_flag = true;
         }
     }
@@ -197,7 +197,7 @@ static void viewCartHandler(struct http_transaction *txn)
     }
     else
     {
-        log_info("viewCartHandler doesn't know what to do for HOP %u.", txn->hop_count);
+        log_debug("viewCartHandler doesn't know what to do for HOP %u.", txn->hop_count);
         returnResponse(txn);
     }
 }
@@ -216,7 +216,7 @@ static void PlaceOrder(struct http_transaction *txn)
 
 static void placeOrderHandler(struct http_transaction *txn)
 {
-    log_info("Call placeOrderHandler ### Hop: %u", txn->hop_count);
+    log_debug("Call placeOrderHandler ### Hop: %u", txn->hop_count);
 
     if (txn->hop_count == 0)
     {
@@ -236,7 +236,7 @@ static void placeOrderHandler(struct http_transaction *txn)
     }
     else
     {
-        log_info("placeOrderHandler doesn't know what to do for HOP %u.", txn->hop_count);
+        log_debug("placeOrderHandler doesn't know what to do for HOP %u.", txn->hop_count);
         returnResponse(txn);
     }
 }
@@ -245,7 +245,7 @@ static void httpRequestDispatcher(struct http_transaction *txn)
 {
 
     char *req = txn->request;
-    // log_info("Receive one msg: %s", req);
+    // log_debug("Receive one msg: %s", req);
     if (strstr(req, "/1/cart/checkout") != NULL)
     {
         placeOrderHandler(txn);
@@ -262,7 +262,7 @@ static void httpRequestDispatcher(struct http_transaction *txn)
         }
         else
         {
-            log_info("No handler found in frontend: %s", req);
+            log_debug("No handler found in frontend: %s", req);
         }
     }
     else if (strstr(req, "/1/product") != NULL)
@@ -279,7 +279,7 @@ static void httpRequestDispatcher(struct http_transaction *txn)
     }
     else
     {
-        log_info("Unknown handler. Check your HTTP Query, human!: %s", req);
+        log_debug("Unknown handler. Check your HTTP Query, human!: %s", req);
         returnResponse(txn);
     }
 
@@ -304,7 +304,7 @@ static void *nf_worker(void *arg)
             log_error("read() error: %s", strerror(errno));
             return NULL;
         }
-        // log_info("Receive one msg: %s", txn->request);
+        // log_debug("Receive one msg: %s", txn->request);
         httpRequestDispatcher(txn);
 
         bytes_written = write(pipefd_tx[index][1], &txn, sizeof(struct http_transaction *));
@@ -553,6 +553,8 @@ static int nf(uint8_t nf_id)
 int main(int argc, char **argv)
 {
     log_set_level_from_env();
+
+    log_set_level(LOG_INFO);
 
     uint8_t nf_id;
     int ret;
