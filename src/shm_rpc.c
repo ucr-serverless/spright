@@ -77,7 +77,7 @@ void convertCurrencyOfProducts(struct http_transaction *txn)
 {
     if (strcmp(defaultCurrency, "USD") == 0)
     {
-        log_info("Default Currency is USD. Skip convertCurrency");
+        log_debug("Default Currency is USD. Skip convertCurrency");
         int i = 0;
         for (i = 0; i < txn->list_products_response.num_products; i++)
         {
@@ -90,7 +90,7 @@ void convertCurrencyOfProducts(struct http_transaction *txn)
     }
     else
     {
-        log_info("Default Currency is %s. Do convertCurrency", defaultCurrency);
+        log_debug("Default Currency is %s. Do convertCurrency", defaultCurrency);
         if (txn->productViewCntr != 0)
         {
             txn->product_view[txn->productViewCntr - 1].Item =
@@ -135,13 +135,13 @@ void getProduct(struct http_transaction *txn)
     {
         char *start_of_product_id = strtok(query, "&");
         strcpy(txn->get_product_request.Id, strchr(start_of_product_id, '=') + 1);
-        log_info("Product ID: %s", txn->get_product_request.Id);
+        log_debug("Product ID: %s", txn->get_product_request.Id);
         // returnResponse(txn); return;
     }
     else if (strstr(req, "/1/product") != NULL)
     {
         strcpy(txn->get_product_request.Id, query);
-        log_info("Product ID: %s", txn->get_product_request.Id);
+        log_debug("Product ID: %s", txn->get_product_request.Id);
     }
     else
     {
@@ -172,7 +172,7 @@ void convertCurrencyOfProduct(struct http_transaction *txn)
 {
     if (strcmp(defaultCurrency, "USD") == 0)
     {
-        log_info("Default Currency is USD. Skip convertCurrencyOfProduct");
+        log_debug("Default Currency is USD. Skip convertCurrencyOfProduct");
         txn->product_view[0].Item = txn->get_product_response;
         txn->product_view[0].Price = txn->get_product_response.PriceUsd;
 
@@ -180,7 +180,7 @@ void convertCurrencyOfProduct(struct http_transaction *txn)
     }
     else
     {
-        log_info("Default Currency is %s. Do convertCurrencyOfProduct", defaultCurrency);
+        log_debug("Default Currency is %s. Do convertCurrencyOfProduct", defaultCurrency);
         if (txn->productViewCntr != 0)
         {
             txn->product_view[txn->productViewCntr - 1].Item = txn->get_product_response;
@@ -215,12 +215,12 @@ void insertCart(struct http_transaction *txn)
 
     if (strstr(req, "/1/cart?") != NULL && strstr(req, "POST"))
     {
-        // log_info("Query : %s", query);
+        // log_debug("Query : %s", query);
         // char *start_of_product_id = strtok(query, "&");
         char *start_of_quantity = strchr(query, '&') + 1;
         in->Item.Quantity = atoi(strchr(start_of_quantity, '=') + 1);
         // strcpy(txn->get_product_request.Id, strchr(start_of_product_id, '=') + 1);
-        log_info("Product Quantity: %d", in->Item.Quantity);
+        log_debug("Product Quantity: %d", in->Item.Quantity);
         // product_id=66VCHSJNUP&quantity=1
     }
     else
@@ -264,7 +264,7 @@ void convertCurrencyOfCart(struct http_transaction *txn)
 {
     if (strcmp(defaultCurrency, "USD") == 0)
     {
-        log_info("Default Currency is USD. Skip convertCurrencyOfCart");
+        log_debug("Default Currency is USD. Skip convertCurrencyOfCart");
         calculateTotalPrice(txn);
         return;
     }
@@ -277,7 +277,7 @@ void convertCurrencyOfCart(struct http_transaction *txn)
 
         if (txn->cartItemCurConvertCntr < txn->cartItemViewCntr)
         {
-            log_info("Default Currency is %s. Do convertCurrencyOfCart", defaultCurrency);
+            log_debug("Default Currency is %s. Do convertCurrencyOfCart", defaultCurrency);
             strcpy(txn->currency_conversion_req.ToCode, defaultCurrency);
             txn->currency_conversion_req.From = txn->cart_item_view[txn->cartItemCurConvertCntr].Price;
 
@@ -298,10 +298,10 @@ void convertCurrencyOfCart(struct http_transaction *txn)
 
 void getCartItemInfo(struct http_transaction *txn)
 {
-    log_info("%d items in the cart.", txn->get_cart_response.num_items);
+    log_debug("%d items in the cart.", txn->get_cart_response.num_items);
     if (txn->get_cart_response.num_items <= 0)
     {
-        log_info("None items in the cart.");
+        log_debug("None items in the cart.");
         txn->total_price.Units = 0;
         txn->total_price.Nanos = 0;
         returnResponse(txn);
@@ -319,7 +319,7 @@ void getCartItemInfo(struct http_transaction *txn)
     if (txn->cartItemViewCntr < txn->get_cart_response.num_items)
     {
         strcpy(txn->get_product_request.Id, txn->get_cart_response.Items[txn->cartItemViewCntr].ProductId);
-        // log_info("Product ID: %s", txn->get_product_request.Id);
+        // log_debug("Product ID: %s", txn->get_product_request.Id);
 
         strcpy(txn->rpc_handler, "GetProduct");
         txn->caller_fn = FRONTEND;
@@ -340,7 +340,7 @@ void convertCurrencyOfShippingQuote(struct http_transaction *txn)
 {
     if (strcmp(defaultCurrency, "USD") == 0)
     {
-        log_info("Default Currency is USD. Skip convertCurrencyOfShippingQuote");
+        log_debug("Default Currency is USD. Skip convertCurrencyOfShippingQuote");
         txn->get_quote_response.conversion_flag = true;
     }
     else
@@ -348,11 +348,11 @@ void convertCurrencyOfShippingQuote(struct http_transaction *txn)
         if (txn->get_quote_response.conversion_flag == true)
         {
             txn->get_quote_response.CostUsd = txn->currency_conversion_result;
-            log_info("Write back convertCurrencyOfShippingQuote");
+            log_debug("Write back convertCurrencyOfShippingQuote");
         }
         else
         {
-            log_info("Default Currency is %s. Do convertCurrencyOfShippingQuote", defaultCurrency);
+            log_debug("Default Currency is %s. Do convertCurrencyOfShippingQuote", defaultCurrency);
             strcpy(txn->currency_conversion_req.ToCode, defaultCurrency);
             strcpy(txn->currency_conversion_req.From.CurrencyCode, txn->get_quote_response.CostUsd.CurrencyCode);
             txn->currency_conversion_req.From.Units = txn->get_quote_response.CostUsd.Units;
@@ -368,7 +368,7 @@ void convertCurrencyOfShippingQuote(struct http_transaction *txn)
 
 void calculateTotalPrice(struct http_transaction *txn)
 {
-    log_info("Calculating total price...");
+    log_debug("Calculating total price...");
     int i = 0;
     for (i = 0; i < txn->cartItemViewCntr; i++)
     {

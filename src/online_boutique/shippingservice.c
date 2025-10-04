@@ -77,14 +77,14 @@ static Quote CreateQuoteFromCount(int count)
 // GetQuote produces a shipping quote (cost) in USD.
 static void GetQuote(struct http_transaction *txn)
 {
-    log_info("[GetQuote] received request");
+    log_debug("[GetQuote] received request");
 
     GetQuoteRequest *in = &txn->get_quote_request;
 
     // 1. Our quote system requires the total number of items to be shipped.
     int count = 0;
     int i;
-    // log_info("num_items: %d", in->num_items);
+    // log_debug("num_items: %d", in->num_items);
     for (i = 0; i < in->num_items; i++)
     {
         count += in->Items[i].Quantity;
@@ -127,7 +127,7 @@ static void MockGetQuoteRequest(struct http_transaction *txn)
 // 	char tmp[40];
 // 	int i;
 // 	for (i = 0; i < digits; i++) {
-// 		slog_info(tmp, "%d", rand() % 10);
+// 		log_debug(tmp, "%d", rand() % 10);
 // 		strcat(str, tmp);
 // 	}
 
@@ -162,7 +162,7 @@ static void CreateTrackingId(char *salt, char *out)
 // It supplies a tracking ID for notional lookup of shipment delivery status.
 static void ShipOrder(struct http_transaction *txn)
 {
-    log_info("[ShipOrder] received request");
+    log_debug("[ShipOrder] received request");
     ShipOrderRequest *in = &txn->ship_order_request;
 
     // 1. Create a Tracking ID
@@ -218,8 +218,8 @@ static void *nf_worker(void *arg)
         }
         else
         {
-            log_info("%s() is not supported", txn->rpc_handler);
-            log_info("\t\t#### Run Mock Test ####");
+            log_debug("%s() is not supported", txn->rpc_handler);
+            log_debug("\t\t#### Run Mock Test ####");
             MockShipOrderRequest(txn);
             ShipOrder(txn);
             PrintShipOrderResponse(txn);
@@ -475,6 +475,8 @@ static int nf(uint8_t nf_id)
 int main(int argc, char **argv)
 {
     log_set_level_from_env();
+
+    log_set_level(LOG_INFO);
 
     uint8_t nf_id;
     int ret;

@@ -49,12 +49,12 @@ struct clib_map *LocalCartStore;
 
 static void PrintUserCart(Cart *cart)
 {
-    log_info("Cart for user %s: ", cart->UserId);
-    log_info("## %d items in the cart: ", cart->num_items);
+    log_debug("Cart for user %s: ", cart->UserId);
+    log_debug("## %d items in the cart: ", cart->num_items);
     int i;
     for (i = 0; i < cart->num_items; i++)
     {
-        log_info("\t%d. ProductId: %s \tQuantity: %d", i + 1, cart->Items[i].ProductId, cart->Items[i].Quantity);
+        log_debug("\t%d. ProductId: %s \tQuantity: %d", i + 1, cart->Items[i].ProductId, cart->Items[i].Quantity);
     }
     printf("\n");
     return;
@@ -62,7 +62,7 @@ static void PrintUserCart(Cart *cart)
 
 static void PrintLocalCartStore()
 {
-    log_info("\t\t #### PrintLocalCartStore ####");
+    log_debug("\t\t #### PrintLocalCartStore ####");
 
     struct clib_iterator *myItr;
     struct clib_object *pElement;
@@ -82,7 +82,7 @@ static void PrintLocalCartStore()
 
 static void AddItemAsync(char *userId, char *productId, int32_t quantity)
 {
-    log_info("AddItemAsync called with userId=%s, productId=%s, quantity=%d", userId, productId, quantity);
+    log_debug("AddItemAsync called with userId=%s, productId=%s, quantity=%d", userId, productId, quantity);
 
     Cart newCart = {.UserId = "", .Items = {{.ProductId = "", .Quantity = quantity}}};
 
@@ -92,24 +92,24 @@ static void AddItemAsync(char *userId, char *productId, int32_t quantity)
     void *cart;
     if (clib_true != find_c_map(LocalCartStore, userId, &cart))
     {
-        log_info("Add new carts for user %s", userId);
+        log_debug("Add new carts for user %s", userId);
         char *key = clib_strdup(userId);
         int key_length = (int)strlen(key) + 1;
         newCart.num_items = 1;
-        log_info("Inserting [%s -> %s]", key, newCart.UserId);
+        log_debug("Inserting [%s -> %s]", key, newCart.UserId);
         insert_c_map(LocalCartStore, key, key_length, &newCart, sizeof(Cart));
         free(key);
     }
     else
     {
-        log_info("Found carts for user %s", userId);
+        log_debug("Found carts for user %s", userId);
         int cnt = 0;
         int i;
         for (i = 0; i < ((Cart *)cart)->num_items; i++)
         {
             if (strcmp(((Cart *)cart)->Items[i].ProductId, productId) == 0)
             { // If the item exists, we update its quantity
-                log_info("Update carts for user %s - the item exists, we update its quantity", userId);
+                log_debug("Update carts for user %s - the item exists, we update its quantity", userId);
                 ((Cart *)cart)->Items[i].Quantity++;
             }
             else
@@ -120,7 +120,7 @@ static void AddItemAsync(char *userId, char *productId, int32_t quantity)
 
         if (cnt == ((Cart *)cart)->num_items)
         { // The item doesn't exist, we update it into DB
-            log_info("Update carts for user %s - The item doesn't exist, we update it into DB", userId);
+            log_debug("Update carts for user %s - The item doesn't exist, we update it into DB", userId);
             ((Cart *)cart)->num_items++;
             strcpy(((Cart *)cart)->Items[((Cart *)cart)->num_items].ProductId, productId);
             ((Cart *)cart)->Items[((Cart *)cart)->num_items].Quantity = quantity;
@@ -140,7 +140,7 @@ static void MockAddItemRequest(struct http_transaction *txn)
 
 static void AddItem(struct http_transaction *txn)
 {
-    log_info("[AddItem] received request");
+    log_debug("[AddItem] received request");
 
     AddItemRequest *in = &txn->add_item_request;
     AddItemAsync(in->UserId, in->Item.ProductId, in->Item.Quantity);
@@ -151,12 +151,12 @@ static void GetCartAsync(struct http_transaction *txn)
 {
     GetCartRequest *in = &txn->get_cart_request;
     Cart *out = &txn->get_cart_response;
-    log_info("[GetCart] GetCartAsync called with userId=%s", in->UserId);
+    log_debug("[GetCart] GetCartAsync called with userId=%s", in->UserId);
 
     void *cart;
     if (clib_true != find_c_map(LocalCartStore, in->UserId, &cart))
     {
-        log_info("No carts for user %s", in->UserId);
+        log_debug("No carts for user %s", in->UserId);
         out->num_items = 0;
         return;
     }
@@ -182,13 +182,13 @@ static void MockGetCartRequest(struct http_transaction *txn)
 
 static void PrintGetCartResponse(struct http_transaction *txn)
 {
-    log_info("\t\t#### PrintGetCartResponse ####");
+    log_debug("\t\t#### PrintGetCartResponse ####");
     Cart *out = &txn->get_cart_response;
-    log_info("Cart for user %s: ", out->UserId);
+    log_debug("Cart for user %s: ", out->UserId);
     int i;
     for (i = 0; i < out->num_items; i++)
     {
-        log_info("\t%d. ProductId: %s \tQuantity: %d", i + 1, out->Items[i].ProductId, out->Items[i].Quantity);
+        log_debug("\t%d. ProductId: %s \tQuantity: %d", i + 1, out->Items[i].ProductId, out->Items[i].Quantity);
     }
     printf("\n");
     return;
@@ -197,12 +197,12 @@ static void PrintGetCartResponse(struct http_transaction *txn)
 static void EmptyCartAsync(struct http_transaction *txn)
 {
     EmptyCartRequest *in = &txn->empty_cart_request;
-    log_info("EmptyCartAsync called with userId=%s", in->UserId);
+    log_debug("EmptyCartAsync called with userId=%s", in->UserId);
 
     void *cart;
     if (clib_true != find_c_map(LocalCartStore, in->UserId, &cart))
     {
-        log_info("No carts for user %s", in->UserId);
+        log_debug("No carts for user %s", in->UserId);
         // out->num_items = -1;
         return;
     }
@@ -211,7 +211,7 @@ static void EmptyCartAsync(struct http_transaction *txn)
         int i;
         for (i = 0; i < ((Cart *)cart)->num_items; i++)
         {
-            log_info("Clean up item %d", i + 1);
+            log_debug("Clean up item %d", i + 1);
             strcpy((*((Cart **)(&cart)))->Items[i].ProductId, "");
             ((*((Cart **)(&cart))))->Items[i].Quantity = 0;
         }
@@ -222,7 +222,7 @@ static void EmptyCartAsync(struct http_transaction *txn)
 
 static void EmptyCart(struct http_transaction *txn)
 {
-    log_info("[EmptyCart] received request");
+    log_debug("[EmptyCart] received request");
     EmptyCartAsync(txn);
     return;
 }
@@ -266,8 +266,8 @@ static void *nf_worker(void *arg)
         }
         else
         {
-            log_info("%s() is not supported", txn->rpc_handler);
-            log_info("\t\t#### Run Mock Test ####");
+            log_debug("%s() is not supported", txn->rpc_handler);
+            log_debug("\t\t#### Run Mock Test ####");
             MockAddItemRequest(txn);
             AddItem(txn);
             PrintLocalCartStore();
@@ -530,6 +530,8 @@ static int nf(uint8_t nf_id)
 int main(int argc, char **argv)
 {
     log_set_level_from_env();
+
+    log_set_level(LOG_INFO);
 
     uint8_t nf_id;
     int ret;
